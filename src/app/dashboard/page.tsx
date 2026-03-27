@@ -1,0 +1,43 @@
+import { createClient } from '@/lib/supabase-server';
+import { redirect } from 'next/navigation';
+import ChatInterface from '@/components/ChatInterface';
+import Header from '@/components/Header';
+
+export default async function DashboardPage() {
+  const supabase = createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*, restaurants(*)')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile) {
+    // Profile doesn't exist — sign out and redirect
+    await supabase.auth.signOut();
+    redirect('/');
+  }
+
+  if (profile.status === 'archived') {
+    await supabase.auth.signOut();
+    redirect('/?error=account_archived');
+  }
+
+  const isManager = profile.role === 'manager' || profile.role === 'admin';
+
+  return (
+    <div className="flex flex-col h-screen overflow-hidden">
+      <Header
+        profile={profile}
+        showAdminLink={isManager}
+        currentPage="chat"
+      />
+      <main className="flex-1 overflow-hidden max-w-2xl w-full mx-auto flex flex-col">
+        <ChatInterface profile={profile} />
+      </main>
+    </div>
+  );
+}
