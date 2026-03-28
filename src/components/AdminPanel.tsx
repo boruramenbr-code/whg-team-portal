@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Profile, Restaurant, UserRole } from '@/lib/types';
 
 interface ProfileWithRestaurant extends Profile {
-  restaurants?: { name: string; slug: string };
+  restaurants?: Restaurant;
 }
 
 interface AdminPanelProps {
