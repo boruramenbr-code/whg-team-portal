@@ -1,35 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { loginAction } from '@/app/actions/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), password }),
-    });
+    const result = await loginAction(email.trim(), password);
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error || 'Login failed. Please try again.');
+    if (result?.error) {
+      setError(result.error);
       setLoading(false);
-    } else {
-      router.push('/dashboard');
-      router.refresh();
     }
+    // On success, loginAction calls redirect('/dashboard') server-side
   };
 
   return (
