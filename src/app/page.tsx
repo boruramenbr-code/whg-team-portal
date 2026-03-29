@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,33 +14,19 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
-      if (authError) {
-        setError(
-          authError.message === 'Invalid login credentials'
-            ? 'Incorrect email or password. Please try again.'
-            : authError.message
-        );
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Login failed. Please try again.');
         setLoading(false);
       } else {
-        // Extract tokens and set server-side cookies via /api/set-session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await fetch('/api/set-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
-            }),
-          });
-        }
-        // Hard navigation so the fresh server-set cookies are sent with the request
+        // Hard navigation — server already set the auth cookies on the response above
         window.location.href = '/dashboard';
       }
     } catch (err) {
