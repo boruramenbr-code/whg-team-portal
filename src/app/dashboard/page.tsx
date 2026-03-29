@@ -15,19 +15,8 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single();
 
-  console.log('[Dashboard] user.id:', user.id);
-  console.log('[Dashboard] profile:', profile);
-  console.log('[Dashboard] profileError:', profileError);
-
-  if (!profile) {
-    // Render error so we can see what profileError says instead of redirect-looping
-    return (
-      <div style={{ padding: 40, fontFamily: 'monospace' }}>
-        <h2>Profile load failed</h2>
-        <p><strong>user.id:</strong> {user.id}</p>
-        <p><strong>profileError:</strong> {JSON.stringify(profileError)}</p>
-      </div>
-    );
+if (!profile) {
+    redirect('/');
   }
 
   if (profile.status === 'archived') {

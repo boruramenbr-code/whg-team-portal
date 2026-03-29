@@ -38,8 +38,9 @@ export async function middleware(request: NextRequest) {
     if (!user && isProtected) {
       return NextResponse.redirect(new URL('/', request.url));
     }
-    // Do NOT redirect authenticated users from '/' — avoids redirect loops
-    // when the dashboard encounters an error and redirects back to '/'
+    if (user && isLoginPage) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   return supabaseResponse;
