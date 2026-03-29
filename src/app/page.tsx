@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { loginAction } from '@/app/actions/auth';
+import { createClient } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,13 +15,21 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const result = await loginAction(email.trim(), password);
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-      if (result?.error) {
-        setError(result.error);
+      if (authError) {
+        setError(
+          authError.message === 'Invalid login credentials'
+            ? 'Incorrect email or password. Please try again.'
+            : authError.message
+        );
         setLoading(false);
       } else {
-        // Hard navigation forces a full page load — avoids RSC soft-nav 503
+        // Hard navigation so cookies are sent with the full request
         window.location.href = '/dashboard';
       }
     } catch (err) {
