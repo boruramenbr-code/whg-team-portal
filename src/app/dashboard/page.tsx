@@ -20,8 +20,14 @@ export default async function DashboardPage() {
   console.log('[Dashboard] profileError:', profileError);
 
   if (!profile) {
-    // Profile doesn't exist — redirect without signing out so we can debug session
-    redirect('/?error=no_profile');
+    // Render error so we can see what profileError says instead of redirect-looping
+    return (
+      <div style={{ padding: 40, fontFamily: 'monospace' }}>
+        <h2>Profile load failed</h2>
+        <p><strong>user.id:</strong> {user.id}</p>
+        <p><strong>profileError:</strong> {JSON.stringify(profileError)}</p>
+      </div>
+    );
   }
 
   if (profile.status === 'archived') {
