@@ -9,11 +9,15 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/');
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*, restaurants(*)')
     .eq('id', user.id)
     .single();
+
+  console.log('[Dashboard] user.id:', user.id);
+  console.log('[Dashboard] profile:', profile);
+  console.log('[Dashboard] profileError:', profileError);
 
   if (!profile) {
     // Profile doesn't exist — sign out and redirect
