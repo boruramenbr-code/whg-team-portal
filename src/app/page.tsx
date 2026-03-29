@@ -19,8 +19,10 @@ export default function LoginPage() {
     if (result?.error) {
       setError(result.error);
       setLoading(false);
+    } else {
+      // Hard navigation forces a full page load — avoids RSC soft-nav 503
+      window.location.href = '/dashboard';
     }
-    // On success, loginAction calls redirect('/dashboard') server-side
   };
 
   return (
