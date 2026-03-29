@@ -20,13 +20,11 @@ export default async function DashboardPage() {
   console.log('[Dashboard] profileError:', profileError);
 
   if (!profile) {
-    // Profile doesn't exist — sign out and redirect
-    await supabase.auth.signOut();
-    redirect('/');
+    // Profile doesn't exist — redirect without signing out so we can debug session
+    redirect('/?error=no_profile');
   }
 
   if (profile.status === 'archived') {
-    await supabase.auth.signOut();
     redirect('/?error=account_archived');
   }
 
