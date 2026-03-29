@@ -29,7 +29,19 @@ export default function LoginPage() {
         );
         setLoading(false);
       } else {
-        // Hard navigation so cookies are sent with the full request
+        // Extract tokens and set server-side cookies via /api/set-session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await fetch('/api/set-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            }),
+          });
+        }
+        // Hard navigation so the fresh server-set cookies are sent with the request
         window.location.href = '/dashboard';
       }
     } catch (err) {
