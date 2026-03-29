@@ -30,15 +30,17 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isLoginPage = path === '/';
   const isProtected = path.startsWith('/dashboard') || path.startsWith('/admin');
+  const isGet = request.method === 'GET';
 
-  // Redirect unauthenticated users away from protected routes
-  if (!user && isProtected) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // Redirect authenticated users away from login page
-  if (user && isLoginPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Only apply redirects on GET requests — POST requests are Server Actions
+  // and must not be intercepted or they fail with "failed to forward action response"
+  if (isGet) {
+    if (!user && isProtected) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    if (user && isLoginPage) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   return supabaseResponse;

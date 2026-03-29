@@ -14,14 +14,20 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const result = await loginAction(email.trim(), password);
+    try {
+      const result = await loginAction(email.trim(), password);
 
-    if (result?.error) {
-      setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+      } else {
+        // Hard navigation forces a full page load — avoids RSC soft-nav 503
+        window.location.href = '/dashboard';
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Login failed. Please try again.');
       setLoading(false);
-    } else {
-      // Hard navigation forces a full page load — avoids RSC soft-nav 503
-      window.location.href = '/dashboard';
     }
   };
 
