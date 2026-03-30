@@ -115,6 +115,9 @@ ${handbookContext || 'No relevant handbook sections found for this question.'}`;
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
 
+        // Flag questions the handbook couldn't answer
+        const isUnanswered = fullAnswer.includes("I don't have that information in the handbook");
+
         // Save to chat history (fire and forget)
         supabase
           .from('chat_history')
@@ -123,6 +126,7 @@ ${handbookContext || 'No relevant handbook sections found for this question.'}`;
             question,
             answer: fullAnswer,
             handbook_source: source,
+            is_unanswered: isUnanswered,
           })
           .then(() => {});
       } catch {

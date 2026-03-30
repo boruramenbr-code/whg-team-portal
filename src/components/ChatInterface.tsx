@@ -18,9 +18,11 @@ const QUICK_QUESTIONS = [
 
 interface ChatInterfaceProps {
   profile: Profile;
+  pendingQuestion?: string | null;
+  onPendingQuestionConsumed?: () => void;
 }
 
-export default function ChatInterface({ profile }: ChatInterfaceProps) {
+export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,6 +36,14 @@ export default function ChatInterface({ profile }: ChatInterfaceProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Auto-send when a question is selected from the sidebar
+  useEffect(() => {
+    if (pendingQuestion) {
+      sendMessage(pendingQuestion);
+      onPendingQuestionConsumed?.();
+    }
+  }, [pendingQuestion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
