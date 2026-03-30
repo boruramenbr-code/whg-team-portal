@@ -1,6 +1,7 @@
 export type UserRole = 'employee' | 'manager' | 'assistant_manager' | 'admin';
 export type UserStatus = 'active' | 'archived';
 export type HandbookSource = 'employee' | 'manager';
+export type PreferredLanguage = 'en' | 'es';
 
 export interface Restaurant {
   id: string;
@@ -15,6 +16,8 @@ export interface Profile {
   restaurant_id: string;
   role: UserRole;
   status: UserStatus;
+  preferred_language: PreferredLanguage;
+  employee_pin?: string;
   created_at: string;
   updated_at: string;
   restaurants?: Restaurant;

@@ -36,6 +36,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
+  const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -93,7 +94,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, handbookSource }),
+        body: JSON.stringify({ question, handbookSource, language }),
       });
 
       if (!res.ok || !res.body) throw new Error('Request failed');
@@ -146,7 +147,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
     } finally {
       setLoading(false);
     }
-  }, [input, handbookSource, loading]);
+  }, [input, handbookSource, language, loading]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -157,20 +158,21 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Manager handbook toggle */}
-      {isManager && (
-        <div className={`px-4 py-2.5 border-b flex-shrink-0 transition-colors ${
-          handbookSource === 'manager'
-            ? 'bg-[#1B3A6B] border-[#152d54]'
-            : 'bg-white border-gray-100'
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className={`flex rounded-lg p-0.5 max-w-xs ${
+      {/* Top control bar — manager toggle + language toggle */}
+      <div className={`px-4 py-2.5 border-b flex-shrink-0 transition-colors ${
+        isManager && handbookSource === 'manager'
+          ? 'bg-[#1B3A6B] border-[#152d54]'
+          : 'bg-white border-gray-100'
+      }`}>
+        <div className="flex items-center justify-between gap-3">
+          {/* Manager handbook toggle (managers only) */}
+          {isManager ? (
+            <div className={`flex rounded-lg p-0.5 ${
               handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
             }`}>
               <button
                 onClick={() => { setHandbookSource('employee'); onHandbookSourceChange?.('employee'); }}
-                className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
+                className={`py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'employee'
                     ? 'bg-white text-[#1B3A6B] shadow-sm'
                     : handbookSource === 'manager'
@@ -182,7 +184,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
               </button>
               <button
                 onClick={() => { setHandbookSource('manager'); onHandbookSourceChange?.('manager'); }}
-                className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
+                className={`py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'manager'
                     ? 'bg-[#2E86C1] text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-700'
@@ -191,14 +193,45 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
                 Manager Reference
               </button>
             </div>
-            {handbookSource === 'manager' && (
-              <span className="text-xs text-white/70 font-medium pr-1">
-                Manager Mode
-              </span>
-            )}
+          ) : (
+            <div /> /* spacer to keep language toggle right-aligned for employees */
+          )}
+
+          {/* Language toggle — EN / ES */}
+          <div className={`flex rounded-lg p-0.5 flex-shrink-0 ${
+            isManager && handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
+          }`}>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-md transition-all ${
+                language === 'en'
+                  ? isManager && handbookSource === 'manager'
+                    ? 'bg-white text-[#1B3A6B] shadow-sm'
+                    : 'bg-white text-[#1B3A6B] shadow-sm'
+                  : isManager && handbookSource === 'manager'
+                  ? 'text-white/50 hover:text-white'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setLanguage('es')}
+              className={`py-1 px-2.5 text-xs font-bold rounded-md transition-all ${
+                language === 'es'
+                  ? isManager && handbookSource === 'manager'
+                    ? 'bg-white text-[#1B3A6B] shadow-sm'
+                    : 'bg-white text-[#1B3A6B] shadow-sm'
+                  : isManager && handbookSource === 'manager'
+                  ? 'text-white/50 hover:text-white'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              ES
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">

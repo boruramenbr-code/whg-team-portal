@@ -24,18 +24,20 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Account inactive' }, { status: 403 });
   }
 
-  const { question, handbookSource } = await req.json();
+  const { question, handbookSource, language } = await req.json();
 
   if (!question?.trim()) {
     return Response.json({ error: 'Question is required' }, { status: 400 });
   }
 
-  // Detect Spanish questions by looking for Spanish-specific characters/words
-  const spanishPattern = /[ñáéíóúüÁÉÍÓÚÜ¿¡]|(^|\s)(qué|cómo|cuál|cuándo|dónde|puedo|tengo|hay|es|son|para|por|con|del|las|los|una|esto|esta|tiene|puede|debo|política|horario|descanso|uniforme|descuento|vacaciones|ausencia)/i;
-  const isSpanish = spanishPattern.test(question);
-
-  // Determine which handbook to search based on role and language
+  // Language: use the in-session toggle value if sent, otherwise fall back to profile preference
   const isManagerOrAdmin = ['manager', 'assistant_manager', 'admin'].includes(profile.role);
+  const effectiveLanguage: 'en' | 'es' = language === 'es' || language === 'en'
+    ? language
+    : (profile.preferred_language || 'en');
+  const isSpanish = effectiveLanguage === 'es';
+
+  // Determine which handbook source to search
   const source = isManagerOrAdmin && handbookSource === 'manager'
     ? 'manager'
     : isSpanish

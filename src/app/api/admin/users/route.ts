@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, restaurant_id, role, pin, email, password } = body;
+  const { full_name, restaurant_id, role, pin, email, password, preferred_language } = body;
 
   if (!full_name || !restaurant_id) {
     return Response.json({ error: 'Name and restaurant are required' }, { status: 400 });
@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
       role: 'employee',
       status: 'active',
       employee_pin: pin,
+      preferred_language: preferred_language || 'en',
     });
 
     if (profileError) {
@@ -156,6 +157,7 @@ export async function POST(req: NextRequest) {
     restaurant_id,
     role: targetRole,
     status: 'active',
+    preferred_language: preferred_language || 'en',
   });
 
   if (profileError) {

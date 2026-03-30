@@ -81,6 +81,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     password: '',
     restaurant_id: currentUser.restaurant_id || '',
     role: 'employee' as UserRole,
+    preferred_language: 'en' as 'en' | 'es',
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -118,6 +119,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       password: '',
       restaurant_id: currentUser.restaurant_id || '',
       role: 'employee',
+      preferred_language: 'en',
     });
   };
 
@@ -419,21 +421,51 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </select>
                 </div>
 
-                {/* EMPLOYEE: 4-digit PIN */}
+                {/* EMPLOYEE: 4-digit PIN + Language */}
                 {isEmployeeRole && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                      4-Digit PIN
-                    </label>
-                    <PinInput
-                      value={form.pin}
-                      onChange={(v) => setForm({ ...form, pin: v })}
-                      disabled={formLoading}
-                    />
-                    <p className="text-[11px] text-gray-400 mt-1.5">
-                      Share this PIN with them after adding.
-                    </p>
-                  </div>
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        4-Digit PIN
+                      </label>
+                      <PinInput
+                        value={form.pin}
+                        onChange={(v) => setForm({ ...form, pin: v })}
+                        disabled={formLoading}
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1.5">
+                        Share this PIN with them after adding.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        Language
+                      </label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'en', label: '🇺🇸 English' },
+                          { value: 'es', label: '🇲🇽 Español' },
+                        ].map((lang) => (
+                          <button
+                            key={lang.value}
+                            type="button"
+                            onClick={() => setForm({ ...form, preferred_language: lang.value as 'en' | 'es' })}
+                            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                              form.preferred_language === lang.value
+                                ? 'border-[#1B3A6B] bg-[#1B3A6B] text-white'
+                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                            }`}
+                          >
+                            {lang.label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1.5">
+                        The app will respond in their preferred language automatically.
+                      </p>
+                    </div>
+                  </>
                 )}
 
                 {/* MANAGER / ASST. MANAGER / ADMIN: email + password */}
