@@ -28,9 +28,10 @@ interface ChatInterfaceProps {
   profile: Profile;
   pendingQuestion?: string | null;
   onPendingQuestionConsumed?: () => void;
+  onHandbookSourceChange?: (source: 'employee' | 'manager') => void;
 }
 
-export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed }: ChatInterfaceProps) {
+export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed, onHandbookSourceChange }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -166,7 +167,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
               handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
             }`}>
               <button
-                onClick={() => setHandbookSource('employee')}
+                onClick={() => { setHandbookSource('employee'); onHandbookSourceChange?.('employee'); }}
                 className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'employee'
                     ? 'bg-white text-[#1B3A6B] shadow-sm'
@@ -178,7 +179,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
                 Team Handbook
               </button>
               <button
-                onClick={() => setHandbookSource('manager')}
+                onClick={() => { setHandbookSource('manager'); onHandbookSourceChange?.('manager'); }}}
                 className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'manager'
                     ? 'bg-[#2E86C1] text-white shadow-sm'
