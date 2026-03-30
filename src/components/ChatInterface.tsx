@@ -179,7 +179,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
                 Team Handbook
               </button>
               <button
-                onClick={() => { setHandbookSource('manager'); onHandbookSourceChange?.('manager'); }}}
+                onClick={() => { setHandbookSource('manager'); onHandbookSourceChange?.('manager'); }}
                 className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'manager'
                     ? 'bg-[#2E86C1] text-white shadow-sm'
