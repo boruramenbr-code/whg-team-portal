@@ -9,9 +9,11 @@ interface PopularQuestion {
 
 interface Props {
   onSelect: (question: string) => void;
+  language?: 'en' | 'es';
 }
 
-export default function PopularQuestions({ onSelect }: Props) {
+export default function PopularQuestions({ onSelect, language = 'en' }: Props) {
+  const isSpanish = language === 'es';
   const [questions, setQuestions] = useState<PopularQuestion[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +32,7 @@ export default function PopularQuestions({ onSelect }: Props) {
       <div className="flex items-center gap-2 mb-3">
         <div className="w-1.5 h-5 bg-[#2E86C1] rounded-full" />
         <h3 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider">
-          Staff Are Asking
+          {isSpanish ? 'El Personal Pregunta' : 'Staff Are Asking'}
         </h3>
       </div>
 
@@ -42,7 +44,7 @@ export default function PopularQuestions({ onSelect }: Props) {
         </div>
       ) : questions.length === 0 ? (
         <p className="text-xs text-gray-400 text-center mt-8">
-          No questions yet — be the first to ask!
+          {isSpanish ? 'Aún no hay preguntas — ¡sé el primero en preguntar!' : 'No questions yet — be the first to ask!'}
         </p>
       ) : (
         <div className="space-y-2">
@@ -58,7 +60,7 @@ export default function PopularQuestions({ onSelect }: Props) {
                 </p>
                 {count > 1 && (
                   <span className="inline-block mt-1 text-[10px] text-[#2E86C1] font-semibold">
-                    Asked {count}×
+                    {isSpanish ? `Preguntado ${count}×` : `Asked ${count}×`}
                   </span>
                 )}
               </div>
@@ -68,7 +70,7 @@ export default function PopularQuestions({ onSelect }: Props) {
       )}
 
       <p className="text-[10px] text-gray-400 text-center mt-4">
-        Click any question to ask it
+        {isSpanish ? 'Haz clic en cualquier pregunta para consultarla' : 'Click any question to ask it'}
       </p>
     </div>
   );

@@ -50,7 +50,7 @@ export default function Sidebar({ handbookSource, onSelect, language }: Props) {
         {tab === 'topics' ? (
           <TopicBrowser handbookSource={handbookSource} onSelect={onSelect} language={language} />
         ) : (
-          <PopularQuestions onSelect={onSelect} />
+          <PopularQuestions onSelect={onSelect} language={language} />
         )}
       </div>
     </div>
