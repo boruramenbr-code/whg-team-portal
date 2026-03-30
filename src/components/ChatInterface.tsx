@@ -10,11 +10,18 @@ interface Message {
   source?: 'employee' | 'manager' | 'employee-es';
 }
 
-const EMPLOYEE_QUESTIONS = [
+const EMPLOYEE_QUESTIONS_EN = [
   'What is the meal discount policy?',
   'What is the attendance and call-out policy?',
   'What are the dress code requirements?',
   'What is the progressive discipline policy?',
+];
+
+const EMPLOYEE_QUESTIONS_ES = [
+  '¿Cuál es la política de descuento en comidas?',
+  '¿Cuál es la política de asistencia y ausencias?',
+  '¿Cuáles son los requisitos del código de vestimenta?',
+  '¿Cuál es la política de disciplina progresiva?',
 ];
 
 const MANAGER_QUESTIONS = [
@@ -245,16 +252,27 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
               }`}>WHG</span>
             </div>
             <h3 className="text-[#1B3A6B] font-bold text-lg">
-              {handbookSource === 'manager' ? `Manager Reference` : greeting}
+              {handbookSource === 'manager'
+                ? 'Manager Reference'
+                : language === 'es'
+                ? `¡Hola, ${firstName}!`
+                : greeting}
             </h3>
             <p className="text-gray-500 text-sm mt-1 max-w-xs">
               {handbookSource === 'manager'
                 ? 'Ask about policies, discipline, coaching, operations — straight from your reference guide.'
+                : language === 'es'
+                ? 'Pregúntame cualquier cosa del Manual del Equipo. Te doy la respuesta directa.'
                 : 'Ask me anything from the Team Handbook. I\'ll give you the straight answer.'}
             </p>
 
             <div className="mt-6 w-full max-w-sm space-y-2">
-              {(handbookSource === 'manager' ? MANAGER_QUESTIONS : EMPLOYEE_QUESTIONS).map((q) => (
+              {(handbookSource === 'manager'
+                ? MANAGER_QUESTIONS
+                : language === 'es'
+                ? EMPLOYEE_QUESTIONS_ES
+                : EMPLOYEE_QUESTIONS_EN
+              ).map((q) => (
                 <button
                   key={q}
                   onClick={() => sendMessage(q)}
@@ -331,7 +349,13 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={`Ask about the ${handbookSource === 'manager' ? 'Manager Reference' : 'Team Handbook'}…`}
+            placeholder={
+              handbookSource === 'manager'
+                ? 'Ask about the Manager Reference…'
+                : language === 'es'
+                ? 'Escribe tu pregunta aquí…'
+                : 'Ask about the Team Handbook…'
+            }
             rows={1}
             disabled={loading}
             className="flex-1 resize-none px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-sm text-gray-800 bg-gray-50 disabled:opacity-60 transition-shadow"
@@ -358,7 +382,9 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
           </button>
         </div>
         <p className="text-center text-[10px] text-gray-400 mt-2">
-          Answers are based on the WHG handbook only · Shift+Enter for new line
+          {language === 'es'
+            ? 'Las respuestas se basan en el manual de WHG · Shift+Enter para nueva línea'
+            : 'Answers are based on the WHG handbook only · Shift+Enter for new line'}
         </p>
       </div>
     </div>
