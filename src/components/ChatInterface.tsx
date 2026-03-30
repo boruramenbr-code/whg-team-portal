@@ -7,6 +7,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  source?: 'employee' | 'manager' | 'employee-es';
 }
 
 const EMPLOYEE_QUESTIONS = [
@@ -80,6 +81,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
       id: `a-${Date.now()}`,
       role: 'assistant',
       content: '',
+      source: handbookSource,
     };
 
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
@@ -241,27 +243,43 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
             }`}
           >
             {msg.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-full bg-[#1B3A6B] flex items-center justify-center flex-shrink-0 mb-0.5">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5 ${
+                msg.source === 'manager' ? 'bg-amber-600' : 'bg-[#1B3A6B]'
+              }`}>
                 <span className="text-white text-[10px] font-bold">W</span>
               </div>
             )}
 
-            <div
-              className={`max-w-[82%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                msg.role === 'user'
-                  ? 'bg-[#1B3A6B] text-white rounded-br-sm'
-                  : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
-              }`}
-            >
-              {msg.content === '' && msg.role === 'assistant' ? (
-                <span className="flex gap-1 items-center py-0.5">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
+            <div className="flex flex-col gap-1 max-w-[82%]">
+              {msg.role === 'assistant' && msg.source === 'manager' && msg.content !== '' && (
+                <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide pl-1">
+                  Manager Reference
                 </span>
-              ) : (
-                msg.content
               )}
+              {msg.role === 'assistant' && msg.source === 'employee' && msg.content !== '' && (
+                <span className="text-[10px] font-semibold text-[#2E86C1] uppercase tracking-wide pl-1">
+                  Team Handbook
+                </span>
+              )}
+              <div
+                className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-[#1B3A6B] text-white rounded-br-sm'
+                    : msg.source === 'manager'
+                    ? 'bg-amber-50 text-gray-800 border border-amber-200 shadow-sm rounded-bl-sm'
+                    : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
+                }`}
+              >
+                {msg.content === '' && msg.role === 'assistant' ? (
+                  <span className="flex gap-1 items-center py-0.5">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
+                  </span>
+                ) : (
+                  msg.content
+                )}
+              </div>
             </div>
           </div>
         ))}
