@@ -10,7 +10,9 @@ function getAdminClient() {
   );
 }
 
-// PATCH /api/admin/users/[id] — Update status or role
+const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
+
+// PATCH /api/admin/users/[id] — Update status, role, or reset PIN
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -25,15 +27,15 @@ export async function PATCH(
     .eq('id', user.id)
     .single();
 
-  if (!me || !['admin', 'manager'].includes(me.role)) {
+  if (!me || !MANAGER_ROLES.includes(me.role)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const body = await req.json();
   const adminClient = getAdminClient();
 
-  // Managers can only update employees at their restaurant
-  if (me.role === 'manager') {
+  // Managers and assistant managers can only update employees at their own restaurant
+  if (me.role !== 'admin') {
     const { data: target } = await supabase
       .from('profiles')
       .select('restaurant_id, role')
@@ -45,19 +47,47 @@ export async function PATCH(
     }
 
     // Managers cannot change roles
-    if (body.role) {
+    if (body.role !== undefined) {
       return Response.json({ error: 'Managers cannot change roles' }, { status: 403 });
     }
   }
 
-  // If archiving, invalidate their active sessions immediately
+  // Handle PIN reset — update auth password and profile PIN
+  if (body.pin !== undefined) {
+    if (!/^\d{4}$/.test(body.pin)) {
+      return Response.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+    }
+
+    const newPassword = `WHG${body.pin}!staff`;
+    const { error: pwError } = await adminClient.auth.admin.updateUserById(params.id, {
+      password: newPassword,
+    });
+
+    if (pwError) return Response.json({ error: pwError.message }, { status: 400 });
+
+    // Update stored PIN in profile
+    const { error: pinError } = await adminClient
+      .from('profiles')
+      .update({ employee_pin: body.pin })
+      .eq('id', params.id);
+
+    if (pinError) return Response.json({ error: pinError.message }, { status: 400 });
+
+    return Response.json({ success: true });
+  }
+
+  // If archiving, immediately invalidate all active sessions
   if (body.status === 'archived') {
     await adminClient.auth.admin.signOut(params.id, 'global');
   }
 
+  // Build profile update — strip 'pin' key (handled separately above via auth password update)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { pin: _ignored, ...profileUpdate } = body;
+
   const { error } = await adminClient
     .from('profiles')
-    .update(body)
+    .update(profileUpdate)
     .eq('id', params.id);
 
   if (error) return Response.json({ error: error.message }, { status: 400 });

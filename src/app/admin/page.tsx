@@ -15,7 +15,7 @@ export default async function AdminPage() {
     .eq('id', user.id)
     .single();
 
-  if (!profile || !['admin', 'manager'].includes(profile.role)) {
+  if (!profile || !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
     redirect('/dashboard');
   }
 
@@ -28,7 +28,7 @@ export default async function AdminPage() {
   const { data: restaurants } = await supabase
     .from('restaurants')
     .select('*')
-    .eq('is_active', true)
+    .not('is_active', 'eq', false)
     .order('name');
 
   return (

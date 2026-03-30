@@ -19,7 +19,7 @@ export default async function DashboardPage() {
 
   if (profile.status === 'archived') redirect('/?error=account_archived');
 
-  const isManager = profile.role === 'manager' || profile.role === 'admin';
+  const isManager = ['manager', 'assistant_manager', 'admin'].includes(profile.role);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

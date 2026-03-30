@@ -15,24 +15,81 @@ interface AdminPanelProps {
 const ROLE_STYLES: Record<string, string> = {
   admin: 'bg-purple-100 text-purple-700',
   manager: 'bg-blue-100 text-blue-700',
+  assistant_manager: 'bg-sky-100 text-sky-700',
   employee: 'bg-gray-100 text-gray-600',
 };
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  manager: 'Manager',
+  assistant_manager: 'Asst. Manager',
+  employee: 'Employee',
+};
+
+function PinInput({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    onChange(v);
+  };
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="\d{4}"
+        maxLength={4}
+        value={value}
+        onChange={handleChange}
+        disabled={disabled}
+        placeholder="0000"
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-mono tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-center text-gray-800 bg-gray-50 disabled:opacity-60"
+        required
+      />
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={`w-1.5 h-1.5 rounded-full transition-colors ${
+              i < value.length ? 'bg-[#1B3A6B]' : 'bg-gray-200'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps) {
   const [users, setUsers] = useState<ProfileWithRestaurant[]>([]);
   const [filter, setFilter] = useState<'active' | 'archived'>('active');
   const [loading, setLoading] = useState(true);
+
+  // Add member modal
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     full_name: '',
-    email: '',
-    password: '',
+    pin: '',
     restaurant_id: currentUser.restaurant_id || '',
     role: 'employee' as UserRole,
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+
+  // PIN reset modal
+  const [resetTarget, setResetTarget] = useState<ProfileWithRestaurant | null>(null);
+  const [newPin, setNewPin] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   const isAdmin = currentUser.role === 'admin';
 
@@ -50,6 +107,10 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.pin.length !== 4) {
+      setFormError('PIN must be exactly 4 digits.');
+      return;
+    }
     setFormLoading(true);
     setFormError('');
     setFormSuccess('');
@@ -66,11 +127,10 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       setFormError(data.error || 'Failed to create account. Please try again.');
       setFormLoading(false);
     } else {
-      setFormSuccess(`Account created for ${form.full_name}!`);
+      setFormSuccess(`${form.full_name} has been added!`);
       setForm({
         full_name: '',
-        email: '',
-        password: '',
+        pin: '',
         restaurant_id: currentUser.restaurant_id || '',
         role: 'employee',
       });
@@ -85,7 +145,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
   const toggleArchive = async (userId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'archived' : 'active';
-    const confirmed = confirm(
+    const confirmed = window.confirm(
       newStatus === 'archived'
         ? 'Archive this team member? They will immediately lose access.'
         : 'Restore access for this team member?'
@@ -109,6 +169,47 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     fetchUsers();
   };
 
+  const handleResetPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    if (newPin.length !== 4) {
+      setResetError('PIN must be exactly 4 digits.');
+      return;
+    }
+    setResetLoading(true);
+    setResetError('');
+    setResetSuccess('');
+
+    const res = await fetch(`/api/admin/users/${resetTarget.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: newPin }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setResetError(data.error || 'Failed to reset PIN.');
+      setResetLoading(false);
+    } else {
+      setResetSuccess(`PIN updated for ${resetTarget.full_name}!`);
+      setResetLoading(false);
+      setTimeout(() => {
+        setResetTarget(null);
+        setNewPin('');
+        setResetSuccess('');
+        fetchUsers();
+      }, 1500);
+    }
+  };
+
+  const openResetPin = (u: ProfileWithRestaurant) => {
+    setResetTarget(u);
+    setNewPin('');
+    setResetError('');
+    setResetSuccess('');
+  };
+
   const visibleRestaurants = isAdmin
     ? restaurants
     : restaurants.filter((r) => r.id === currentUser.restaurant_id);
@@ -120,11 +221,17 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
         <div>
           <h2 className="text-xl font-bold text-[#1B3A6B]">Team Members</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            {isAdmin ? 'All restaurants' : (currentUser as ProfileWithRestaurant).restaurants?.name}
+            {isAdmin
+              ? 'All restaurants'
+              : (currentUser as ProfileWithRestaurant).restaurants?.name}
           </p>
         </div>
         <button
-          onClick={() => { setShowForm(true); setFormError(''); setFormSuccess(''); }}
+          onClick={() => {
+            setShowForm(true);
+            setFormError('');
+            setFormSuccess('');
+          }}
           className="bg-[#1B3A6B] hover:bg-[#2E86C1] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           + Add Member
@@ -165,7 +272,8 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
               <div className="min-w-0">
                 <p className="font-semibold text-gray-800 text-sm truncate">{u.full_name}</p>
                 <p className="text-xs text-gray-500 truncate">
-                  {u.restaurants?.name || '—'} · {u.id === currentUser.id ? 'You' : u.role}
+                  {u.restaurants?.name || '—'}
+                  {u.id === currentUser.id ? ' · You' : ''}
                 </p>
               </div>
 
@@ -178,6 +286,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2E86C1] bg-white"
                   >
                     <option value="employee">Employee</option>
+                    <option value="assistant_manager">Asst. Manager</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>
@@ -187,8 +296,19 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       ROLE_STYLES[u.role] || ROLE_STYLES.employee
                     }`}
                   >
-                    {u.role}
+                    {ROLE_LABELS[u.role] || u.role}
                   </span>
+                )}
+
+                {/* PIN Reset — only for employees, shown to managers */}
+                {u.role === 'employee' && u.id !== currentUser.id && (
+                  <button
+                    onClick={() => openResetPin(u)}
+                    className="text-xs px-3 py-1 rounded-lg font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                    title="Reset PIN"
+                  >
+                    PIN
+                  </button>
                 )}
 
                 {/* Archive / Restore */}
@@ -210,11 +330,14 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
         </div>
       )}
 
-      {/* Add Member Modal */}
+      {/* ─── ADD MEMBER MODAL ─── */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-lg font-bold text-[#1B3A6B] mb-4">Add Team Member</h3>
+            <h3 className="text-lg font-bold text-[#1B3A6B] mb-1">Add Team Member</h3>
+            <p className="text-xs text-gray-500 mb-5">
+              They'll use their name + 4-digit PIN to log in.
+            </p>
 
             {formSuccess ? (
               <div className="text-center py-6">
@@ -224,7 +347,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
             ) : (
               <form onSubmit={handleAddUser} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
                     Full Name
                   </label>
                   <input
@@ -232,40 +355,27 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                     value={form.full_name}
                     onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1]"
+                    placeholder="e.g. Sarah Johnson"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Email Address
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    4-Digit PIN
                   </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1]"
-                    required
+                  <PinInput
+                    value={form.pin}
+                    onChange={(v) => setForm({ ...form, pin: v })}
+                    disabled={formLoading}
                   />
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Share this PIN with them after adding.
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Temporary Password
-                  </label>
-                  <input
-                    type="text"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1]"
-                    placeholder="Min. 8 characters — share this with them"
-                    minLength={8}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
                     Restaurant
                   </label>
                   <select
@@ -285,7 +395,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
                 {isAdmin && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
                       Role
                     </label>
                     <select
@@ -294,6 +404,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
                     >
                       <option value="employee">Employee</option>
+                      <option value="assistant_manager">Assistant Manager</option>
                       <option value="manager">Manager</option>
                       <option value="admin">Admin</option>
                     </select>
@@ -316,10 +427,66 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </button>
                   <button
                     type="submit"
-                    disabled={formLoading}
+                    disabled={formLoading || form.pin.length !== 4}
                     className="flex-1 py-2.5 bg-[#1B3A6B] hover:bg-[#2E86C1] text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
                   >
-                    {formLoading ? 'Creating...' : 'Create Account'}
+                    {formLoading ? 'Adding...' : 'Add Member'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── PIN RESET MODAL ─── */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-lg font-bold text-[#1B3A6B] mb-1">Reset PIN</h3>
+            <p className="text-xs text-gray-500 mb-5">
+              Setting a new PIN for{' '}
+              <span className="font-semibold text-gray-700">{resetTarget.full_name}</span>
+            </p>
+
+            {resetSuccess ? (
+              <div className="text-center py-6">
+                <div className="text-4xl mb-3">✅</div>
+                <p className="text-green-700 font-semibold">{resetSuccess}</p>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    New 4-Digit PIN
+                  </label>
+                  <PinInput
+                    value={newPin}
+                    onChange={setNewPin}
+                    disabled={resetLoading}
+                  />
+                </div>
+
+                {resetError && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
+                    {resetError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setResetTarget(null)}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetLoading || newPin.length !== 4}
+                    className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
+                  >
+                    {resetLoading ? 'Saving...' : 'Save PIN'}
                   </button>
                 </div>
               </form>

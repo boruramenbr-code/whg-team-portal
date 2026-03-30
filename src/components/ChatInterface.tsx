@@ -39,8 +39,10 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isManager = profile.role === 'manager' || profile.role === 'admin';
+  const isManager = ['manager', 'admin', 'assistant_manager'].includes(profile.role);
   const firstName = profile.full_name.split(' ')[0];
+  const restaurantName = (profile.restaurants as { name?: string } | null)?.name || null;
+  const greeting = restaurantName ? `Hey ${firstName} of ${restaurantName}!` : `Hey ${firstName}!`;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -210,7 +212,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
               }`}>WHG</span>
             </div>
             <h3 className="text-[#1B3A6B] font-bold text-lg">
-              {handbookSource === 'manager' ? `Manager Reference` : `Hey ${firstName}!`}
+              {handbookSource === 'manager' ? `Manager Reference` : greeting}
             </h3>
             <p className="text-gray-500 text-sm mt-1 max-w-xs">
               {handbookSource === 'manager'

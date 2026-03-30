@@ -1,12 +1,12 @@
-export type UserRole = 'employee' | 'manager' | 'admin';
+export type UserRole = 'employee' | 'manager' | 'assistant_manager' | 'admin';
 export type UserStatus = 'active' | 'archived';
 export type HandbookSource = 'employee' | 'manager';
 
 export interface Restaurant {
   id: string;
   name: string;
-  slug: string;
-  is_active: boolean;
+  slug?: string;
+  is_active?: boolean;
 }
 
 export interface Profile {

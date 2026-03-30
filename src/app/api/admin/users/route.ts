@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { randomUUID } from 'crypto';
 
 // Admin client uses service role key — SERVER ONLY
 function getAdminClient() {
@@ -10,6 +11,8 @@ function getAdminClient() {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 }
+
+const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
 
 // GET /api/admin/users?status=active|archived
 export async function GET(req: NextRequest) {
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!me || !['admin', 'manager'].includes(me.role)) {
+  if (!me || !MANAGER_ROLES.includes(me.role)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -35,8 +38,8 @@ export async function GET(req: NextRequest) {
     .eq('status', status)
     .order('full_name');
 
-  // Managers only see their own restaurant
-  if (me.role === 'manager') {
+  // Managers and assistant managers only see their own restaurant
+  if (me.role !== 'admin') {
     query = query.eq('restaurant_id', me.restaurant_id);
   }
 
@@ -46,7 +49,7 @@ export async function GET(req: NextRequest) {
   return Response.json({ users });
 }
 
-// POST /api/admin/users — Create a new team member
+// POST /api/admin/users — Create a new team member using PIN
 export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -58,16 +61,25 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!me || !['admin', 'manager'].includes(me.role)) {
+  if (!me || !MANAGER_ROLES.includes(me.role)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const body = await req.json();
-  const { full_name, email, password, restaurant_id, role } = body;
+  const { full_name, pin, restaurant_id, role } = body;
 
-  // Managers can only add employees to their own restaurant
-  if (me.role === 'manager') {
-    if (role !== 'employee') {
+  if (!full_name || !pin || !restaurant_id) {
+    return Response.json({ error: 'Name, PIN, and restaurant are required' }, { status: 400 });
+  }
+
+  // Validate PIN format
+  if (!/^\d{4}$/.test(pin)) {
+    return Response.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+  }
+
+  // Managers and assistant managers can only add employees to their own restaurant
+  if (me.role !== 'admin') {
+    if (role && role !== 'employee') {
       return Response.json(
         { error: 'Managers can only create employee accounts' },
         { status: 403 }
@@ -83,11 +95,17 @@ export async function POST(req: NextRequest) {
 
   const adminClient = getAdminClient();
 
-  // Create Supabase auth user
+  // Pre-generate a UUID to use as both user ID and email prefix
+  const staffId = randomUUID();
+  const email = `${staffId}@whg.staff`;
+  const password = `WHG${pin}!staff`;
+
+  // Create Supabase auth user with pre-specified ID
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+    id: staffId,
     email,
     password,
-    email_confirm: true, // Skip email verification — manager sets credentials
+    email_confirm: true,
     user_metadata: { full_name },
   });
 
@@ -102,6 +120,7 @@ export async function POST(req: NextRequest) {
     restaurant_id,
     role: role || 'employee',
     status: 'active',
+    employee_pin: pin,
   });
 
   if (profileError) {
