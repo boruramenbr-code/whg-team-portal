@@ -30,9 +30,17 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Question is required' }, { status: 400 });
   }
 
-  // Determine which handbook to search based on role
+  // Detect Spanish questions by looking for Spanish-specific characters/words
+  const spanishPattern = /[ñáéíóúüÁÉÍÓÚÜ¿¡]|(^|\s)(qué|cómo|cuál|cuándo|dónde|puedo|tengo|hay|es|son|para|por|con|del|las|los|una|esto|esta|tiene|puede|debo|política|horario|descanso|uniforme|descuento|vacaciones|ausencia)/i;
+  const isSpanish = spanishPattern.test(question);
+
+  // Determine which handbook to search based on role and language
   const isManagerOrAdmin = ['manager', 'admin'].includes(profile.role);
-  const source = isManagerOrAdmin && handbookSource === 'manager' ? 'manager' : 'employee';
+  const source = isManagerOrAdmin && handbookSource === 'manager'
+    ? 'manager'
+    : isSpanish
+    ? 'employee-es'
+    : 'employee';
 
   // Generate embedding for the question
   let embedding: number[];
@@ -76,6 +84,7 @@ GUIDELINES:
 - If the answer is in the handbook, give it clearly. You can quote directly if helpful.
 - If the answer is NOT in the handbook, say: "I don't have that information in the handbook. Please ask your manager directly."
 - Never say anything that contradicts the handbook.
+- LANGUAGE: ${isSpanish ? 'The question is in Spanish. Respond ONLY in Spanish.' : 'Respond in English only. Never include Spanish in your response.'}
 - The team member works at: ${restaurantName}
 - If a policy varies by location, use the restaurant-specific version below.
 
