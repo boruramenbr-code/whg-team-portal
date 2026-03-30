@@ -77,12 +77,17 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
   const [form, setForm] = useState({
     full_name: '',
     pin: '',
+    email: '',
+    password: '',
     restaurant_id: currentUser.restaurant_id || '',
     role: 'employee' as UserRole,
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+
+  const isEmployeeRole = form.role === 'employee';
+  const isElevatedRole = ['manager', 'assistant_manager', 'admin'].includes(form.role);
 
   // PIN reset modal
   const [resetTarget, setResetTarget] = useState<ProfileWithRestaurant | null>(null);
@@ -105,12 +110,30 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     fetchUsers();
   }, [fetchUsers]);
 
+  const resetForm = () => {
+    setForm({
+      full_name: '',
+      pin: '',
+      email: '',
+      password: '',
+      restaurant_id: currentUser.restaurant_id || '',
+      role: 'employee',
+    });
+  };
+
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.pin.length !== 4) {
+
+    // Client-side validation by role type
+    if (form.role === 'employee' && form.pin.length !== 4) {
       setFormError('PIN must be exactly 4 digits.');
       return;
     }
+    if (isElevatedRole && (!form.email || form.password.length < 8)) {
+      setFormError('Email and a password of at least 8 characters are required.');
+      return;
+    }
+
     setFormLoading(true);
     setFormError('');
     setFormSuccess('');
@@ -128,12 +151,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       setFormLoading(false);
     } else {
       setFormSuccess(`${form.full_name} has been added!`);
-      setForm({
-        full_name: '',
-        pin: '',
-        restaurant_id: currentUser.restaurant_id || '',
-        role: 'employee',
-      });
+      resetForm();
       setFormLoading(false);
       setTimeout(() => {
         setShowForm(false);
@@ -332,11 +350,13 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
       {/* ─── ADD MEMBER MODAL ─── */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl my-auto">
             <h3 className="text-lg font-bold text-[#1B3A6B] mb-1">Add Team Member</h3>
             <p className="text-xs text-gray-500 mb-5">
-              They'll use their name + 4-digit PIN to log in.
+              {isElevatedRole
+                ? 'Manager accounts use email + password to sign in.'
+                : 'Staff will select their name and enter their PIN to sign in.'}
             </p>
 
             {formSuccess ? (
@@ -346,6 +366,27 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
               </div>
             ) : (
               <form onSubmit={handleAddUser} className="space-y-4">
+
+                {/* Role — shown first so the form adapts immediately */}
+                {isAdmin && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                      Role
+                    </label>
+                    <select
+                      value={form.role}
+                      onChange={(e) => setForm({ ...form, role: e.target.value as UserRole, pin: '', email: '', password: '' })}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                    >
+                      <option value="employee">Employee</option>
+                      <option value="assistant_manager">Assistant Manager</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Full Name */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
                     Full Name
@@ -360,20 +401,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                    4-Digit PIN
-                  </label>
-                  <PinInput
-                    value={form.pin}
-                    onChange={(v) => setForm({ ...form, pin: v })}
-                    disabled={formLoading}
-                  />
-                  <p className="text-[11px] text-gray-400 mt-1.5">
-                    Share this PIN with them after adding.
-                  </p>
-                </div>
-
+                {/* Restaurant */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
                     Restaurant
@@ -386,29 +414,62 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   >
                     <option value="">Select a restaurant...</option>
                     {visibleRestaurants.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
+                      <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
                   </select>
                 </div>
 
-                {isAdmin && (
+                {/* EMPLOYEE: 4-digit PIN */}
+                {isEmployeeRole && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                      Role
+                      4-Digit PIN
                     </label>
-                    <select
-                      value={form.role}
-                      onChange={(e) => setForm({ ...form, role: e.target.value as UserRole })}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
-                    >
-                      <option value="employee">Employee</option>
-                      <option value="assistant_manager">Assistant Manager</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    <PinInput
+                      value={form.pin}
+                      onChange={(v) => setForm({ ...form, pin: v })}
+                      disabled={formLoading}
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1.5">
+                      Share this PIN with them after adding.
+                    </p>
                   </div>
+                )}
+
+                {/* MANAGER / ASST. MANAGER / ADMIN: email + password */}
+                {isElevatedRole && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1]"
+                        placeholder="manager@email.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        Temporary Password
+                      </label>
+                      <input
+                        type="text"
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] font-mono"
+                        placeholder="Min. 8 characters"
+                        minLength={8}
+                        required
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1.5">
+                        They'll use this to sign in under Manager / Owner login.
+                      </p>
+                    </div>
+                  </>
                 )}
 
                 {formError && (
@@ -420,14 +481,18 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                 <div className="flex gap-3 pt-1">
                   <button
                     type="button"
-                    onClick={() => setShowForm(false)}
+                    onClick={() => { setShowForm(false); resetForm(); }}
                     className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={formLoading || form.pin.length !== 4}
+                    disabled={
+                      formLoading ||
+                      (isEmployeeRole && form.pin.length !== 4) ||
+                      (isElevatedRole && (!form.email || form.password.length < 8))
+                    }
                     className="flex-1 py-2.5 bg-[#1B3A6B] hover:bg-[#2E86C1] text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
                   >
                     {formLoading ? 'Adding...' : 'Add Member'}

@@ -13,6 +13,7 @@ function getAdminClient() {
 }
 
 const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
+const ELEVATED_ROLES = ['manager', 'assistant_manager', 'admin'];
 
 // GET /api/admin/users?status=active|archived
 export async function GET(req: NextRequest) {
@@ -49,7 +50,9 @@ export async function GET(req: NextRequest) {
   return Response.json({ users });
 }
 
-// POST /api/admin/users — Create a new team member using PIN
+// POST /api/admin/users — Create a new team member
+// Employees: PIN-based auth (name + 4-digit PIN)
+// Managers / Asst. Managers: email + password (admin only)
 export async function POST(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -66,65 +69,96 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, pin, restaurant_id, role } = body;
+  const { full_name, restaurant_id, role, pin, email, password } = body;
 
-  if (!full_name || !pin || !restaurant_id) {
-    return Response.json({ error: 'Name, PIN, and restaurant are required' }, { status: 400 });
+  if (!full_name || !restaurant_id) {
+    return Response.json({ error: 'Name and restaurant are required' }, { status: 400 });
   }
 
-  // Validate PIN format
-  if (!/^\d{4}$/.test(pin)) {
-    return Response.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+  const targetRole = role || 'employee';
+  const isElevatedRole = ELEVATED_ROLES.includes(targetRole);
+
+  // Only admins can create manager-level accounts
+  if (isElevatedRole && me.role !== 'admin') {
+    return Response.json({ error: 'Only admins can create manager accounts' }, { status: 403 });
   }
 
-  // Managers and assistant managers can only add employees to their own restaurant
+  // Managers/assistant managers can only add employees to their own restaurant
   if (me.role !== 'admin') {
-    if (role && role !== 'employee') {
-      return Response.json(
-        { error: 'Managers can only create employee accounts' },
-        { status: 403 }
-      );
+    if (targetRole !== 'employee') {
+      return Response.json({ error: 'Managers can only create employee accounts' }, { status: 403 });
     }
     if (restaurant_id !== me.restaurant_id) {
-      return Response.json(
-        { error: 'Managers can only add staff to their own restaurant' },
-        { status: 403 }
-      );
+      return Response.json({ error: 'Managers can only add staff to their own restaurant' }, { status: 403 });
     }
   }
 
   const adminClient = getAdminClient();
 
-  // Pre-generate a UUID to use as both user ID and email prefix
-  const staffId = randomUUID();
-  const email = `${staffId}@whg.staff`;
-  const password = `WHG${pin}!staff`;
+  // ── EMPLOYEE: PIN-based auth ──────────────────────────────────────────────
+  if (targetRole === 'employee') {
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      return Response.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+    }
 
-  // Create Supabase auth user with pre-specified ID
+    const staffId = randomUUID();
+    const staffEmail = `${staffId}@whg.staff`;
+    const staffPassword = `WHG${pin}!staff`;
+
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+      id: staffId,
+      email: staffEmail,
+      password: staffPassword,
+      email_confirm: true,
+      user_metadata: { full_name },
+    });
+
+    if (authError) return Response.json({ error: authError.message }, { status: 400 });
+
+    const { error: profileError } = await adminClient.from('profiles').insert({
+      id: authData.user.id,
+      full_name,
+      restaurant_id,
+      role: 'employee',
+      status: 'active',
+      employee_pin: pin,
+    });
+
+    if (profileError) {
+      await adminClient.auth.admin.deleteUser(authData.user.id);
+      return Response.json({ error: profileError.message }, { status: 400 });
+    }
+
+    return Response.json({ success: true }, { status: 201 });
+  }
+
+  // ── MANAGER / ASST. MANAGER / ADMIN: email + password ────────────────────
+  if (!email || !password) {
+    return Response.json({ error: 'Email and password are required for manager accounts' }, { status: 400 });
+  }
+
+  if (password.length < 8) {
+    return Response.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+  }
+
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-    id: staffId,
-    email,
+    email: email.trim().toLowerCase(),
     password,
     email_confirm: true,
     user_metadata: { full_name },
   });
 
-  if (authError) {
-    return Response.json({ error: authError.message }, { status: 400 });
-  }
+  if (authError) return Response.json({ error: authError.message }, { status: 400 });
 
-  // Create profile row
   const { error: profileError } = await adminClient.from('profiles').insert({
     id: authData.user.id,
     full_name,
     restaurant_id,
-    role: role || 'employee',
+    role: targetRole,
     status: 'active',
-    employee_pin: pin,
   });
 
   if (profileError) {
-    // Roll back auth user if profile creation failed
     await adminClient.auth.admin.deleteUser(authData.user.id);
     return Response.json({ error: profileError.message }, { status: 400 });
   }
