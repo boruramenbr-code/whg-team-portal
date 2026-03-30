@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
   // Search handbook for relevant chunks via vector similarity
   const { data: chunks } = await supabase.rpc('match_handbook_chunks', {
     query_embedding: embedding,
-    match_threshold: 0.5,
-    match_count: 6,
+    match_threshold: 0.2,
+    match_count: 8,
     source_filter: source,
   });
 
