@@ -10,7 +10,7 @@ interface TopicGroup {
   topics: Topic[];
 }
 
-const EMPLOYEE_TOPICS: TopicGroup[] = [
+const EMPLOYEE_TOPICS_EN: TopicGroup[] = [
   {
     category: 'Policies',
     topics: [
@@ -41,6 +41,41 @@ const EMPLOYEE_TOPICS: TopicGroup[] = [
       { label: 'Clocking In & Out', question: 'What are the rules for clocking in and out?' },
       { label: 'Safety & Emergencies', question: 'What are the safety and emergency procedures?' },
       { label: 'Food Safety', question: 'What are the food safety requirements for staff?' },
+    ],
+  },
+];
+
+const EMPLOYEE_TOPICS_ES: TopicGroup[] = [
+  {
+    category: 'Políticas',
+    topics: [
+      { label: 'Asistencia y Ausencias', question: '¿Cuál es la política de asistencia y ausencias?' },
+      { label: 'Código de Vestimenta', question: '¿Cuáles son los requisitos del código de vestimenta?' },
+      { label: 'Uso del Teléfono', question: '¿Cuál es la política de uso del teléfono personal en el trabajo?' },
+      { label: 'Redes Sociales', question: '¿Cuál es la política de redes sociales?' },
+      { label: 'Acoso y Conducta', question: '¿Cuál es la política de acoso y conducta en el trabajo?' },
+      { label: 'Disciplina Progresiva', question: '¿Cuál es la política de disciplina progresiva?' },
+    ],
+  },
+  {
+    category: 'Pago y Beneficios',
+    topics: [
+      { label: 'Descuento en Comidas', question: '¿Cuál es la política de descuento en comidas?' },
+      { label: 'Propinas', question: '¿Cómo funciona la política de propinas?' },
+      { label: 'Horas Extra', question: '¿Hay pago de horas extra y cómo funciona?' },
+      { label: 'Días Festivos', question: '¿Hay que trabajar en días festivos y hay pago especial?' },
+      { label: 'Días Libres', question: '¿Cuál es la política de días libres y vacaciones?' },
+      { label: 'Descansos', question: '¿Cuándo son los descansos y cuánto duran?' },
+    ],
+  },
+  {
+    category: 'Estándares de Trabajo',
+    topics: [
+      { label: 'Servicio al Cliente', question: '¿Cuáles son los estándares de servicio al cliente?' },
+      { label: 'Uniforme y Apariencia', question: '¿Cuáles son los estándares de uniforme y apariencia?' },
+      { label: 'Entrada y Salida', question: '¿Cuáles son las reglas para marcar entrada y salida?' },
+      { label: 'Seguridad y Emergencias', question: '¿Cuáles son los procedimientos de seguridad y emergencias?' },
+      { label: 'Seguridad Alimentaria', question: '¿Cuáles son los requisitos de seguridad alimentaria para el personal?' },
     ],
   },
 ];
@@ -80,18 +115,29 @@ const MANAGER_TOPICS: TopicGroup[] = [
 interface Props {
   handbookSource: 'employee' | 'manager';
   onSelect: (question: string) => void;
+  language: 'en' | 'es';
 }
 
-export default function TopicBrowser({ handbookSource, onSelect }: Props) {
-  const groups = handbookSource === 'manager' ? MANAGER_TOPICS : EMPLOYEE_TOPICS;
+export default function TopicBrowser({ handbookSource, onSelect, language }: Props) {
   const isManager = handbookSource === 'manager';
+  const isSpanish = language === 'es';
+
+  const groups = isManager
+    ? MANAGER_TOPICS
+    : isSpanish
+    ? EMPLOYEE_TOPICS_ES
+    : EMPLOYEE_TOPICS_EN;
 
   return (
     <div className="p-4 space-y-5">
       <div className="flex items-center gap-2">
         <div className={`w-1.5 h-5 rounded-full ${isManager ? 'bg-amber-500' : 'bg-[#2E86C1]'}`} />
         <h3 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider">
-          {isManager ? 'Manager Topics' : 'Handbook Topics'}
+          {isManager
+            ? 'Manager Topics'
+            : isSpanish
+            ? 'Temas del Manual'
+            : 'Handbook Topics'}
         </h3>
       </div>
 

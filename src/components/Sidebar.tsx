@@ -7,11 +7,13 @@ import TopicBrowser from './TopicBrowser';
 interface Props {
   handbookSource: 'employee' | 'manager';
   onSelect: (question: string) => void;
+  language: 'en' | 'es';
 }
 
-export default function Sidebar({ handbookSource, onSelect }: Props) {
+export default function Sidebar({ handbookSource, onSelect, language }: Props) {
   const [tab, setTab] = useState<'popular' | 'topics'>('topics');
   const isManager = handbookSource === 'manager';
+  const isSpanish = language === 'es';
 
   return (
     <div className="flex flex-col h-full">
@@ -27,7 +29,7 @@ export default function Sidebar({ handbookSource, onSelect }: Props) {
               : 'text-gray-400 hover:text-gray-600'
           }`}
         >
-          Topics
+          {isSpanish ? 'Temas' : 'Topics'}
         </button>
         <button
           onClick={() => setTab('popular')}
@@ -39,14 +41,14 @@ export default function Sidebar({ handbookSource, onSelect }: Props) {
               : 'text-gray-400 hover:text-gray-600'
           }`}
         >
-          Popular
+          {isSpanish ? 'Popular' : 'Popular'}
         </button>
       </div>
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
         {tab === 'topics' ? (
-          <TopicBrowser handbookSource={handbookSource} onSelect={onSelect} />
+          <TopicBrowser handbookSource={handbookSource} onSelect={onSelect} language={language} />
         ) : (
           <PopularQuestions onSelect={onSelect} />
         )}

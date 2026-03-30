@@ -13,6 +13,7 @@ interface Props {
 export default function DashboardClient({ profile, isManager }: Props) {
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
+  const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
 
   const handleSelect = (q: string) => {
@@ -30,6 +31,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
             pendingQuestion={pendingQuestion}
             onPendingQuestionConsumed={() => setPendingQuestion(null)}
             onHandbookSourceChange={setHandbookSource}
+            language={language}
+            onLanguageChange={setLanguage}
           />
         </div>
 
@@ -54,7 +57,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-gray-100 bg-gray-50/60 overflow-hidden">
-        <Sidebar handbookSource={handbookSource} onSelect={handleSelect} />
+        <Sidebar handbookSource={handbookSource} onSelect={handleSelect} language={language} />
       </aside>
 
       {/* Mobile topics sheet */}
@@ -75,7 +78,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
               </button>
             </div>
             <div className="overflow-y-auto flex-1">
-              <Sidebar handbookSource={handbookSource} onSelect={handleSelect} />
+              <Sidebar handbookSource={handbookSource} onSelect={handleSelect} language={language} />
             </div>
           </div>
         </>

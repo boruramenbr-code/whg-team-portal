@@ -36,14 +36,15 @@ interface ChatInterfaceProps {
   pendingQuestion?: string | null;
   onPendingQuestionConsumed?: () => void;
   onHandbookSourceChange?: (source: 'employee' | 'manager') => void;
+  language: 'en' | 'es';
+  onLanguageChange: (lang: 'en' | 'es') => void;
 }
 
-export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed, onHandbookSourceChange }: ChatInterfaceProps) {
+export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed, onHandbookSourceChange, language, onLanguageChange }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
-  const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -209,7 +210,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
             isManager && handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
           }`}>
             <button
-              onClick={() => setLanguage('en')}
+              onClick={() => onLanguageChange('en')}
               className={`py-1 px-2.5 text-xs font-bold rounded-md transition-all ${
                 language === 'en'
                   ? isManager && handbookSource === 'manager'
@@ -223,7 +224,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
               EN
             </button>
             <button
-              onClick={() => setLanguage('es')}
+              onClick={() => onLanguageChange('es')}
               className={`py-1 px-2.5 text-xs font-bold rounded-md transition-all ${
                 language === 'es'
                   ? isManager && handbookSource === 'manager'
