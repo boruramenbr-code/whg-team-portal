@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const isSpanish = spanishPattern.test(question);
 
   // Determine which handbook to search based on role and language
-  const isManagerOrAdmin = ['manager', 'admin'].includes(profile.role);
+  const isManagerOrAdmin = ['manager', 'assistant_manager', 'admin'].includes(profile.role);
   const source = isManagerOrAdmin && handbookSource === 'manager'
     ? 'manager'
     : isSpanish
@@ -83,7 +83,7 @@ GUIDELINES:
 - Answer in plain, friendly language. Be direct and helpful.
 - If the answer is in the handbook, give it clearly. You can quote directly if helpful.
 - LANGUAGE: ${isSpanish ? 'The question is in Spanish. Respond ONLY in Spanish.' : 'Respond in English only. Never include Spanish in your response.'}
-- The team member works at: ${restaurantName}
+- This team member works at ${restaurantName}. Always refer to their location by name (e.g., "at ${restaurantName}" or "here at ${restaurantName}") rather than saying "your restaurant" or "your location." Make every answer feel like it's specifically for ${restaurantName}.
 - If a policy varies by location, use the restaurant-specific version below.
 
 WHEN THE HANDBOOK DOESN'T COVER THE QUESTION:
