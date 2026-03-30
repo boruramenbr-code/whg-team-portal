@@ -105,12 +105,22 @@ ${handbookContext || 'No relevant handbook sections found for this question.'}
 ${isSpanish ? '🔴 REMINDER: Your entire response must be in Spanish (Español). Every word. No exceptions.' : ''}`;
 
   // Stream the answer
+  // When Spanish is selected, prime the conversation so the model is already
+  // committed to responding in Spanish before it sees the question or handbook content.
+  const primedMessages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+    { role: 'system', content: systemPrompt },
+    ...(isSpanish
+      ? [
+          { role: 'user' as const, content: 'Por favor responde todas mis preguntas en español.' },
+          { role: 'assistant' as const, content: 'Entendido. Responderé todas tus preguntas completamente en español.' },
+        ]
+      : []),
+    { role: 'user', content: question },
+  ];
+
   const stream = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: question },
-    ],
+    messages: primedMessages,
     stream: true,
     temperature: 0.2,
     max_tokens: 600,
