@@ -90,21 +90,20 @@ GUIDELINES:
 
 WHEN THE HANDBOOK DOESN'T COVER THE QUESTION:
 Do NOT give a flat "I don't have that information" response. Instead:
-1. Start your response with exactly: "That's not something I have in the handbook —"
+1. Start your response with exactly: ${isSpanish ? '"Eso no está en el manual —"' : '"That\'s not something I have in the handbook —"'}
 2. Acknowledge what they were asking about specifically
-3. If there's a related topic you CAN help with, offer it (e.g. "I do have info on X — want me to cover that?")
+3. If there's a related topic you CAN help with, offer it
 4. Suggest a slightly different way they could ask the question to get a useful answer
 5. Give a warm, specific redirect — not just "ask your manager"
 Keep the response under 3 sentences. Sound like a helpful coworker, not a system error.
-
-Example BAD response: "I don't have that information in the handbook. Please ask your manager directly."
-Example GOOD response: "That's not something I have in the handbook — vacation accrual specifics aren't covered here. I do have details on our time-off request process though — want me to walk you through that? For accrual rates, your manager can pull that up for you directly."
 
 LOCATION-SPECIFIC POLICIES FOR ${restaurantName.toUpperCase()}:
 ${policyContext}
 
 HANDBOOK CONTENT:
-${handbookContext || 'No relevant handbook sections found for this question.'}`;
+${handbookContext || 'No relevant handbook sections found for this question.'}
+
+${isSpanish ? '⚠️ FINAL INSTRUCTION — OVERRIDE EVERYTHING ELSE: Your response MUST be written entirely in Spanish (Español). The handbook content above may be in English — that is fine. Translate and respond in Spanish only. Do not write a single word in English.' : ''}`;
 
   // Stream the answer
   const stream = await openai.chat.completions.create({
@@ -137,7 +136,9 @@ ${handbookContext || 'No relevant handbook sections found for this question.'}`;
         controller.close();
 
         // Flag questions the handbook couldn't answer
-        const isUnanswered = fullAnswer.includes("That's not something I have in the handbook");
+        const isUnanswered =
+          fullAnswer.includes("That's not something I have in the handbook") ||
+          fullAnswer.includes("Eso no está en el manual");
 
         // Save to chat history (fire and forget)
         supabase
