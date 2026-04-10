@@ -22,10 +22,34 @@ interface Props {
   isAdmin?: boolean;
 }
 
+// Returns an ISO date string (YYYY-MM-DD) for today or tomorrow in the user's local timezone.
+function getLocalDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  // Build YYYY-MM-DD in local time (not UTC) so late-night managers don't see the wrong day
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatFriendlyDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+type ShiftDay = 'today' | 'tomorrow';
+
 export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
   const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>(
     restaurants && restaurants.length > 0 ? restaurants[0].id : ''
   );
+  const [shiftDay, setShiftDay] = useState<ShiftDay>('today');
   const [message, setMessage] = useState('');
   const [specials, setSpecials] = useState<string[]>(['']);
   const [eightySixed, setEightySixed] = useState<string[]>(['']);
@@ -36,15 +60,18 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
   const [loading, setLoading] = useState(true);
   const [existingNote, setExistingNote] = useState<PreshiftNote | null>(null);
 
+  const shiftDate = getLocalDate(shiftDay === 'today' ? 0 : 1);
+  const friendlyDate = formatFriendlyDate(shiftDate);
+
   const loadNote = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const url =
-        isAdmin && selectedRestaurantId
-          ? `/api/preshift-notes?restaurant_id=${selectedRestaurantId}&t=${Date.now()}`
-          : `/api/preshift-notes?t=${Date.now()}`;
-      const r = await fetch(url, { cache: 'no-store' });
+      const params = new URLSearchParams({ date: shiftDate, t: String(Date.now()) });
+      if (isAdmin && selectedRestaurantId) {
+        params.set('restaurant_id', selectedRestaurantId);
+      }
+      const r = await fetch(`/api/preshift-notes?${params.toString()}`, { cache: 'no-store' });
       const d = await r.json();
       if (d.note) {
         setExistingNote(d.note);
@@ -64,7 +91,7 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, selectedRestaurantId]);
+  }, [isAdmin, selectedRestaurantId, shiftDate]);
 
   useEffect(() => {
     loadNote();
@@ -100,6 +127,7 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
         specials: specials.filter((s) => s.trim()),
         eightySixed: eightySixed.filter((s) => s.trim()),
         focusItems: focusItems.filter((s) => s.trim()),
+        shiftDate,
       };
       if (isAdmin && selectedRestaurantId) {
         body.restaurantId = selectedRestaurantId;
@@ -188,18 +216,60 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
             <div>
               <h3 className="font-bold text-gray-900 text-sm">Pre-Shift Notes</h3>
               <p className="text-[11px] text-gray-500">
-                {existingNote
+                {shiftDay === 'tomorrow'
+                  ? 'Prepping tomorrow — not visible to staff until tomorrow'
+                  : existingNote
                   ? "Editing today's note — changes go live immediately"
                   : 'Post a note for your team before their shift'}
               </p>
             </div>
           </div>
-          {existingNote && (
+          {existingNote && shiftDay === 'today' && (
             <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
               Live
             </span>
           )}
+          {existingNote && shiftDay === 'tomorrow' && (
+            <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+              Drafted
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* Today / Tomorrow toggle */}
+      <div className="px-5 pt-4">
+        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs font-semibold">
+          <button
+            onClick={() => setShiftDay('today')}
+            className={`px-3 py-1.5 rounded-md transition-colors ${
+              shiftDay === 'today'
+                ? 'bg-white text-[#1B3A6B] shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setShiftDay('tomorrow')}
+            className={`px-3 py-1.5 rounded-md transition-colors ${
+              shiftDay === 'tomorrow'
+                ? 'bg-white text-[#1B3A6B] shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Tomorrow
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-500 mt-1.5">
+          Editing note for <span className="font-semibold text-gray-700">{friendlyDate}</span>
+          {shiftDay === 'tomorrow' && (
+            <span className="text-blue-600">
+              {' '}
+              · goes live automatically at midnight
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="p-5 space-y-5">
@@ -293,7 +363,9 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
               Saving...
             </span>
           ) : existingNote ? (
-            'Update Pre-Shift Note'
+            shiftDay === 'tomorrow' ? "Update Tomorrow's Note" : 'Update Pre-Shift Note'
+          ) : shiftDay === 'tomorrow' ? (
+            "Save Tomorrow's Note"
           ) : (
             'Post Pre-Shift Note'
           )}
