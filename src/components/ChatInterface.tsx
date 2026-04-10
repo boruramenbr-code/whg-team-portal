@@ -105,7 +105,19 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
         body: JSON.stringify({ question, handbookSource, language }),
       });
 
-      if (!res.ok || !res.body) throw new Error('Request failed');
+      if (!res.ok || !res.body) {
+        // Handle rate limit or other API errors gracefully
+        let errorMsg = "I'm having trouble connecting right now. Please try again in a moment.";
+        try {
+          const errorData = await res.json();
+          if (res.status === 429) {
+            errorMsg = errorData.error || "You've reached the question limit. Please wait a bit before asking more.";
+          } else if (errorData.error) {
+            errorMsg = errorData.error;
+          }
+        } catch { /* use default message */ }
+        throw new Error(errorMsg);
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -140,15 +152,14 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
           }
         }
       }
-    } catch {
+    } catch (err) {
+      const errorMessage = err instanceof Error
+        ? err.message
+        : "I'm having trouble connecting right now. Please try again in a moment.";
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMsg.id
-            ? {
-                ...m,
-                content:
-                  "I'm having trouble connecting right now. Please try again in a moment.",
-              }
+            ? { ...m, content: errorMessage }
             : m
         )
       );

@@ -182,6 +182,7 @@ export default function LoginPage() {
         setError(data.error || 'Incorrect PIN. Please try again.');
         setPin('');
         setLoading(false);
+        return;
       } else {
         window.location.href = '/dashboard';
       }

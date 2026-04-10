@@ -1,8 +1,12 @@
 import { createClient } from '@/lib/supabase-server';
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Rate limit: 50 questions per user per hour (protects OpenAI costs)
+const CHAT_LIMIT = { maxAttempts: 50, windowSeconds: 3600 };
 
 export async function POST(req: NextRequest) {
   const supabase = createClient();
@@ -11,6 +15,15 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // ── Rate limiting (per user) ──────────────────────────────────────────
+  const rateCheck = checkRateLimit(`chat:${user.id}`, CHAT_LIMIT);
+  if (!rateCheck.allowed) {
+    return Response.json(
+      { error: `You've reached the question limit. Please wait a bit before asking more.` },
+      { status: 429, headers: { 'Retry-After': String(rateCheck.retryAfterSeconds) } }
+    );
   }
 
   // Load user profile + restaurant
@@ -28,6 +41,11 @@ export async function POST(req: NextRequest) {
 
   if (!question?.trim()) {
     return Response.json({ error: 'Question is required' }, { status: 400 });
+  }
+
+  // Limit question length to prevent abuse and keep embedding costs low
+  if (question.trim().length > 500) {
+    return Response.json({ error: 'Question is too long. Please keep it under 500 characters.' }, { status: 400 });
   }
 
   // Language: use the in-session toggle value if sent, otherwise fall back to profile preference
@@ -57,12 +75,31 @@ export async function POST(req: NextRequest) {
   }
 
   // Search handbook for relevant chunks via vector similarity
-  const { data: chunks } = await supabase.rpc('match_handbook_chunks', {
+  const { data: chunks, error: rpcError } = await supabase.rpc('match_handbook_chunks', {
     query_embedding: embedding,
     match_threshold: 0.2,
     match_count: 8,
     source_filter: source,
   });
+
+  // If the source-specific search returns nothing (e.g. 'employee-es' chunks
+  // don't exist yet), fall back to the base 'employee' source so Spanish
+  // users still get answers. The system prompt will translate the content.
+  let finalChunks = chunks;
+  if ((!chunks || chunks.length === 0) && source === 'employee-es') {
+    const { data: fallbackChunks } = await supabase.rpc('match_handbook_chunks', {
+      query_embedding: embedding,
+      match_threshold: 0.2,
+      match_count: 8,
+      source_filter: 'employee',
+    });
+    finalChunks = fallbackChunks;
+  }
+
+  if (rpcError) {
+    console.error('Vector search failed:', rpcError.message);
+    // Don't block the user — continue with empty context
+  }
 
   // Get restaurant-specific policy overrides
   const { data: policies } = await supabase
@@ -71,7 +108,7 @@ export async function POST(req: NextRequest) {
     .eq('restaurant_id', profile.restaurant_id);
 
   // Build context strings
-  const handbookContext = chunks?.map((c: { content: string }) => c.content).join('\n\n---\n\n') || '';
+  const handbookContext = finalChunks?.map((c: { content: string }) => c.content).join('\n\n---\n\n') || '';
   const restaurantName = (profile.restaurants as { name?: string } | null)?.name || 'your restaurant';
   const policyContext = policies?.length
     ? policies.map((p: { policy_key: string; policy_value: string }) => `• ${p.policy_key}: ${p.policy_value}`).join('\n')

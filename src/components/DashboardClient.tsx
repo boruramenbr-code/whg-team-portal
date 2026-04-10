@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Profile } from '@/lib/types';
 import ChatInterface from './ChatInterface';
 import Sidebar from './Sidebar';
+import WelcomeSplash from './WelcomeSplash';
 
 interface Props {
   profile: Profile;
@@ -15,14 +16,29 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+
+  const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
   const handleSelect = (q: string) => {
     setPendingQuestion(q);
     setMobileTopicsOpen(false);
   };
 
+  const firstName = profile.full_name.split(' ')[0];
+  const restaurantName = (profile.restaurants as { name?: string } | null)?.name || null;
+
   return (
     <div className="flex flex-1 overflow-hidden relative">
+      {/* Welcome splash on login */}
+      {showSplash && (
+        <WelcomeSplash
+          firstName={firstName}
+          restaurantName={restaurantName}
+          onComplete={handleSplashComplete}
+        />
+      )}
+
       {/* Chat — main area */}
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
         <div className="max-w-2xl w-full mx-auto h-full flex flex-col">
