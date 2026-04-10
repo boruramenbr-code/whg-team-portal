@@ -1,6 +1,9 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Public endpoint — returns active staff names for a restaurant (used on the PIN login screen)
 // Only returns employees (not managers/admins — they use the email/password login)
 export async function GET(req: NextRequest) {
@@ -26,5 +29,8 @@ export async function GET(req: NextRequest) {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  return Response.json({ staff: data });
+  return Response.json(
+    { staff: data },
+    { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+  );
 }

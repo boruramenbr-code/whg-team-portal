@@ -125,7 +125,7 @@ export default function LoginPage() {
     setStaffLoading(true);
     setStaff([]);
     setStaffSearch('');
-    fetch(`/api/staff-list?restaurant_id=${selectedRestaurant.id}`)
+    fetch(`/api/staff-list?restaurant_id=${selectedRestaurant.id}&t=${Date.now()}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         setStaff(d.staff || []);
