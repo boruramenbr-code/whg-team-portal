@@ -1,3 +1,8 @@
 node_modules/
 .next/
 .env.local
+
+# Local scripts and build artifacts
+ingest-handbook.mjs
+handbook_chunks_raw.json
+tsconfig.tsbuildinfo

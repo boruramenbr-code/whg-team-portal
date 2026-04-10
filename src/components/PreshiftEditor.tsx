@@ -2,13 +2,22 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+interface TaggedItem {
+  id?: string;
+  text: string;
+  by: string | null;
+  at?: string;
+}
+
 interface PreshiftNote {
   id: string;
   message: string | null;
-  specials: string[];
-  eighty_sixed: string[];
-  focus_items: string[];
+  specials: TaggedItem[];
+  eighty_sixed: TaggedItem[];
+  focus_items: TaggedItem[];
   shift_date: string;
+  updated_at?: string;
+  creator_name?: string | null;
 }
 
 interface Restaurant {
@@ -26,7 +35,6 @@ interface Props {
 function getLocalDate(offsetDays: number): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
-  // Build YYYY-MM-DD in local time (not UTC) so late-night managers don't see the wrong day
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -43,6 +51,11 @@ function formatFriendlyDate(isoDate: string): string {
   });
 }
 
+function emptyItem(): TaggedItem {
+  // No id = server treats it as new and tags it with current user's initials
+  return { text: '', by: null };
+}
+
 type ShiftDay = 'today' | 'tomorrow';
 
 export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
@@ -51,9 +64,9 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
   );
   const [shiftDay, setShiftDay] = useState<ShiftDay>('today');
   const [message, setMessage] = useState('');
-  const [specials, setSpecials] = useState<string[]>(['']);
-  const [eightySixed, setEightySixed] = useState<string[]>(['']);
-  const [focusItems, setFocusItems] = useState<string[]>(['']);
+  const [specials, setSpecials] = useState<TaggedItem[]>([emptyItem()]);
+  const [eightySixed, setEightySixed] = useState<TaggedItem[]>([emptyItem()]);
+  const [focusItems, setFocusItems] = useState<TaggedItem[]>([emptyItem()]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -76,15 +89,15 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
       if (d.note) {
         setExistingNote(d.note);
         setMessage(d.note.message || '');
-        setSpecials(d.note.specials?.length > 0 ? d.note.specials : ['']);
-        setEightySixed(d.note.eighty_sixed?.length > 0 ? d.note.eighty_sixed : ['']);
-        setFocusItems(d.note.focus_items?.length > 0 ? d.note.focus_items : ['']);
+        setSpecials(d.note.specials?.length > 0 ? d.note.specials : [emptyItem()]);
+        setEightySixed(d.note.eighty_sixed?.length > 0 ? d.note.eighty_sixed : [emptyItem()]);
+        setFocusItems(d.note.focus_items?.length > 0 ? d.note.focus_items : [emptyItem()]);
       } else {
         setExistingNote(null);
         setMessage('');
-        setSpecials(['']);
-        setEightySixed(['']);
-        setFocusItems(['']);
+        setSpecials([emptyItem()]);
+        setEightySixed([emptyItem()]);
+        setFocusItems([emptyItem()]);
       }
     } catch {
       // ignore
@@ -97,20 +110,20 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
     loadNote();
   }, [loadNote]);
 
-  const updateArrayItem = (
-    setter: React.Dispatch<React.SetStateAction<string[]>>,
+  const updateItemText = (
+    setter: React.Dispatch<React.SetStateAction<TaggedItem[]>>,
     index: number,
     value: string
   ) => {
-    setter((prev) => prev.map((item, i) => (i === index ? value : item)));
+    setter((prev) => prev.map((item, i) => (i === index ? { ...item, text: value } : item)));
   };
 
-  const addArrayItem = (setter: React.Dispatch<React.SetStateAction<string[]>>) => {
-    setter((prev) => [...prev, '']);
+  const addItem = (setter: React.Dispatch<React.SetStateAction<TaggedItem[]>>) => {
+    setter((prev) => [...prev, emptyItem()]);
   };
 
-  const removeArrayItem = (
-    setter: React.Dispatch<React.SetStateAction<string[]>>,
+  const removeItem = (
+    setter: React.Dispatch<React.SetStateAction<TaggedItem[]>>,
     index: number
   ) => {
     setter((prev) => prev.filter((_, i) => i !== index));
@@ -122,11 +135,20 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
     setSaved(false);
 
     try {
+      // Filter out empty rows but preserve id/by/at for existing items
+      const cleanList = (items: TaggedItem[]) =>
+        items
+          .filter((i) => i.text.trim())
+          .map((i) => ({
+            ...(i.id ? { id: i.id, by: i.by, at: i.at } : {}),
+            text: i.text.trim(),
+          }));
+
       const body: Record<string, unknown> = {
         message,
-        specials: specials.filter((s) => s.trim()),
-        eightySixed: eightySixed.filter((s) => s.trim()),
-        focusItems: focusItems.filter((s) => s.trim()),
+        specials: cleanList(specials),
+        eightySixed: cleanList(eightySixed),
+        focusItems: cleanList(focusItems),
         shiftDate,
       };
       if (isAdmin && selectedRestaurantId) {
@@ -146,6 +168,12 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
       } else {
         setSaved(true);
         setExistingNote(data.note);
+        // Refresh from server so new items show their assigned tags
+        if (data.note) {
+          setSpecials(data.note.specials?.length > 0 ? data.note.specials : [emptyItem()]);
+          setEightySixed(data.note.eighty_sixed?.length > 0 ? data.note.eighty_sixed : [emptyItem()]);
+          setFocusItems(data.note.focus_items?.length > 0 ? data.note.focus_items : [emptyItem()]);
+        }
         setTimeout(() => setSaved(false), 3000);
       }
     } catch {
@@ -158,8 +186,8 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
   const renderArrayFields = (
     label: string,
     emoji: string,
-    items: string[],
-    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    items: TaggedItem[],
+    setter: React.Dispatch<React.SetStateAction<TaggedItem[]>>,
     placeholder: string,
     colorClass: string
   ) => (
@@ -169,17 +197,22 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
       </label>
       <div className="space-y-2">
         {items.map((item, i) => (
-          <div key={i} className="flex gap-2">
+          <div key={item.id || `new-${i}`} className="flex gap-2 items-center">
             <input
               type="text"
-              value={item}
-              onChange={(e) => updateArrayItem(setter, i, e.target.value)}
+              value={item.text}
+              onChange={(e) => updateItemText(setter, i, e.target.value)}
               placeholder={placeholder}
               className={`flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 ${colorClass}`}
             />
+            {item.by && (
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide px-1.5 py-0.5 bg-gray-100 rounded">
+                {item.by}
+              </span>
+            )}
             {items.length > 1 && (
               <button
-                onClick={() => removeArrayItem(setter, i)}
+                onClick={() => removeItem(setter, i)}
                 className="text-gray-300 hover:text-red-400 transition-colors px-1"
                 aria-label="Remove item"
               >
@@ -189,7 +222,7 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
           </div>
         ))}
         <button
-          onClick={() => addArrayItem(setter)}
+          onClick={() => addItem(setter)}
           className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
         >
           + Add another
@@ -336,6 +369,10 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
           'e.g., Upsell the salmon special, keep ticket times under 15 min',
           'border-blue-100 focus:ring-blue-300'
         )}
+
+        <p className="text-[11px] text-gray-400 italic">
+          Tip: items are tagged with the initials of whoever added them, so multiple managers can share the same list.
+        </p>
 
         {error && (
           <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-2.5 rounded-xl">

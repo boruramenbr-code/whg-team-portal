@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+interface TaggedItem {
+  id: string;
+  text: string;
+  by: string | null;
+  at: string;
+}
+
 interface PreshiftNote {
   id: string;
   message: string | null;
-  specials: string[];
-  eighty_sixed: string[];
-  focus_items: string[];
+  specials: TaggedItem[];
+  eighty_sixed: TaggedItem[];
+  focus_items: TaggedItem[];
   shift_date: string;
   created_at: string;
   updated_at: string;
@@ -61,8 +68,7 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
   const hasMessage = !!note?.message?.trim();
   const hasAnyContent = hasSpecials || has86 || hasFocus || hasMessage;
 
-  const postedBy = note?.creator_name || null;
-  const postedTime = note
+  const updatedTime = note
     ? new Date(note.updated_at || note.created_at).toLocaleTimeString([], {
         hour: 'numeric',
         minute: '2-digit',
@@ -130,10 +136,15 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
                       <div className="flex flex-wrap gap-1.5">
                         {note!.specials.map((item, i) => (
                           <span
-                            key={i}
-                            className="inline-block bg-white border border-amber-200 text-gray-700 text-xs px-2.5 py-1 rounded-lg"
+                            key={item.id || i}
+                            className="inline-flex items-center gap-1.5 bg-white border border-amber-200 text-gray-700 text-xs px-2.5 py-1 rounded-lg"
                           >
-                            {item}
+                            {item.text}
+                            {item.by && (
+                              <span className="text-[9px] font-bold text-gray-400 uppercase">
+                                {item.by}
+                              </span>
+                            )}
                           </span>
                         ))}
                       </div>
@@ -151,10 +162,15 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
                       <div className="flex flex-wrap gap-1.5">
                         {note!.eighty_sixed.map((item, i) => (
                           <span
-                            key={i}
-                            className="inline-block bg-red-50 border border-red-200 text-red-700 text-xs px-2.5 py-1 rounded-lg font-medium"
+                            key={item.id || i}
+                            className="inline-flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-xs px-2.5 py-1 rounded-lg font-medium"
                           >
-                            {item}
+                            {item.text}
+                            {item.by && (
+                              <span className="text-[9px] font-bold text-red-400 uppercase">
+                                {item.by}
+                              </span>
+                            )}
                           </span>
                         ))}
                       </div>
@@ -171,9 +187,14 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
                       </div>
                       <div className="space-y-1.5">
                         {note!.focus_items.map((item, i) => (
-                          <div key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                          <div key={item.id || i} className="flex items-start gap-2 text-sm text-gray-700">
                             <span className="text-blue-400 mt-0.5">•</span>
-                            <span>{item}</span>
+                            <span className="flex-1">{item.text}</span>
+                            {item.by && (
+                              <span className="text-[9px] font-bold text-gray-400 uppercase mt-1">
+                                {item.by}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -183,13 +204,9 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
 
                 <div className="px-5 py-2 border-t border-amber-100">
                   <span className="text-[10px] text-amber-500">
-                    {postedBy
-                      ? isES
-                        ? `Publicado por ${postedBy} a las ${postedTime}`
-                        : `Posted by ${postedBy} at ${postedTime}`
-                      : isES
-                      ? `Publicado a las ${postedTime}`
-                      : `Posted at ${postedTime}`}
+                    {isES
+                      ? `Última actualización a las ${updatedTime}`
+                      : `Last updated at ${updatedTime}`}
                   </span>
                 </div>
               </div>
