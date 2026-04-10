@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import AdminPanel from '@/components/AdminPanel';
+import PreshiftEditor from '@/components/PreshiftEditor';
 import Header from '@/components/Header';
 
 export default async function AdminPage() {
@@ -38,6 +39,12 @@ export default async function AdminPage() {
         currentPage="admin"
       />
       <main className="flex-1">
+        {/* Pre-Shift Notes Editor */}
+        <div className="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-6">
+          <PreshiftEditor />
+        </div>
+
+        {/* Team Management (has its own max-w container) */}
         <AdminPanel
           currentUser={profile}
           restaurants={restaurants || []}
