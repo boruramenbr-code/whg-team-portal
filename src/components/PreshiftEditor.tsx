@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface PreshiftNote {
   id: string;
@@ -11,7 +11,21 @@ interface PreshiftNote {
   shift_date: string;
 }
 
-export default function PreshiftEditor() {
+interface Restaurant {
+  id: string;
+  name: string;
+}
+
+interface Props {
+  // If provided, shows restaurant picker (admin use). Otherwise, locked to user's own restaurant.
+  restaurants?: Restaurant[];
+  isAdmin?: boolean;
+}
+
+export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>(
+    restaurants && restaurants.length > 0 ? restaurants[0].id : ''
+  );
   const [message, setMessage] = useState('');
   const [specials, setSpecials] = useState<string[]>(['']);
   const [eightySixed, setEightySixed] = useState<string[]>(['']);
@@ -22,22 +36,39 @@ export default function PreshiftEditor() {
   const [loading, setLoading] = useState(true);
   const [existingNote, setExistingNote] = useState<PreshiftNote | null>(null);
 
-  // Load existing note for today
+  const loadNote = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const url =
+        isAdmin && selectedRestaurantId
+          ? `/api/preshift-notes?restaurant_id=${selectedRestaurantId}&t=${Date.now()}`
+          : `/api/preshift-notes?t=${Date.now()}`;
+      const r = await fetch(url, { cache: 'no-store' });
+      const d = await r.json();
+      if (d.note) {
+        setExistingNote(d.note);
+        setMessage(d.note.message || '');
+        setSpecials(d.note.specials?.length > 0 ? d.note.specials : ['']);
+        setEightySixed(d.note.eighty_sixed?.length > 0 ? d.note.eighty_sixed : ['']);
+        setFocusItems(d.note.focus_items?.length > 0 ? d.note.focus_items : ['']);
+      } else {
+        setExistingNote(null);
+        setMessage('');
+        setSpecials(['']);
+        setEightySixed(['']);
+        setFocusItems(['']);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [isAdmin, selectedRestaurantId]);
+
   useEffect(() => {
-    fetch('/api/preshift-notes')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.note) {
-          setExistingNote(d.note);
-          setMessage(d.note.message || '');
-          setSpecials(d.note.specials?.length > 0 ? d.note.specials : ['']);
-          setEightySixed(d.note.eighty_sixed?.length > 0 ? d.note.eighty_sixed : ['']);
-          setFocusItems(d.note.focus_items?.length > 0 ? d.note.focus_items : ['']);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    loadNote();
+  }, [loadNote]);
 
   const updateArrayItem = (
     setter: React.Dispatch<React.SetStateAction<string[]>>,
@@ -64,15 +95,20 @@ export default function PreshiftEditor() {
     setSaved(false);
 
     try {
+      const body: Record<string, unknown> = {
+        message,
+        specials: specials.filter((s) => s.trim()),
+        eightySixed: eightySixed.filter((s) => s.trim()),
+        focusItems: focusItems.filter((s) => s.trim()),
+      };
+      if (isAdmin && selectedRestaurantId) {
+        body.restaurantId = selectedRestaurantId;
+      }
+
       const res = await fetch('/api/preshift-notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message,
-          specials: specials.filter((s) => s.trim()),
-          eightySixed: eightySixed.filter((s) => s.trim()),
-          focusItems: focusItems.filter((s) => s.trim()),
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -153,7 +189,7 @@ export default function PreshiftEditor() {
               <h3 className="font-bold text-gray-900 text-sm">Pre-Shift Notes</h3>
               <p className="text-[11px] text-gray-500">
                 {existingNote
-                  ? 'Editing today\'s note — changes go live immediately'
+                  ? "Editing today's note — changes go live immediately"
                   : 'Post a note for your team before their shift'}
               </p>
             </div>
@@ -167,6 +203,29 @@ export default function PreshiftEditor() {
       </div>
 
       <div className="p-5 space-y-5">
+        {/* Admin restaurant picker */}
+        {isAdmin && restaurants && restaurants.length > 0 && (
+          <div>
+            <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
+              <span>🏢</span> Restaurant
+            </label>
+            <select
+              value={selectedRestaurantId}
+              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+            >
+              {restaurants.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-400 mt-1">
+              As an owner, you can post or edit pre-shift notes for any restaurant.
+            </p>
+          </div>
+        )}
+
         {/* Manager message */}
         <div>
           <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
@@ -181,7 +240,6 @@ export default function PreshiftEditor() {
           />
         </div>
 
-        {/* Specials */}
         {renderArrayFields(
           "Today's Specials",
           '⭐',
@@ -191,7 +249,6 @@ export default function PreshiftEditor() {
           'border-gray-200 focus:ring-amber-300'
         )}
 
-        {/* 86'd Items */}
         {renderArrayFields(
           "86'd Items",
           '🚫',
@@ -201,7 +258,6 @@ export default function PreshiftEditor() {
           'border-red-100 focus:ring-red-300'
         )}
 
-        {/* Focus Items */}
         {renderArrayFields(
           "Today's Focus",
           '🎯',
@@ -211,7 +267,6 @@ export default function PreshiftEditor() {
           'border-blue-100 focus:ring-blue-300'
         )}
 
-        {/* Error / Success */}
         {error && (
           <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-2.5 rounded-xl">
             {error}
@@ -224,7 +279,6 @@ export default function PreshiftEditor() {
           </div>
         )}
 
-        {/* Save button */}
         <button
           onClick={handleSave}
           disabled={saving}

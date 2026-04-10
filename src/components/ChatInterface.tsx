@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Profile } from '@/lib/types';
-import PreshiftBoard from './PreshiftBoard';
 
 interface Message {
   id: string;
@@ -46,7 +45,6 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
-  const [preshiftDismissed, setPreshiftDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -256,11 +254,6 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Pre-Shift Board — shows above everything when there's a note for today */}
-        {!preshiftDismissed && (
-          <PreshiftBoard language={language} onDismiss={() => setPreshiftDismissed(true)} />
-        )}
-
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center pt-4 pb-8">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${

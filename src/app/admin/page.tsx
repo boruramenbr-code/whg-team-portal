@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import AdminPanel from '@/components/AdminPanel';
 import PreshiftEditor from '@/components/PreshiftEditor';
+import OwnerMessageEditor from '@/components/OwnerMessageEditor';
 import Header from '@/components/Header';
 
 export default async function AdminPage() {
@@ -39,9 +40,13 @@ export default async function AdminPage() {
         currentPage="admin"
       />
       <main className="flex-1">
-        {/* Pre-Shift Notes Editor */}
-        <div className="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-6">
-          <PreshiftEditor />
+        {/* Pre-Shift Notes Editor + Owner's Message (admin only) */}
+        <div className="max-w-3xl mx-auto px-4 md:px-6 pt-4 md:pt-6 space-y-4">
+          <PreshiftEditor
+            isAdmin={profile.role === 'admin'}
+            restaurants={profile.role === 'admin' ? (restaurants || []) : undefined}
+          />
+          {profile.role === 'admin' && <OwnerMessageEditor />}
         </div>
 
         {/* Team Management (has its own max-w container) */}
