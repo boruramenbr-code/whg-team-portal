@@ -244,7 +244,7 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
             onClick={() => setShiftDay('today')}
             className={`px-3 py-1.5 rounded-md transition-colors ${
               shiftDay === 'today'
-                ? 'bg-white text-[#1B3A6B] shadow-sm'
+                ? 'bg-amber-500 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -254,7 +254,7 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
             onClick={() => setShiftDay('tomorrow')}
             className={`px-3 py-1.5 rounded-md transition-colors ${
               shiftDay === 'tomorrow'
-                ? 'bg-white text-[#1B3A6B] shadow-sm'
+                ? 'bg-amber-500 text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
