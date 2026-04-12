@@ -41,18 +41,19 @@ Make doing the right things feel rewarding. Built on top of the training, BOH, a
 - **Leaderboards** — Per-restaurant and cross-brand. Weekly and all-time views.
 - **Rewards redemption** — Points cash out for gift cards, swag, shift trades, or cash bonuses. Managers approve redemptions.
 
-#### Review Recognition Board *(new — added 2026-04-10)*
-A dedicated board inside the Gamification module for 5-star Google and Yelp reviews.
+#### Review Recognition Board *(spec'd 2026-04-11 — see [REVIEWS_SPEC.md](./REVIEWS_SPEC.md))*
+A dedicated Reviews tab (Tab 3 of the portal) with a live appreciation feed and a three-board mentions leaderboard tied to a tiered reward system.
 
-- **Appreciation board** — When a new 5-star review comes in, it's posted on the board so the team sees it in real time. Just a running feed of good reviews with date, source (Google/Yelp), and excerpt.
-- **Named-employee recognition** — When a staff member is named in a positive review, they get a star / recognition badge next to their name in the portal.
-- **Running mentions leaderboard** — Dated list of every employee who's been named in a good review. Each name shows the number of mentions next to it. List is sorted highest to lowest, and **employees with zero mentions are not shown** — it's a board of winners, not a scoreboard of everyone.
-- **Prize scale tied to mentions** — Set thresholds that unlock rewards. Example structure (adjustable):
-  - 3 mentions → small recognition / $10 gift card
-  - 5 mentions → $25 gift card
-  - 10 mentions → "Top Honcho" for the period + $50 gift card
-  - Cap the payout per period so this stays predictable for the P&L.
-- **How reviews get in** — Phase 1: manager manually adds a review (paste the text, tag named staff). Phase 2: pull Google/Yelp reviews automatically via their APIs and let a manager tag named staff with one click.
+- **Appreciation feed** — Rolling 7-day window of recent 4–5 star reviews, newest on top. Employees see only appreciation reviews by default; managers see all reviews. Each card shows source, rating, date, body, and pills tagging staff named.
+- **Three mentions boards** — Monthly, Quarterly, and All-Time "Head Honcho." Zero-mention staff never appear. Only 4–5 star reviews count.
+- **Prize structure** (locked in):
+  - **Monthly**: 3 mentions → $10 WHG gift card, 5 mentions → $25 WHG gift card, 10 mentions → $50 WHG gift card. One tier per employee per month (highest hit, not stacked). Uses WHG restaurant gift cards because real cost is ~35% of face value.
+  - **Quarterly**: #1 rank at quarter close → $100 cash or Visa/Amazon gift card (their choice). #2 → $50 WHG gift card. Optional stretch: 20+ mentions in a quarter → automatic $100 regardless of rank.
+  - **All-Time Head Honcho**: no cash prize, pure prestige. #1 holds the 👑 crown until someone passes them. This is the retention board.
+- **How reviews get in** — Phase 1: manager manually adds a review (paste text, tag staff). Phase 2: Google Business Profile API auto-sync. Yelp stays manual (their API is too crippled to rely on).
+- **Tagging** — Any manager at a location can add or edit staff tags on any review at that location. All active employees are taggable, including bussers and back-kitchen — if they get named, they count.
+- **Payout control** — No automatic payouts. Every reward goes through a manager-approved queue with full audit trail. Cost exposure: ~$5,700/year worst case across all four locations.
+- **Cost ceiling dashboard** — Admin view surfaces running monthly and quarterly spend per location so you can see exposure before approving payouts.
 
 ### 4. Anonymous Feedback Channel
 A way for staff to raise issues without having to walk into a manager's office. Routed to the appropriate manager/owner. Tracked so nothing gets lost.
