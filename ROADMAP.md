@@ -13,6 +13,14 @@ Living document of everything planned, in-progress, and shipped for the WHG Team
 
 ---
 
+## 🚧 Build Order (locked in)
+
+1. **Handbook & Policies tab** *(spec'd — see [HANDBOOK_POLICIES_SPEC.md](./HANDBOOK_POLICIES_SPEC.md))* — readable handbook, 9 individual policies with digital signatures, chatbot relocated + personality upgrade, manager compliance dashboard. ~1.5–2 day build. **Building next.**
+2. **Anonymous Feedback Box** *(spec'd — see [FEEDBACK_SPEC.md](./FEEDBACK_SPEC.md))* — half-day build after Handbook tab ships.
+3. **Reviews & Mentions** *(spec'd — see [REVIEWS_SPEC.md](./REVIEWS_SPEC.md))* — bigger build, comes after Feedback.
+
+---
+
 ## 🛠 In Planning
 
 ### 1. Onboarding & Training Module
@@ -55,19 +63,20 @@ A dedicated Reviews tab (Tab 3 of the portal) with a live appreciation feed and 
 - **Payout control** — No automatic payouts. Every reward goes through a manager-approved queue with full audit trail. Cost exposure: ~$5,700/year worst case across all four locations.
 - **Cost ceiling dashboard** — Admin view surfaces running monthly and quarterly spend per location so you can see exposure before approving payouts.
 
-### 4. Anonymous Feedback Channel
-A way for staff to raise issues without having to walk into a manager's office. Routed to the appropriate manager/owner. Tracked so nothing gets lost.
+### 4. Anonymous Feedback Channel *(spec'd 2026-04-11 — see [FEEDBACK_SPEC.md](./FEEDBACK_SPEC.md))*
+A private channel for staff to surface concerns, suggestions, and compliments without fear of retaliation. Routed to managers and/or owners based on an "about my manager" escalation checkbox. Anonymity is technically enforced — no user_id, IP, or device data is stored with the submission. Location managers see feedback for their restaurant only; owners see everything. Half-day build. **Recommended next tab to ship** before the larger Reviews tab build.
 
 ### 5. Policy Acknowledgment Tracking
-When a policy changes (handbook update, new SOP, schedule policy), push it to the affected staff, require them to read and acknowledge, and log the acknowledgment for HR/legal.
+*Absorbed into the Handbook & Policies tab (see [HANDBOOK_POLICIES_SPEC.md](./HANDBOOK_POLICIES_SPEC.md)). Digital signatures, version tracking, and re-acknowledgment flagging are all part of that build.*
 
 ### 6. Schedule Visibility (light)
 Not building a full scheduler — 7shifts already does that. But pull the current week's schedule into the portal so employees see their shifts without leaving the app. Read-only to start.
 
 ### 7. Handbook Chat Enhancements
-- **Image / media support** — Employees can ask "what does the hibachi station setup look like?" and get back a photo from the handbook, not just text.
-- **Feedback loop** — Thumbs up/down on answers, routed to admin so we can find gaps in the handbook.
-- **Suggested questions** — Surface common questions by role and restaurant to help people discover what the assistant can do.
+- **Personality upgrade** — *Included in Handbook & Policies tab v1.* Chatbot uses employee's first name, rephrases handbook content conversationally instead of verbatim, asks follow-ups, and is aware of restaurant context. System prompt change, not a code rewrite.
+- **Image / media support** — Employees can ask "what does the hibachi station setup look like?" and get back a photo from the handbook, not just text. *(Phase 2+)*
+- **Feedback loop** — Thumbs up/down on answers, routed to admin so we can find gaps in the handbook. *(Phase 2+)*
+- **Suggested questions** — Surface common questions by role and restaurant to help people discover what the assistant can do. *(Phase 2+)*
 
 ### 8. Manager Dashboard
 A single screen for a manager walking into their shift: today's pre-shift note, training due, certifications expiring, open waste entries, unacknowledged policies, recent reviews, WHG Points leaderboard snapshot.
