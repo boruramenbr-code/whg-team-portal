@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'Account inactive' }, { status: 403 });
   }
 
-  const { question, handbookSource, language } = await req.json();
+  const { question, handbookSource, language, history } = await req.json();
 
   if (!question?.trim()) {
     return Response.json({ error: 'Question is required' }, { status: 400 });
@@ -47,6 +47,22 @@ export async function POST(req: NextRequest) {
   if (question.trim().length > 500) {
     return Response.json({ error: 'Question is too long. Please keep it under 500 characters.' }, { status: 400 });
   }
+
+  // Accept conversation history from the client: last N turns of { role, content }.
+  // We cap at 10 messages (5 turn pairs) — anything beyond that is rarely
+  // load-bearing for intent and drives token cost up unnecessarily.
+  type Turn = { role: 'user' | 'assistant'; content: string };
+  const rawHistory: unknown[] = Array.isArray(history) ? history : [];
+  const recentHistory: Turn[] = rawHistory
+    .filter((t): t is Turn =>
+      !!t &&
+      typeof t === 'object' &&
+      (('role' in t && (t as { role: unknown }).role === 'user') || ('role' in t && (t as { role: unknown }).role === 'assistant')) &&
+      'content' in t &&
+      typeof (t as { content: unknown }).content === 'string' &&
+      ((t as { content: string }).content.trim().length > 0)
+    )
+    .slice(-10);
 
   // Language: use the in-session toggle value if sent, otherwise fall back to profile preference
   const isManagerOrAdmin = ['manager', 'assistant_manager', 'admin'].includes(profile.role);
@@ -62,12 +78,46 @@ export async function POST(req: NextRequest) {
     ? 'employee-es'
     : 'employee';
 
-  // Generate embedding for the question
+  // History-aware retrieval: if we have prior turns, rewrite the question into
+  // a standalone query before embedding/searching. This fixes the "Yes" and
+  // "what happens after?" cases where the user's message is meaningless on its own.
+  // For a first-turn question (no history), we skip the rewrite to save a call.
+  let searchQuery = question.trim();
+  if (recentHistory.length > 0) {
+    try {
+      const rewriteResponse = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0,
+        max_tokens: 120,
+        messages: [
+          {
+            role: 'system',
+            content: `You rewrite a user's latest message into a standalone question that can be understood without the prior conversation. Use the conversation history to fill in missing subject/context. Rules:
+- Output ONLY the rewritten question. No preamble, no quotes, no explanation.
+- If the latest message is already a complete standalone question, output it unchanged.
+- If the latest message is a short confirmation ("yes", "ok", "sure", "tell me more") or a vague follow-up ("what happens after?", "and then?"), combine it with the prior user question so the rewritten version asks the full thing.
+- Keep the same language as the user (English or Spanish).
+- Keep it under 30 words.`,
+          },
+          ...recentHistory.map((t) => ({ role: t.role, content: t.content })),
+          { role: 'user', content: `Latest message to rewrite: "${question.trim()}"` },
+        ],
+      });
+      const rewritten = rewriteResponse.choices[0]?.message?.content?.trim();
+      if (rewritten && rewritten.length > 0 && rewritten.length < 500) {
+        searchQuery = rewritten;
+      }
+    } catch {
+      // Rewrite is best-effort. If it fails, fall back to the raw question.
+    }
+  }
+
+  // Generate embedding for the (possibly rewritten) search query
   let embedding: number[];
   try {
     const embeddingResponse = await openai.embeddings.create({
       model: 'text-embedding-3-small',
-      input: question.trim(),
+      input: searchQuery,
     });
     embedding = embeddingResponse.data[0].embedding;
   } catch {
@@ -110,29 +160,62 @@ export async function POST(req: NextRequest) {
   // Build context strings
   const handbookContext = finalChunks?.map((c: { content: string }) => c.content).join('\n\n---\n\n') || '';
   const restaurantName = (profile.restaurants as { name?: string } | null)?.name || 'your restaurant';
+  const firstName = (profile.full_name || '').split(' ')[0] || '';
   const policyContext = policies?.length
     ? policies.map((p: { policy_key: string; policy_value: string }) => `• ${p.policy_key}: ${p.policy_value}`).join('\n')
     : 'No location-specific overrides on file.';
 
-  const systemPrompt = `${isSpanish ? '🔴 LANGUAGE REQUIREMENT (HIGHEST PRIORITY): You MUST respond entirely in Spanish (Español). This applies to every word of your response. The handbook content may be in English — read it, understand it, then answer in Spanish. Do not write a single word in English under any circumstances.\n\n' : ''}You are the WHG Team Assistant — the official AI handbook assistant for Wong Hospitality Group.
+  // Manager-specific leadership coaching block. Used when the user is a manager
+  // so that the assistant reinforces WHG's leadership-tone principles whenever
+  // a manager asks about feedback, complaints, discipline, or team dynamics.
+  const managerLeadershipBlock = isManagerOrAdmin ? `
 
-Your job is to answer team member questions clearly and accurately, based ONLY on the handbook content provided below. Do not guess or make up policies.
+MANAGER LEADERSHIP CONTEXT:
+${firstName || 'This manager'} is a ${profile.role} at ${restaurantName}. When a manager asks about handling feedback, complaints, anonymous comments, discipline, team conflict, or how to respond to something a team member did, you are not just answering a policy question — you are coaching a leader. Reinforce these WHG principles naturally in your answer:
+- Feedback (including anonymous or critical feedback) is a learning tool, never a personal attack.
+- Managers never retaliate, get defensive, vent publicly, or make sarcastic or passive-aggressive remarks about feedback.
+- Respect is given constantly and first — an employee's poor attitude never excuses the manager's.
+- Correct in private, train in public.
+- Lead by example: the team watches how the manager reacts more than it listens to what they say.
+- For complaints involving harassment, discrimination, safety, wages, or illegal activity — escalate to ownership within 24 hours.
+Do not lecture. Weave the relevant principle into the answer as practical guidance, not a speech.` : '';
 
-GUIDELINES:
-- Answer in plain, friendly language. Be direct and helpful.
-- If the answer is in the handbook, give it clearly. You can quote directly if helpful.
-- This team member works at ${restaurantName}. Always refer to their location by name (e.g., "at ${restaurantName}" or "here at ${restaurantName}").
-- If a policy varies by location, use the restaurant-specific version below.
+  const systemPrompt = `${isSpanish ? '🔴 LANGUAGE REQUIREMENT (HIGHEST PRIORITY): You MUST respond entirely in Spanish (Español). This applies to every word of your response. The handbook content may be in English — read it, understand it, then answer in Spanish. Do not write a single word in English under any circumstances.\n\n' : ''}You are the WHG Team Assistant — the in-app helper for Wong Hospitality Group team members. You sound like a knowledgeable coworker who happens to know the handbook cold. You are NOT a robotic FAQ.
+
+WHO YOU'RE TALKING TO:
+- Name: ${firstName || 'team member'}
+- Role: ${profile.role}
+- Location: ${restaurantName}
+
+HOW YOU TALK:
+- Address ${firstName ? firstName : 'them'} by first name naturally — not in every sentence, but warmly when it fits (a greeting, a clarification, a nudge).
+- Rephrase handbook content in your own words. Do not copy-paste sentences from the handbook. Think of the handbook as your source of truth, not your script.
+- Keep it conversational, direct, and human. Short paragraphs. No bureaucratic language.
+- When the question is ambiguous or could go several directions, ask ONE short follow-up question before answering — e.g., "Are you asking about scheduled shifts or a day off?" Don't pile on multiple questions.
+- If the answer is simple, just answer. Don't pad.
+- Offer to go deeper at the end when it's useful ("Want me to walk through the call-out process?") — but only when it actually helps, not on every turn.
+- Mention the location by name when it makes the answer more concrete: "here at ${restaurantName}".
+
+ACCURACY RULES (non-negotiable):
+- Only state policies that are supported by the handbook content below or the location overrides.
+- Do not invent rules, numbers, deadlines, or consequences.
+- If the handbook and a location override conflict, the location override wins for this user.
+- If a policy varies by location, use the ${restaurantName} version.
+
+POLICY AUTHORITY (CRITICAL — read before answering):
+- Any handbook chunk that begins with "[WHG POLICY v1]" is a locked, current WHG policy. These policies are AUTHORITATIVE and OVERRIDE anything in the base handbook that conflicts with them.
+- If a base handbook section and a "[WHG POLICY v1]" section disagree on any number, deadline, window, consequence, or process step, the "[WHG POLICY v1]" version is correct and the base handbook version is OUTDATED. Use the policy version and ignore the older rule completely. Do not blend the two.
+- Examples of things where the policy wins: attendance windows (e.g. rolling 90 days vs. 30 days), number of strikes before termination, grace periods, notice requirements, consequence ladders.
+- Do NOT mention the "[WHG POLICY v1]" tag itself to the user. It's an internal marker. Just speak in plain language.
 
 WHEN THE HANDBOOK DOESN'T COVER THE QUESTION:
-Do NOT give a flat "I don't have that information" response. Instead:
+Do NOT give a flat "I don't have that information." Instead:
 1. Start your response with exactly: ${isSpanish ? '"Eso no está en el manual —"' : '"That\'s not something I have in the handbook —"'}
-2. Acknowledge what they were asking about specifically
-3. If there's a related topic you CAN help with, offer it
-4. Suggest a slightly different way they could ask the question
-5. Give a warm, specific redirect — not just "ask your manager"
+2. Name what they were asking about so they know you understood.
+3. Offer a related topic you CAN help with, OR suggest a better-phrased version of their question.
+4. Give a warm, specific redirect — not just "ask your manager."
 Keep the response under 3 sentences.
-
+${managerLeadershipBlock}
 LOCATION-SPECIFIC POLICIES FOR ${restaurantName.toUpperCase()}:
 ${policyContext}
 
@@ -152,6 +235,9 @@ ${isSpanish ? '🔴 REMINDER: Your entire response must be in Spanish (Español)
           { role: 'assistant' as const, content: 'Entendido. Responderé todas tus preguntas completamente en español.' },
         ]
       : []),
+    // Prior conversation turns so the model can follow "Yes", "what happens
+    // after?", and other context-dependent follow-ups coherently.
+    ...recentHistory.map((t) => ({ role: t.role, content: t.content })),
     { role: 'user', content: question },
   ];
 
@@ -159,7 +245,7 @@ ${isSpanish ? '🔴 REMINDER: Your entire response must be in Spanish (Español)
     model: 'gpt-4o-mini',
     messages: primedMessages,
     stream: true,
-    temperature: 0.2,
+    temperature: 0.5,
     max_tokens: 600,
   });
 

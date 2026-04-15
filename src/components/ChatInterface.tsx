@@ -96,13 +96,22 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
       source: handbookSource,
     };
 
+    // Capture prior conversation BEFORE appending the new turns.
+    // This becomes the "history" sent to the server so the AI can follow
+    // context-dependent follow-ups ("yes", "what happens after?"). We filter
+    // out any empty assistant placeholders and cap to the last 10 messages.
+    const historyForServer = messages
+      .filter((m) => m.content.trim().length > 0)
+      .slice(-10)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, handbookSource, language }),
+        body: JSON.stringify({ question, handbookSource, language, history: historyForServer }),
       });
 
       if (!res.ok || !res.body) {
@@ -166,7 +175,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
     } finally {
       setLoading(false);
     }
-  }, [input, handbookSource, language, loading]);
+  }, [input, handbookSource, language, loading, messages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

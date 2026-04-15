@@ -6,13 +6,14 @@ import ChatInterface from './ChatInterface';
 import Sidebar from './Sidebar';
 import WelcomeSplash from './WelcomeSplash';
 import PreshiftTab from './PreshiftTab';
+import PoliciesTab from './PoliciesTab';
 
 interface Props {
   profile: Profile;
   isManager: boolean;
 }
 
-type TabKey = 'handbook' | 'preshift';
+type TabKey = 'handbook' | 'preshift' | 'policies';
 
 export default function DashboardClient({ profile, isManager }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('handbook');
@@ -36,7 +37,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const isES = language === 'es';
 
   const tabs: { key: TabKey; label: string; labelEs: string; emoji: string }[] = [
-    { key: 'handbook', label: 'Handbook', labelEs: 'Manual', emoji: '📘' },
+    { key: 'handbook', label: 'Ask', labelEs: 'Preguntar', emoji: '💬' },
+    { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '📘' },
     { key: 'preshift', label: 'Pre-Shift', labelEs: 'Pre-Turno', emoji: '📋' },
   ];
 
@@ -141,6 +143,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
               </>
             )}
           </>
+        )}
+
+        {activeTab === 'policies' && (
+          <PoliciesTab language={language} />
         )}
 
         {activeTab === 'preshift' && (
