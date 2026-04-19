@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 
+const SPLASH_LOGO: Record<string, string> = {
+  'Ichiban Sushi': '/logos/ichiban-white.png',
+  'Boru Ramen': '/logos/boru-white.png',
+  'Shokudo': '/logos/shokudo-white.png',
+};
+
 interface WelcomeSplashProps {
   firstName: string;
   restaurantName: string | null;
@@ -34,14 +40,35 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
         phase === 'enter' ? 'opacity-0' : phase === 'exit' ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      {/* WHG Logo */}
+      {/* WHG logo */}
       <div
-        className={`w-20 h-20 rounded-3xl bg-white/10 flex items-center justify-center mb-6 transition-all duration-700 ${
+        className={`mb-4 transition-all duration-700 ${
           phase === 'hold' ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
         }`}
       >
-        <span className="text-white font-bold text-3xl tracking-tight">WHG</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logos/whg.png"
+          alt="Wong Hospitality Group"
+          className="h-32 w-auto object-contain rounded-xl mx-auto"
+        />
       </div>
+
+      {/* Restaurant logo (below WHG) */}
+      {restaurantName && SPLASH_LOGO[restaurantName] && (
+        <div
+          className={`mb-4 transition-all duration-700 delay-150 ${
+            phase === 'hold' ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
+          }`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={SPLASH_LOGO[restaurantName]}
+            alt={`${restaurantName} logo`}
+            className="h-14 w-auto object-contain drop-shadow-lg mx-auto"
+          />
+        </div>
+      )}
 
       {/* Welcome text */}
       <div

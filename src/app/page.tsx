@@ -30,6 +30,19 @@ const RESTAURANT_EMOJI: Record<string, string> = {
   'Central Hub': '☕',
 };
 
+// White logos for dark gradient cards; black logos for light surfaces
+const RESTAURANT_LOGO_WHITE: Record<string, string> = {
+  'Ichiban Sushi': '/logos/ichiban-white.png',
+  'Boru Ramen': '/logos/boru-white.png',
+  'Shokudo': '/logos/shokudo-white.png',
+};
+
+const RESTAURANT_LOGO_BLACK: Record<string, string> = {
+  'Ichiban Sushi': '/logos/ichiban-black.png',
+  'Boru Ramen': '/logos/boru-black.png',
+  'Shokudo': '/logos/shokudo-black.png',
+};
+
 function PinDots({ pin }: { pin: string }) {
   return (
     <div className="flex gap-4 justify-center my-6">
@@ -252,12 +265,12 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#0F1E3C] flex flex-col items-center justify-center px-4 py-8">
       {/* Brand header */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/10 mb-3">
-          <span className="text-white font-bold text-xl tracking-tight">WHG</span>
-        </div>
-        <h1 className="text-white text-xl font-bold tracking-wide">
-          Wong Hospitality Group
-        </h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logos/whg.png"
+          alt="Wong Hospitality Group"
+          className="h-36 w-auto object-contain mx-auto rounded-xl mb-3"
+        />
         <p className="text-[#7BA7D3] text-xs mt-1 tracking-widest uppercase">
           Team Portal
         </p>
@@ -311,20 +324,38 @@ export default function LoginPage() {
                 <div className="text-center text-white/40 py-8 text-sm">Loading...</div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
-                  {restaurants.map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => handleRestaurantSelect(r)}
-                      className={`bg-gradient-to-br ${
-                        RESTAURANT_COLORS[r.name] || 'from-[#1B3A6B] to-[#0F1E3C]'
-                      } rounded-2xl p-4 text-left shadow-lg hover:scale-105 transition-all active:scale-95 border border-white/10`}
-                    >
-                      <div className="text-2xl mb-2">
-                        {RESTAURANT_EMOJI[r.name] || '🍽️'}
-                      </div>
-                      <p className="text-white font-bold text-sm leading-tight">{r.name}</p>
-                    </button>
-                  ))}
+                  {restaurants.map((r) => {
+                    const logoSrc = RESTAURANT_LOGO_WHITE[r.name];
+                    return (
+                      <button
+                        key={r.id}
+                        onClick={() => handleRestaurantSelect(r)}
+                        className={`bg-gradient-to-br ${
+                          RESTAURANT_COLORS[r.name] || 'from-[#1B3A6B] to-[#0F1E3C]'
+                        } rounded-2xl shadow-lg hover:scale-105 transition-all active:scale-95 border border-white/10 flex items-center justify-center ${
+                          logoSrc ? 'p-3 aspect-square' : 'p-4 flex-col'
+                        }`}
+                      >
+                        {logoSrc ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={logoSrc}
+                            alt={`${r.name} logo`}
+                            className={`w-full h-full object-contain drop-shadow-md ${
+                              r.name === 'Shokudo' ? 'scale-125' : 'p-1'
+                            }`}
+                          />
+                        ) : (
+                          <>
+                            <div className="text-2xl mb-2">
+                              {RESTAURANT_EMOJI[r.name] || '🍽️'}
+                            </div>
+                            <p className="text-white font-bold text-sm leading-tight text-center">{r.name}</p>
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -333,8 +364,17 @@ export default function LoginPage() {
           {/* STEP 2: Staff Name Selection */}
           {step === 2 && selectedRestaurant && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">{RESTAURANT_EMOJI[selectedRestaurant.name] || '🍽️'}</span>
+              <div className="flex items-center gap-3 mb-3">
+                {RESTAURANT_LOGO_WHITE[selectedRestaurant.name] ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={RESTAURANT_LOGO_WHITE[selectedRestaurant.name]}
+                    alt={`${selectedRestaurant.name} logo`}
+                    className="h-7 w-auto object-contain"
+                  />
+                ) : (
+                  <span className="text-lg">{RESTAURANT_EMOJI[selectedRestaurant.name] || '🍽️'}</span>
+                )}
                 <p className="text-white font-semibold">{selectedRestaurant.name}</p>
               </div>
               <p className="text-white/60 text-sm mb-3">Select your name</p>

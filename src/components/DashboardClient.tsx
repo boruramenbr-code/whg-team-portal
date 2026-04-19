@@ -7,16 +7,26 @@ import Sidebar from './Sidebar';
 import WelcomeSplash from './WelcomeSplash';
 import PreshiftTab from './PreshiftTab';
 import PoliciesTab from './PoliciesTab';
+import ComplianceTab from './ComplianceTab';
+import HandbookReaderTab from './HandbookReaderTab';
+import OrgChartTab from './OrgChartTab';
+import HomeTab from './HomeTab';
 
 interface Props {
   profile: Profile;
   isManager: boolean;
 }
 
-type TabKey = 'handbook' | 'preshift' | 'policies';
+// Top-level tabs are grouped by subject. The "handbook" top tab contains
+// three sub-tabs (Read / Policies / Ask) since they all belong to the same
+// subject. Other subjects (Pre-Shift, Compliance, future Feedback/Reviews)
+// stay as their own top-level tabs.
+type TopTabKey = 'home' | 'handbook' | 'preshift' | 'compliance' | 'ourteam';
+type HandbookSubTab = 'read' | 'policies' | 'ask';
 
 export default function DashboardClient({ profile, isManager }: Props) {
-  const [activeTab, setActiveTab] = useState<TabKey>('handbook');
+  const [activeTop, setActiveTop] = useState<TopTabKey>('home');
+  const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>('read');
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
@@ -25,21 +35,33 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
+  // Selecting a topic from the sidebar jumps into the Ask sub-tab of the
+  // Handbook & Policies section so the question lands in the chat.
   const handleSelect = (q: string) => {
     setPendingQuestion(q);
     setMobileTopicsOpen(false);
-    // Selecting a topic should bring the user back to the Handbook tab
-    setActiveTab('handbook');
+    setActiveTop('handbook');
+    setActiveHandbookSub('ask');
   };
 
   const firstName = profile.full_name.split(' ')[0];
   const restaurantName = (profile.restaurants as { name?: string } | null)?.name || null;
   const isES = language === 'es';
 
-  const tabs: { key: TabKey; label: string; labelEs: string; emoji: string }[] = [
-    { key: 'handbook', label: 'Ask', labelEs: 'Preguntar', emoji: '💬' },
-    { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '📘' },
+  const topTabs: { key: TopTabKey; label: string; labelEs: string; emoji: string }[] = [
+    { key: 'home', label: 'Home', labelEs: 'Inicio', emoji: '🏠' },
+    { key: 'handbook', label: 'Handbook & Policies', labelEs: 'Manual y Políticas', emoji: '📘' },
+    { key: 'ourteam', label: 'Our Team', labelEs: 'Nuestro Equipo', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', labelEs: 'Pre-Turno', emoji: '📋' },
+    ...(isManager
+      ? [{ key: 'compliance' as TopTabKey, label: 'Compliance', labelEs: 'Cumplimiento', emoji: '✅' }]
+      : []),
+  ];
+
+  const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
+    { key: 'read', label: 'Read', labelEs: 'Leer', emoji: '📖' },
+    { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
+    { key: 'ask', label: 'Ask', labelEs: 'Preguntar', emoji: '💬' },
   ];
 
   return (
@@ -53,15 +75,15 @@ export default function DashboardClient({ profile, isManager }: Props) {
         />
       )}
 
-      {/* Tab bar */}
-      <div className="flex items-center border-b border-gray-200 bg-white px-2 md:px-4 flex-shrink-0">
+      {/* Top-level tab bar */}
+      <div className="flex items-center border-b border-[#D6DEE8] bg-[#F4F7FB] px-2 md:px-4 flex-shrink-0">
         <div className="flex gap-1">
-          {tabs.map((t) => {
-            const isActive = activeTab === t.key;
+          {topTabs.map((t) => {
+            const isActive = activeTop === t.key;
             return (
               <button
                 key={t.key}
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => setActiveTop(t.key)}
                 className={`relative flex items-center gap-1.5 px-3 md:px-4 py-2.5 text-xs md:text-sm font-semibold transition-colors ${
                   isActive
                     ? 'text-[#1B3A6B]'
@@ -79,11 +101,60 @@ export default function DashboardClient({ profile, isManager }: Props) {
         </div>
       </div>
 
+      {/* Sub-tab bar — only visible inside Handbook & Policies */}
+      {activeTop === 'handbook' && (
+        <div className="flex items-center border-b border-[#D6DEE8]/60 bg-[#ECF0F6] px-2 md:px-4 flex-shrink-0">
+          <div className="flex gap-1">
+            {handbookSubTabs.map((t) => {
+              const isActive = activeHandbookSub === t.key;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveHandbookSub(t.key)}
+                  className={`relative flex items-center gap-1.5 px-3 md:px-4 py-2 text-[11px] md:text-xs font-semibold transition-colors ${
+                    isActive
+                      ? 'text-[#2E86C1]'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <span className="text-sm">{t.emoji}</span>
+                  <span>{isES ? t.labelEs : t.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2E86C1] rounded-t-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tab content */}
       <div className="flex flex-1 overflow-hidden">
-        {activeTab === 'handbook' && (
+        {/* HOME */}
+        {activeTop === 'home' && (
+          <HomeTab
+            firstName={firstName}
+            restaurantName={restaurantName}
+            language={language}
+            onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
+          />
+        )}
+
+        {/* HANDBOOK & POLICIES → Read */}
+        {activeTop === 'handbook' && activeHandbookSub === 'read' && (
+          <HandbookReaderTab language={language} />
+        )}
+
+        {/* HANDBOOK & POLICIES → Policies */}
+        {activeTop === 'handbook' && activeHandbookSub === 'policies' && (
+          <PoliciesTab language={language} />
+        )}
+
+        {/* HANDBOOK & POLICIES → Ask (chatbot) */}
+        {activeTop === 'handbook' && activeHandbookSub === 'ask' && (
           <>
-            <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+            <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-[#E8EEF4] to-[#F0F4F9]">
               <div className="max-w-2xl w-full mx-auto h-full flex flex-col">
                 <ChatInterface
                   profile={profile}
@@ -114,8 +185,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
               </button>
             </main>
 
-            {/* Desktop sidebar — only for the Handbook tab */}
-            <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-gray-100 bg-gray-50/60 overflow-hidden">
+            {/* Desktop topics sidebar — only on the Ask sub-tab */}
+            <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-[#D6DEE8]/60 bg-[#F0F4F9] overflow-hidden">
               <Sidebar handbookSource={handbookSource} onSelect={handleSelect} language={language} />
             </aside>
 
@@ -145,12 +216,19 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </>
         )}
 
-        {activeTab === 'policies' && (
-          <PoliciesTab language={language} />
+        {/* OUR TEAM (org chart) */}
+        {activeTop === 'ourteam' && (
+          <OrgChartTab restaurantId={profile.restaurant_id} restaurantName={restaurantName} isAdmin={profile.role === 'admin'} />
         )}
 
-        {activeTab === 'preshift' && (
+        {/* PRE-SHIFT */}
+        {activeTop === 'preshift' && (
           <PreshiftTab language={language} restaurantName={restaurantName} />
+        )}
+
+        {/* COMPLIANCE (manager-only) */}
+        {activeTop === 'compliance' && isManager && (
+          <ComplianceTab />
         )}
       </div>
     </div>

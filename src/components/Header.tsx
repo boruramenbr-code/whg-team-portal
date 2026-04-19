@@ -4,6 +4,12 @@ import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Profile } from '@/lib/types';
 
+const HEADER_LOGO: Record<string, string> = {
+  'Ichiban Sushi': '/logos/ichiban-white.png',
+  'Boru Ramen': '/logos/boru-white.png',
+  'Shokudo': '/logos/shokudo-white.png',
+};
+
 interface HeaderProps {
   profile: Profile & { restaurants?: { name: string } };
   showAdminLink?: boolean;
@@ -35,9 +41,25 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
             </svg>
           </button>
         )}
-        <div>
-          <span className="font-bold text-base tracking-tight">WHG</span>
-          <span className="text-[#7BA7D3] text-xs ml-1.5">
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logos/whg.png"
+            alt="Wong Hospitality Group"
+            className="h-8 w-auto object-contain rounded"
+          />
+          {profile.restaurants?.name && HEADER_LOGO[profile.restaurants.name] && (
+            <>
+              <span className="text-[#7BA7D3]/40 text-xs">|</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={HEADER_LOGO[profile.restaurants.name]}
+                alt={`${profile.restaurants.name} logo`}
+                className="h-5 w-auto object-contain opacity-90"
+              />
+            </>
+          )}
+          <span className="text-[#7BA7D3] text-xs hidden sm:inline">
             {currentPage === 'admin' ? 'Team Management' : 'Team Portal'}
           </span>
         </div>
