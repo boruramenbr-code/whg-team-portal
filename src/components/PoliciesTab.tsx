@@ -159,6 +159,17 @@ function ProgressBar({ progress, language }: { progress: Progress; language: 'en
   );
 }
 
+/** Helper: pick Spanish field if available when language is 'es', else fall back to English. */
+function esOrEn(policy: PolicyWithStatus, field: 'purpose' | 'details' | 'consequences' | 'acknowledgment_text' | 'location_notes', lang: 'en' | 'es'): string | null {
+  if (lang === 'es') {
+    const esKey = `${field}_es` as keyof PolicyWithStatus;
+    const esVal = policy[esKey];
+    if (typeof esVal === 'string' && esVal) return esVal;
+  }
+  const enVal = policy[field];
+  return typeof enVal === 'string' ? enVal : null;
+}
+
 function PolicyCard({
   policy,
   language,
@@ -175,6 +186,8 @@ function PolicyCard({
     ? { label: isES ? `Firmada ${new Date(policy.signed_at!).toLocaleDateString()}` : `Signed ${new Date(policy.signed_at!).toLocaleDateString()}`, cls: 'bg-green-100 text-green-800 border-green-200' }
     : { label: isES ? 'Firma requerida' : 'Signature required', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
 
+  const purpose = esOrEn(policy, 'purpose', language);
+
   return (
     <button
       onClick={onClick}
@@ -186,8 +199,8 @@ function PolicyCard({
           {badge.label}
         </span>
       </div>
-      {policy.purpose && (
-        <p className="text-xs md:text-sm text-gray-600 line-clamp-2">{policy.purpose}</p>
+      {purpose && (
+        <p className="text-xs md:text-sm text-gray-600 line-clamp-2">{purpose}</p>
       )}
     </button>
   );
@@ -252,36 +265,36 @@ function PolicyDetail({
         </p>
 
         <article className="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed">
-          {policy.purpose && (
+          {esOrEn(policy, 'purpose', language) && (
             <>
               <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
                 {isES ? 'Propósito' : 'Purpose'}
               </h2>
-              <p className="whitespace-pre-wrap">{policy.purpose}</p>
+              <p className="whitespace-pre-wrap">{esOrEn(policy, 'purpose', language)}</p>
             </>
           )}
-          {policy.details && (
+          {esOrEn(policy, 'details', language) && (
             <>
               <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
                 {isES ? 'Detalles de la Política' : 'Policy Details'}
               </h2>
-              <div className="whitespace-pre-wrap">{policy.details}</div>
+              <div className="whitespace-pre-wrap">{esOrEn(policy, 'details', language)}</div>
             </>
           )}
-          {policy.consequences && (
+          {esOrEn(policy, 'consequences', language) && (
             <>
               <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
                 {isES ? 'Consecuencias' : 'Consequences'}
               </h2>
-              <p className="whitespace-pre-wrap">{policy.consequences}</p>
+              <p className="whitespace-pre-wrap">{esOrEn(policy, 'consequences', language)}</p>
             </>
           )}
-          {policy.location_notes && (
+          {esOrEn(policy, 'location_notes', language) && (
             <>
               <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
                 {isES ? 'Notas para su Ubicación' : 'Notes for Your Location'}
               </h2>
-              <p className="whitespace-pre-wrap">{policy.location_notes}</p>
+              <p className="whitespace-pre-wrap">{esOrEn(policy, 'location_notes', language)}</p>
             </>
           )}
         </article>
@@ -295,7 +308,7 @@ function PolicyDetail({
               : (isES ? 'Reconocimiento del Empleado' : 'Employee Acknowledgment')}
           </h2>
           <p className="text-sm text-gray-800 italic whitespace-pre-wrap mb-4">
-            {policy.acknowledgment_text}
+            {esOrEn(policy, 'acknowledgment_text', language) || policy.acknowledgment_text}
           </p>
 
           {!needsSign ? (

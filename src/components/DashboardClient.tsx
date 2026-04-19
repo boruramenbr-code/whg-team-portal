@@ -103,7 +103,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
       {/* Sub-tab bar — only visible inside Handbook & Policies */}
       {activeTop === 'handbook' && (
-        <div className="flex items-center border-b border-[#D6DEE8]/60 bg-[#ECF0F6] px-2 md:px-4 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-[#D6DEE8]/60 bg-[#ECF0F6] px-2 md:px-4 flex-shrink-0">
           <div className="flex gap-1">
             {handbookSubTabs.map((t) => {
               const isActive = activeHandbookSub === t.key;
@@ -125,6 +125,29 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 </button>
               );
             })}
+          </div>
+          {/* Language toggle — visible on Read & Policies sub-tabs */}
+          <div className="flex items-center gap-0.5 bg-white/60 rounded-full p-0.5 border border-gray-200/60">
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                language === 'en'
+                  ? 'bg-[#1B3A6B] text-white'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setLanguage('es')}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                language === 'es'
+                  ? 'bg-[#1B3A6B] text-white'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              ES
+            </button>
           </div>
         </div>
       )}

@@ -58,6 +58,12 @@ export interface Policy {
   consequences: string | null;
   acknowledgment_text: string;
   location_notes: string | null;
+  // Spanish translation columns (nullable — populated by migration 011)
+  purpose_es: string | null;
+  details_es: string | null;
+  consequences_es: string | null;
+  acknowledgment_text_es: string | null;
+  location_notes_es: string | null;
   version: number;
   effective_date: string;
   sort_order: number;
