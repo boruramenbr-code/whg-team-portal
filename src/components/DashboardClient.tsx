@@ -9,7 +9,7 @@ import PreshiftTab from './PreshiftTab';
 import PoliciesTab from './PoliciesTab';
 import ComplianceTab from './ComplianceTab';
 import HandbookReaderTab from './HandbookReaderTab';
-import OrgChartTab from './OrgChartTab';
+import OurTeamTab from './OurTeamTab';
 import HomeTab from './HomeTab';
 
 interface Props {
@@ -239,9 +239,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </>
         )}
 
-        {/* OUR TEAM (org chart) */}
+        {/* OUR TEAM (location tabs + team members / pre-shift sub-tabs) */}
         {activeTop === 'ourteam' && (
-          <OrgChartTab restaurantId={profile.restaurant_id} restaurantName={restaurantName} isAdmin={profile.role === 'admin'} />
+          <OurTeamTab
+            restaurantId={profile.restaurant_id}
+            restaurantName={restaurantName}
+            role={profile.role}
+            language={language}
+          />
         )}
 
         {/* PRE-SHIFT */}

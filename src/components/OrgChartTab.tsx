@@ -15,11 +15,6 @@ interface Position {
   detail: string | null;
 }
 
-interface Restaurant {
-  id: string;
-  name: string;
-}
-
 interface Props {
   restaurantId: string | null;
   restaurantName: string | null;
@@ -115,36 +110,14 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [animateIn, setAnimateIn] = useState(false);
 
-  // Admin restaurant picker
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(restaurantId);
-  const [activeRestaurantName, setActiveRestaurantName] = useState<string | null>(restaurantName);
-
   // SVG connector state
   const chartRef = useRef<HTMLDivElement>(null);
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [showLines, setShowLines] = useState(false);
   const [chartHeight, setChartHeight] = useState(0);
 
-  // Load restaurant list for admins
-  useEffect(() => {
-    if (!isAdmin) return;
-    (async () => {
-      try {
-        const res = await fetch('/api/restaurants');
-        const json = await res.json();
-        const list: Restaurant[] = json.restaurants || [];
-        setRestaurants(list);
-        if (list.length > 0 && !activeRestaurantId) {
-          setActiveRestaurantId(list[0].id);
-          setActiveRestaurantName(list[0].name);
-        }
-      } catch { /* ignore */ }
-    })();
-  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const currentId = isAdmin ? activeRestaurantId : restaurantId;
-  const currentName = isAdmin ? activeRestaurantName : restaurantName;
+  const currentId = restaurantId;
+  const currentName = restaurantName;
 
   useEffect(() => {
     if (!currentId) { setLoading(false); return; }
@@ -357,31 +330,9 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
     );
   }
 
-  const adminPicker = isAdmin && restaurants.length > 1 ? (
-    <div className="flex flex-wrap justify-center gap-2 mt-4">
-      {restaurants.map((r) => (
-        <button
-          key={r.id}
-          onClick={() => {
-            setActiveRestaurantId(r.id);
-            setActiveRestaurantName(r.name);
-          }}
-          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-            currentId === r.id
-              ? 'bg-[#1B3A6B] text-white shadow-md'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-          }`}
-        >
-          {r.name}
-        </button>
-      ))}
-    </div>
-  ) : null;
-
   if (positions.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-sm text-gray-500 gap-4">
-        {adminPicker}
         <p>No org chart set up yet.</p>
       </div>
     );
@@ -416,7 +367,6 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
           })()}
           <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">Meet Your Team</h1>
           <p className="text-sm text-gray-500 mt-1">Tap anyone to learn more about their role</p>
-          {adminPicker}
         </div>
 
         {/* Scrollable chart area for mobile */}

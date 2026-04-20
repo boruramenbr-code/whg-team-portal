@@ -31,9 +31,10 @@ interface OwnerMessage {
 interface Props {
   language: 'en' | 'es';
   restaurantName: string | null;
+  restaurantId?: string | null;
 }
 
-export default function PreshiftTab({ language, restaurantName }: Props) {
+export default function PreshiftTab({ language, restaurantName, restaurantId }: Props) {
   const [note, setNote] = useState<PreshiftNote | null>(null);
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +44,10 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
+      const ridParam = restaurantId ? `&restaurant_id=${restaurantId}` : '';
       const [noteRes, ownerRes] = await Promise.all([
-        fetch(`/api/preshift-notes?t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/owner-messages?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/preshift-notes?t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
+        fetch(`/api/owner-messages?t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
       ]);
       const noteData = await noteRes.json();
       const ownerData = await ownerRes.json();
@@ -56,7 +58,7 @@ export default function PreshiftTab({ language, restaurantName }: Props) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [restaurantId]);
 
   useEffect(() => {
     loadAll();

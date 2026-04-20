@@ -86,10 +86,24 @@ export async function GET(req: NextRequest) {
   const restaurantIdParam = req.nextUrl.searchParams.get('restaurant_id');
   const targetDate = dateParam || new Date().toISOString().split('T')[0];
 
-  const targetRestaurantId =
-    profile.role === 'admin' && restaurantIdParam
-      ? restaurantIdParam
-      : profile.restaurant_id;
+  // Admins can view any restaurant; managers can view their assigned locations
+  let targetRestaurantId = profile.restaurant_id;
+  if (restaurantIdParam) {
+    if (profile.role === 'admin') {
+      targetRestaurantId = restaurantIdParam;
+    } else if (['manager', 'assistant_manager'].includes(profile.role)) {
+      // Check if manager has access to this location
+      const { data: access } = await supabase
+        .from('manager_locations')
+        .select('id')
+        .eq('profile_id', user.id)
+        .eq('restaurant_id', restaurantIdParam)
+        .maybeSingle();
+      if (access || restaurantIdParam === profile.restaurant_id) {
+        targetRestaurantId = restaurantIdParam;
+      }
+    }
+  }
 
   const { data: noteSimple } = await supabase
     .from('preshift_notes')
