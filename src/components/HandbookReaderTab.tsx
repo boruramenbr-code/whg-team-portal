@@ -208,8 +208,8 @@ export default function HandbookReaderTab({ language }: Props) {
 
         {/* Content — responsive typography per spec:
             mobile 18px, tablet 17px, desktop 16px, capped at ~700px width */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-          <article className="max-w-[700px] mx-auto px-5 md:px-8 py-8 text-gray-800 text-[18px] md:text-[17px] lg:text-[16px] leading-relaxed">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+          <article className="max-w-[700px] mx-auto px-4 md:px-8 py-6 md:py-8 text-gray-800 text-base md:text-[17px] lg:text-[16px] leading-relaxed">
             <header className="mb-8 pb-6 border-b border-gray-200">
               <p className="text-[11px] font-bold uppercase tracking-wider text-[#2E86C1] mb-1">
                 WHG Team Handbook
