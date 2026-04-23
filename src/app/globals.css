@@ -5,6 +5,47 @@
 html,
 body {
   height: 100%;
+  overscroll-behavior-y: none; /* Prevent pull-to-refresh bounce */
+}
+
+/* PWA safe areas for notched devices (iPhone X+) */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+/* Bottom nav spacing utility */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Tab transition animations */
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content-enter {
+  animation: tabFadeIn 0.2s ease-out;
+}
+
+/* Smooth transitions for interactive elements */
+.tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Bottom nav active indicator pulse */
+@keyframes navPulse {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.nav-dot-enter {
+  animation: navPulse 0.25s ease-out;
 }
 
 /* Custom scrollbar */

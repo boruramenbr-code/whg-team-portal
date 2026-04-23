@@ -7,6 +7,12 @@ interface ProfileWithRestaurant extends Profile {
   restaurants?: Restaurant;
 }
 
+interface UserLocation {
+  id: string;
+  restaurant_id: string;
+  restaurants: { id: string; name: string; slug: string } | null;
+}
+
 interface AdminPanelProps {
   currentUser: Profile;
   restaurants: Restaurant[];
@@ -26,6 +32,7 @@ const ROLE_LABELS: Record<string, string> = {
   employee: 'Employee',
 };
 
+/* ── PIN Input ── */
 function PinInput({
   value,
   onChange,
@@ -67,10 +74,18 @@ function PinInput({
   );
 }
 
+/* ── Main Component ── */
 export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps) {
   const [users, setUsers] = useState<ProfileWithRestaurant[]>([]);
   const [filter, setFilter] = useState<'active' | 'archived'>('active');
+  const [restaurantFilter, setRestaurantFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+
+  // Expanded edit row
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editRestaurantId, setEditRestaurantId] = useState<string>('');
+  const [userLocations, setUserLocations] = useState<UserLocation[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
 
   // Add member modal
   const [showForm, setShowForm] = useState(false);
@@ -111,6 +126,59 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     fetchUsers();
   }, [fetchUsers]);
 
+  // Fetch extra locations for expanded user
+  const fetchUserLocations = useCallback(async (profileId: string) => {
+    setLocationsLoading(true);
+    try {
+      const res = await fetch(`/api/admin/manager-locations?profile_id=${profileId}`);
+      const data = await res.json();
+      setUserLocations(data.locations || []);
+    } catch {
+      setUserLocations([]);
+    }
+    setLocationsLoading(false);
+  }, []);
+
+  const handleExpand = (user: ProfileWithRestaurant) => {
+    if (expandedId === user.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(user.id);
+    setEditRestaurantId(user.restaurant_id || '');
+    if (isAdmin) {
+      fetchUserLocations(user.id);
+    }
+  };
+
+  const handleChangeRestaurant = async (userId: string, newRestaurantId: string) => {
+    await fetch(`/api/admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurant_id: newRestaurantId }),
+    });
+    setEditRestaurantId(newRestaurantId);
+    fetchUsers();
+  };
+
+  const handleAddLocation = async (userId: string, restaurantId: string) => {
+    await fetch('/api/admin/manager-locations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile_id: userId, restaurant_id: restaurantId }),
+    });
+    fetchUserLocations(userId);
+  };
+
+  const handleRemoveLocation = async (userId: string, restaurantId: string) => {
+    await fetch('/api/admin/manager-locations', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile_id: userId, restaurant_id: restaurantId }),
+    });
+    fetchUserLocations(userId);
+  };
+
   const resetForm = () => {
     setForm({
       full_name: '',
@@ -125,8 +193,6 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Client-side validation by role type
     if (form.role === 'employee' && form.pin.length !== 4) {
       setFormError('PIN must be exactly 4 digits.');
       return;
@@ -147,9 +213,8 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     });
 
     const data = await res.json();
-
     if (!res.ok) {
-      setFormError(data.error || 'Failed to create account. Please try again.');
+      setFormError(data.error || 'Failed to create account.');
       setFormLoading(false);
     } else {
       setFormSuccess(`${form.full_name} has been added!`);
@@ -191,8 +256,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
   const handleResetPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetTarget) return;
-    if (newPin.length !== 4) {
+    if (!resetTarget || newPin.length !== 4) {
       setResetError('PIN must be exactly 4 digits.');
       return;
     }
@@ -207,7 +271,6 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     });
 
     const data = await res.json();
-
     if (!res.ok) {
       setResetError(data.error || 'Failed to reset PIN.');
       setResetLoading(false);
@@ -234,15 +297,20 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     ? restaurants
     : restaurants.filter((r) => r.id === currentUser.restaurant_id);
 
+  // Apply restaurant filter
+  const filteredUsers = restaurantFilter === 'all'
+    ? users
+    : users.filter((u) => u.restaurant_id === restaurantFilter);
+
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Page header */}
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-xl font-bold text-[#1B3A6B]">Team Members</h2>
           <p className="text-xs text-gray-500 mt-0.5">
             {isAdmin
-              ? 'All restaurants'
+              ? `${filteredUsers.length} ${filter} members${restaurantFilter !== 'all' ? '' : ' across all restaurants'}`
               : (currentUser as ProfileWithRestaurant).restaurants?.name}
           </p>
         </div>
@@ -252,11 +320,40 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
             setFormError('');
             setFormSuccess('');
           }}
-          className="bg-[#1B3A6B] hover:bg-[#2E86C1] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-[#1B3A6B] hover:bg-[#2E86C1] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
         >
-          + Add Member
+          <span className="text-base leading-none">+</span> Add Member
         </button>
       </div>
+
+      {/* Restaurant filter pills — admin only */}
+      {isAdmin && restaurants.length > 1 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setRestaurantFilter('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              restaurantFilter === 'all'
+                ? 'bg-[#1B3A6B] text-white'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            All
+          </button>
+          {restaurants.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setRestaurantFilter(r.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                restaurantFilter === r.id
+                  ? 'bg-[#1B3A6B] text-white'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              {r.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Status filter tabs */}
       <div className="flex gap-2 mb-4">
@@ -266,7 +363,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
             onClick={() => setFilter(s)}
             className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition-colors ${
               filter === s
-                ? 'bg-[#1B3A6B] text-white'
+                ? 'bg-[#2E86C1] text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -278,75 +375,181 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       {/* User list */}
       {loading ? (
         <div className="text-center py-12 text-gray-400 text-sm">Loading...</div>
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm">
           No {filter} team members found.
         </div>
       ) : (
         <div className="space-y-2">
-          {users.map((u) => (
-            <div
-              key={u.id}
-              className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center justify-between gap-3"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-gray-800 text-sm truncate">{u.full_name}</p>
-                <p className="text-xs text-gray-500 truncate">
-                  {u.restaurants?.name || '—'}
-                  {u.id === currentUser.id ? ' · You' : ''}
-                </p>
-              </div>
+          {filteredUsers.map((u) => {
+            const isExpanded = expandedId === u.id;
+            const isSelf = u.id === currentUser.id;
 
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Role badge / selector */}
-                {isAdmin && u.id !== currentUser.id ? (
-                  <select
-                    value={u.role}
-                    onChange={(e) => updateRole(u.id, e.target.value as UserRole)}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#2E86C1] bg-white"
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="assistant_manager">Asst. Manager</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                ) : (
-                  <span
-                    className={`text-[10px] px-2 py-1 rounded-full font-semibold uppercase tracking-wide ${
-                      ROLE_STYLES[u.role] || ROLE_STYLES.employee
-                    }`}
-                  >
-                    {ROLE_LABELS[u.role] || u.role}
-                  </span>
-                )}
-
-                {/* PIN Reset — only for employees, shown to managers */}
-                {u.role === 'employee' && u.id !== currentUser.id && (
+            return (
+              <div key={u.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden transition-shadow hover:shadow-sm">
+                {/* Main row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-3">
                   <button
-                    onClick={() => openResetPin(u)}
-                    className="text-xs px-3 py-1 rounded-lg font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
-                    title="Reset PIN"
+                    onClick={() => !isSelf && handleExpand(u)}
+                    className="min-w-0 text-left flex-1"
+                    disabled={isSelf}
                   >
-                    PIN
+                    <p className="font-semibold text-gray-800 text-sm truncate">
+                      {u.full_name}
+                      {isSelf && <span className="text-gray-400 font-normal ml-1">(You)</span>}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {u.restaurants?.name || '—'}
+                    </p>
                   </button>
-                )}
 
-                {/* Archive / Restore */}
-                {u.id !== currentUser.id && (
-                  <button
-                    onClick={() => toggleArchive(u.id, u.status)}
-                    className={`text-xs px-3 py-1 rounded-lg font-medium transition-colors ${
-                      u.status === 'active'
-                        ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                        : 'bg-green-50 text-green-700 hover:bg-green-100'
-                    }`}
-                  >
-                    {u.status === 'active' ? 'Archive' : 'Restore'}
-                  </button>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Role badge */}
+                    <span
+                      className={`text-[10px] px-2 py-1 rounded-full font-semibold uppercase tracking-wide ${
+                        ROLE_STYLES[u.role] || ROLE_STYLES.employee
+                      }`}
+                    >
+                      {ROLE_LABELS[u.role] || u.role}
+                    </span>
+
+                    {/* Expand/collapse chevron */}
+                    {!isSelf && (
+                      <button
+                        onClick={() => handleExpand(u)}
+                        className="text-gray-300 hover:text-gray-500 transition-colors p-1"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expanded edit row */}
+                {isExpanded && !isSelf && (
+                  <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Change Primary Restaurant */}
+                      {isAdmin && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                            Primary Restaurant
+                          </label>
+                          <select
+                            value={editRestaurantId}
+                            onChange={(e) => handleChangeRestaurant(u.id, e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                          >
+                            {restaurants.map((r) => (
+                              <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Change Role — admin only */}
+                      {isAdmin && (
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                            Role
+                          </label>
+                          <select
+                            value={u.role}
+                            onChange={(e) => updateRole(u.id, e.target.value as UserRole)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                          >
+                            <option value="employee">Employee</option>
+                            <option value="assistant_manager">Asst. Manager</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Multi-location assignments — admin only */}
+                    {isAdmin && (
+                      <div className="mt-4">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-2">
+                          Additional Locations
+                        </label>
+                        {locationsLoading ? (
+                          <p className="text-xs text-gray-400">Loading...</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {restaurants
+                              .filter((r) => r.id !== editRestaurantId)
+                              .map((r) => {
+                                const isAssigned = userLocations.some(
+                                  (ul) => ul.restaurant_id === r.id
+                                );
+                                return (
+                                  <button
+                                    key={r.id}
+                                    onClick={() =>
+                                      isAssigned
+                                        ? handleRemoveLocation(u.id, r.id)
+                                        : handleAddLocation(u.id, r.id)
+                                    }
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                                      isAssigned
+                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                        : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'
+                                    }`}
+                                  >
+                                    {isAssigned ? '✓ ' : '+ '}{r.name}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-gray-400 mt-1.5">
+                          Tap to add or remove access to other locations.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                      {/* PIN Reset — employees only */}
+                      {u.role === 'employee' && (
+                        <button
+                          onClick={() => openResetPin(u)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                        >
+                          Reset PIN
+                        </button>
+                      )}
+
+                      {/* Archive / Restore */}
+                      <button
+                        onClick={() => toggleArchive(u.id, u.status)}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                          u.status === 'active'
+                            ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                            : 'bg-green-50 text-green-700 hover:bg-green-100'
+                        }`}
+                      >
+                        {u.status === 'active' ? 'Archive' : 'Restore'}
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -368,8 +571,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
               </div>
             ) : (
               <form onSubmit={handleAddUser} className="space-y-4">
-
-                {/* Role — shown first so the form adapts immediately */}
+                {/* Role — shown first so the form adapts */}
                 {isAdmin && (
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -421,7 +623,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </select>
                 </div>
 
-                {/* EMPLOYEE: 4-digit PIN + Language */}
+                {/* EMPLOYEE: PIN + Language */}
                 {isEmployeeRole && (
                   <>
                     <div>
@@ -468,7 +670,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </>
                 )}
 
-                {/* MANAGER / ASST. MANAGER / ADMIN: email + password */}
+                {/* MANAGER+: email + password */}
                 {isElevatedRole && (
                   <>
                     <div>
@@ -498,7 +700,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                         required
                       />
                       <p className="text-[11px] text-gray-400 mt-1.5">
-                        They'll use this to sign in under Manager / Owner login.
+                        They&apos;ll use this to sign in under Manager / Owner login.
                       </p>
                     </div>
                   </>

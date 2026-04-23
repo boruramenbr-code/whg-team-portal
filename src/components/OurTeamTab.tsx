@@ -108,7 +108,7 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* ── Location tabs (only if multiple locations) ── */}
       {hasMultipleLocations && (
-        <div className="flex items-center border-b border-[#D6DEE8]/60 bg-[#ECF0F6] px-2 md:px-4 flex-shrink-0">
+        <div className="flex items-center border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-2 md:px-4 flex-shrink-0">
           <div className="flex gap-0.5 overflow-x-auto py-1 scrollbar-hide">
             {locations.map((loc) => {
               const isActive = activeLocationId === loc.id;
@@ -147,7 +147,7 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
 
       {/* ── Sub-tab bar (Team Members / Pre-Shift Notes) ── */}
       {isManager && (
-        <div className="flex items-center border-b border-[#D6DEE8]/40 bg-[#F0F4F9] px-2 md:px-4 flex-shrink-0">
+        <div className="flex items-center border-b border-[#D6DEE8]/40 bg-[#CDDAE7] px-2 md:px-4 flex-shrink-0">
           <div className="flex gap-1">
             {subTabs.map((t) => {
               const isActive = activeSubTab === t.key;

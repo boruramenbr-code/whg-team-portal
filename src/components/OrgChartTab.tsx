@@ -339,7 +339,7 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-gradient-to-b from-[#E8EEF4] via-[#EDF2F8] to-[#F0F4F9]">
+    <div className="flex-1 overflow-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-10">

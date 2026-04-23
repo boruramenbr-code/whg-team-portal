@@ -16,6 +16,11 @@ interface HeaderProps {
   currentPage?: 'chat' | 'admin';
 }
 
+function getDashboardLabel(role: string): string {
+  if (role === 'admin') return 'Owner Dashboard';
+  return 'Manager Dashboard';
+}
+
 export default function Header({ profile, showAdminLink, currentPage }: HeaderProps) {
   const router = useRouter();
 
@@ -60,7 +65,7 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
             </>
           )}
           <span className="text-[#7BA7D3] text-xs hidden sm:inline">
-            {currentPage === 'admin' ? 'Team Management' : 'Team Portal'}
+            {currentPage === 'admin' ? getDashboardLabel(profile.role) : 'Team Portal'}
           </span>
         </div>
       </div>
@@ -79,7 +84,7 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
             onClick={() => router.push('/admin')}
             className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors font-medium"
           >
-            Manage Team
+            Dashboard
           </button>
         )}
 

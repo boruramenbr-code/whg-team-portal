@@ -144,7 +144,7 @@ export default function HandbookReaderTab({ language }: Props) {
     : sections;
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-gradient-to-b from-[#E8EEF4] to-[#F0F4F9]">
+    <div className="flex-1 flex overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB]">
       {/* Desktop TOC sidebar */}
       <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-r border-gray-200 bg-white">
         <div className="px-4 py-3 border-b border-gray-100">

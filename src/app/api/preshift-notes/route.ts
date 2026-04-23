@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
     } else if (['manager', 'assistant_manager'].includes(profile.role)) {
       // Check if manager has access to this location
       const { data: access } = await supabase
-        .from('manager_locations')
+        .from('user_locations')
         .select('id')
         .eq('profile_id', user.id)
         .eq('restaurant_id', restaurantIdParam)

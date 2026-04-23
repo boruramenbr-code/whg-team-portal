@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
 
   const adminClient = getAdminClient();
   const { data, error } = await adminClient
-    .from('manager_locations')
+    .from('user_locations')
     .select('id, restaurant_id, restaurants(id, name, slug)')
     .eq('profile_id', profileId);
 
@@ -76,19 +76,19 @@ export async function POST(req: NextRequest) {
 
   const adminClient = getAdminClient();
 
-  // Verify target is a manager/assistant_manager
+  // Verify target profile exists
   const { data: target } = await adminClient
     .from('profiles')
     .select('role')
     .eq('id', profile_id)
     .single();
 
-  if (!target || !['manager', 'assistant_manager'].includes(target.role)) {
-    return Response.json({ error: 'Can only assign locations to managers' }, { status: 400 });
+  if (!target) {
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   const { error } = await adminClient
-    .from('manager_locations')
+    .from('user_locations')
     .insert({ profile_id, restaurant_id });
 
   if (error) {
@@ -131,7 +131,7 @@ export async function DELETE(req: NextRequest) {
 
   const adminClient = getAdminClient();
   const { error } = await adminClient
-    .from('manager_locations')
+    .from('user_locations')
     .delete()
     .eq('profile_id', profile_id)
     .eq('restaurant_id', restaurant_id);

@@ -72,7 +72,7 @@ export default function PoliciesTab({ language }: Props) {
   const showManagerSection = role === 'manager' || role === 'admin' || role === 'assistant_manager' || grouped.manager.length > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#E8EEF4] via-[#EDF2F8] to-[#F0F4F9]">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
         <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] mb-1">
           {isES ? 'Políticas' : 'Policies'}

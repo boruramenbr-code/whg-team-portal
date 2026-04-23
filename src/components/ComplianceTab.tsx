@@ -111,7 +111,7 @@ export default function ComplianceTab() {
   const { summary, viewer } = data;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#E8EEF4] to-[#F0F4F9]">
+    <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB]">
       {/* Header + summary */}
       <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex-shrink-0">
         <div className="max-w-5xl mx-auto">

@@ -17,12 +17,46 @@ interface Props {
   isManager: boolean;
 }
 
-// Top-level tabs are grouped by subject. The "handbook" top tab contains
-// three sub-tabs (Read / Policies / Ask) since they all belong to the same
-// subject. Other subjects (Pre-Shift, Compliance, future Feedback/Reviews)
-// stay as their own top-level tabs.
 type TopTabKey = 'home' | 'handbook' | 'preshift' | 'compliance' | 'ourteam';
 type HandbookSubTab = 'read' | 'policies' | 'ask';
+
+/* ── SVG icons for bottom nav (inline, no dependency) ── */
+const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
+  home: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#1B3A6B' : 'none'} stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  handbook: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#1B3A6B' : 'none'} stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  ),
+  ourteam: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" fill={a ? '#1B3A6B' : 'none'} />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  preshift: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill={a ? '#1B3A6B' : 'none'} />
+      <polyline points="14 2 14 8 20 8" stroke={a ? 'white' : 'currentColor'} />
+      <line x1="16" y1="13" x2="8" y2="13" stroke={a ? 'white' : 'currentColor'} />
+      <line x1="16" y1="17" x2="8" y2="17" stroke={a ? 'white' : 'currentColor'} />
+    </svg>
+  ),
+  compliance: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill={a ? '#1B3A6B' : 'none'} />
+      <polyline points="9 12 11 14 15 10" stroke={a ? 'white' : 'currentColor'} />
+    </svg>
+  ),
+};
 
 export default function DashboardClient({ profile, isManager }: Props) {
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');
@@ -35,8 +69,6 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
-  // Selecting a topic from the sidebar jumps into the Ask sub-tab of the
-  // Handbook & Policies section so the question lands in the chat.
   const handleSelect = (q: string) => {
     setPendingQuestion(q);
     setMobileTopicsOpen(false);
@@ -58,6 +90,15 @@ export default function DashboardClient({ profile, isManager }: Props) {
       : []),
   ];
 
+  /* Short labels for bottom nav on mobile */
+  const mobileLabels: Record<TopTabKey, { en: string; es: string }> = {
+    home: { en: 'Home', es: 'Inicio' },
+    handbook: { en: 'Handbook', es: 'Manual' },
+    ourteam: { en: 'Team', es: 'Equipo' },
+    preshift: { en: 'Pre-Shift', es: 'Pre-Turno' },
+    compliance: { en: 'Comply', es: 'Cumplir' },
+  };
+
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
     { key: 'read', label: 'Read', labelEs: 'Leer', emoji: '📖' },
     { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
@@ -75,8 +116,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
         />
       )}
 
-      {/* Top-level tab bar */}
-      <div className="flex items-center border-b border-[#D6DEE8] bg-[#F4F7FB] px-2 md:px-4 flex-shrink-0">
+      {/* ── DESKTOP top tab bar (hidden on mobile) ── */}
+      <div className="hidden md:flex items-center border-b border-[#D6DEE8] bg-[#D0DAE5] px-4 flex-shrink-0">
         <div className="flex gap-1">
           {topTabs.map((t) => {
             const isActive = activeTop === t.key;
@@ -84,7 +125,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
               <button
                 key={t.key}
                 onClick={() => setActiveTop(t.key)}
-                className={`relative flex items-center gap-1.5 px-3 md:px-4 py-2.5 text-xs md:text-sm font-semibold transition-colors ${
+                className={`relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${
                   isActive
                     ? 'text-[#1B3A6B]'
                     : 'text-gray-400 hover:text-gray-600'
@@ -101,9 +142,9 @@ export default function DashboardClient({ profile, isManager }: Props) {
         </div>
       </div>
 
-      {/* Sub-tab bar — only visible inside Handbook & Policies */}
+      {/* Sub-tab bar — Handbook & Policies (visible on both mobile + desktop) */}
       {activeTop === 'handbook' && (
-        <div className="flex items-center justify-between border-b border-[#D6DEE8]/60 bg-[#ECF0F6] px-2 md:px-4 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-2 md:px-4 flex-shrink-0">
           <div className="flex gap-1">
             {handbookSubTabs.map((t) => {
               const isActive = activeHandbookSub === t.key;
@@ -111,7 +152,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 <button
                   key={t.key}
                   onClick={() => setActiveHandbookSub(t.key)}
-                  className={`relative flex items-center gap-1.5 px-3 md:px-4 py-2 text-[11px] md:text-xs font-semibold transition-colors ${
+                  className={`tap-highlight relative flex items-center gap-1.5 px-3 md:px-4 py-2 text-[11px] md:text-xs font-semibold transition-colors ${
                     isActive
                       ? 'text-[#2E86C1]'
                       : 'text-gray-400 hover:text-gray-600'
@@ -126,11 +167,11 @@ export default function DashboardClient({ profile, isManager }: Props) {
               );
             })}
           </div>
-          {/* Language toggle — visible on Read & Policies sub-tabs */}
+          {/* Language toggle */}
           <div className="flex items-center gap-0.5 bg-white/60 rounded-full p-0.5 border border-gray-200/60">
             <button
               onClick={() => setLanguage('en')}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+              className={`tap-highlight px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
                 language === 'en'
                   ? 'bg-[#1B3A6B] text-white'
                   : 'text-gray-500 hover:text-gray-700'
@@ -140,7 +181,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
             </button>
             <button
               onClick={() => setLanguage('es')}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+              className={`tap-highlight px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
                 language === 'es'
                   ? 'bg-[#1B3A6B] text-white'
                   : 'text-gray-500 hover:text-gray-700'
@@ -152,32 +193,38 @@ export default function DashboardClient({ profile, isManager }: Props) {
         </div>
       )}
 
-      {/* Tab content */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* ── Tab content ── */}
+      <div className="flex flex-1 overflow-hidden pb-[72px] md:pb-0">
         {/* HOME */}
         {activeTop === 'home' && (
-          <HomeTab
-            firstName={firstName}
-            restaurantName={restaurantName}
-            language={language}
-            onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
-          />
+          <div className="flex-1 overflow-y-auto tab-content-enter">
+            <HomeTab
+              firstName={firstName}
+              restaurantName={restaurantName}
+              language={language}
+              onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
+            />
+          </div>
         )}
 
         {/* HANDBOOK & POLICIES → Read */}
         {activeTop === 'handbook' && activeHandbookSub === 'read' && (
-          <HandbookReaderTab language={language} />
+          <div className="flex-1 overflow-hidden tab-content-enter">
+            <HandbookReaderTab language={language} />
+          </div>
         )}
 
         {/* HANDBOOK & POLICIES → Policies */}
         {activeTop === 'handbook' && activeHandbookSub === 'policies' && (
-          <PoliciesTab language={language} />
+          <div className="flex-1 overflow-hidden tab-content-enter">
+            <PoliciesTab language={language} />
+          </div>
         )}
 
         {/* HANDBOOK & POLICIES → Ask (chatbot) */}
         {activeTop === 'handbook' && activeHandbookSub === 'ask' && (
           <>
-            <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-[#E8EEF4] to-[#F0F4F9]">
+            <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] tab-content-enter">
               <div className="max-w-2xl w-full mx-auto h-full flex flex-col">
                 <ChatInterface
                   profile={profile}
@@ -189,10 +236,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 />
               </div>
 
-              {/* Mobile Topics button */}
+              {/* Mobile Topics button — positioned above bottom nav */}
               <button
                 onClick={() => setMobileTopicsOpen(true)}
-                className={`lg:hidden fixed bottom-20 right-4 z-20 px-4 py-2.5 rounded-full shadow-lg text-xs font-bold text-white flex items-center gap-1.5 transition-colors ${
+                className={`lg:hidden fixed bottom-24 right-4 z-20 px-4 py-2.5 rounded-full shadow-lg text-xs font-bold text-white flex items-center gap-1.5 transition-colors ${
                   handbookSource === 'manager' ? 'bg-amber-600' : 'bg-[#1B3A6B]'
                 }`}
               >
@@ -208,8 +255,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
               </button>
             </main>
 
-            {/* Desktop topics sidebar — only on the Ask sub-tab */}
-            <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-[#D6DEE8]/60 bg-[#F0F4F9] overflow-hidden">
+            {/* Desktop topics sidebar */}
+            <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-[#D6DEE8]/60 bg-[#CDDAE7] overflow-hidden">
               <Sidebar handbookSource={handbookSource} onSelect={handleSelect} language={language} />
             </aside>
 
@@ -239,26 +286,61 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </>
         )}
 
-        {/* OUR TEAM (location tabs + team members / pre-shift sub-tabs) */}
+        {/* OUR TEAM */}
         {activeTop === 'ourteam' && (
-          <OurTeamTab
-            restaurantId={profile.restaurant_id}
-            restaurantName={restaurantName}
-            role={profile.role}
-            language={language}
-          />
+          <div className="flex-1 overflow-hidden tab-content-enter">
+            <OurTeamTab
+              restaurantId={profile.restaurant_id}
+              restaurantName={restaurantName}
+              role={profile.role}
+              language={language}
+            />
+          </div>
         )}
 
         {/* PRE-SHIFT */}
         {activeTop === 'preshift' && (
-          <PreshiftTab language={language} restaurantName={restaurantName} />
+          <div className="flex-1 overflow-hidden tab-content-enter">
+            <PreshiftTab language={language} restaurantName={restaurantName} />
+          </div>
         )}
 
         {/* COMPLIANCE (manager-only) */}
         {activeTop === 'compliance' && isManager && (
-          <ComplianceTab />
+          <div className="flex-1 overflow-hidden tab-content-enter">
+            <ComplianceTab />
+          </div>
         )}
       </div>
+
+      {/* ── MOBILE bottom navigation bar (hidden on desktop) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center justify-around px-1 pt-1.5 pb-safe">
+          {topTabs.map((t) => {
+            const isActive = activeTop === t.key;
+            const label = isES ? mobileLabels[t.key].es : mobileLabels[t.key].en;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActiveTop(t.key)}
+                className={`tap-highlight flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg min-w-[52px] transition-colors ${
+                  isActive ? 'text-[#1B3A6B]' : 'text-gray-400'
+                }`}
+              >
+                <div className="relative">
+                  {NavIcons[t.key](isActive)}
+                  {isActive && (
+                    <span className="nav-dot-enter absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1B3A6B]" />
+                  )}
+                </div>
+                <span className={`text-[10px] font-semibold leading-tight ${isActive ? 'text-[#1B3A6B]' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

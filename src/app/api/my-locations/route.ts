@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase-server';
  * GET /api/my-locations
  * Returns the restaurants the current user can access:
  *  - Employees: just their assigned restaurant
- *  - Managers / Asst. Managers: their primary restaurant + any extras from manager_locations
+ *  - Managers / Asst. Managers: their primary restaurant + any extras from user_locations
  *  - Admins: all active restaurants
  */
 export async function GET() {
@@ -31,40 +31,33 @@ export async function GET() {
     return Response.json({ locations: all || [] });
   }
 
-  // Manager / Asst. Manager: primary + assigned extras
-  if (profile.role === 'manager' || profile.role === 'assistant_manager') {
-    // Get extra assigned locations
-    const { data: extras } = await supabase
-      .from('manager_locations')
-      .select('restaurant_id, restaurants(id, name, slug)')
-      .eq('profile_id', user.id);
+  // All non-admin roles: primary restaurant + any assigned extras
+  const { data: extras } = await supabase
+    .from('user_locations')
+    .select('restaurant_id, restaurants(id, name, slug)')
+    .eq('profile_id', user.id);
 
-    const locationMap = new Map<string, { id: string; name: string; slug: string }>();
+  const locationMap = new Map<string, { id: string; name: string; slug: string }>();
 
-    // Add primary restaurant
-    const primary = profile.restaurants as unknown as { id: string; name: string; slug: string } | null;
-    if (primary) {
-      locationMap.set(primary.id, primary);
-    }
-
-    // Add extras
-    if (extras) {
-      for (const e of extras) {
-        const r = e.restaurants as unknown as { id: string; name: string; slug: string } | null;
-        if (r && !locationMap.has(r.id)) {
-          locationMap.set(r.id, r);
-        }
-      }
-    }
-
-    const locations = Array.from(locationMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-
-    return Response.json({ locations });
+  // Add primary restaurant
+  const primary = profile.restaurants as unknown as { id: string; name: string; slug: string } | null;
+  if (primary) {
+    locationMap.set(primary.id, primary);
   }
 
-  // Employee: just their restaurant
-  const primary = profile.restaurants as unknown as { id: string; name: string; slug: string } | null;
-  return Response.json({ locations: primary ? [primary] : [] });
+  // Add extras from user_locations
+  if (extras) {
+    for (const e of extras) {
+      const r = e.restaurants as unknown as { id: string; name: string; slug: string } | null;
+      if (r && !locationMap.has(r.id)) {
+        locationMap.set(r.id, r);
+      }
+    }
+  }
+
+  const locations = Array.from(locationMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  return Response.json({ locations });
 }

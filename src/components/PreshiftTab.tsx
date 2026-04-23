@@ -84,7 +84,7 @@ export default function PreshiftTab({ language, restaurantName, restaurantId }: 
   });
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#E8EEF4] via-[#EDF2F8] to-[#F0F4F9]">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         {/* Date header */}
         <div className="flex items-center justify-between">
