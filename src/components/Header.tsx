@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Profile } from '@/lib/types';
 
-const HEADER_LOGO: Record<string, string> = {
-  'Ichiban Sushi': '/logos/ichiban-white.png',
-  'Boru Ramen': '/logos/boru-white.png',
-  'Shokudo': '/logos/shokudo-white.png',
+const HEADER_LOGO: Record<string, { src: string; mobileH: string; desktopH: string }> = {
+  'Ichiban Sushi': { src: '/logos/ichiban-white.png', mobileH: 'h-9', desktopH: 'md:h-7' },
+  'Boru Ramen': { src: '/logos/boru-white.png', mobileH: 'h-7', desktopH: 'md:h-6' },
+  'Shokudo': { src: '/logos/shokudo-white.png', mobileH: 'h-7', desktopH: 'md:h-6' },
 };
 
 interface HeaderProps {
@@ -58,9 +58,9 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
               <span className="text-[#7BA7D3]/40 text-sm">|</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={HEADER_LOGO[profile.restaurants.name]}
+                src={HEADER_LOGO[profile.restaurants.name].src}
                 alt={`${profile.restaurants.name} logo`}
-                className="h-7 md:h-6 w-auto object-contain opacity-90"
+                className={`${HEADER_LOGO[profile.restaurants.name].mobileH} ${HEADER_LOGO[profile.restaurants.name].desktopH} w-auto object-contain opacity-90`}
               />
             </>
           )}

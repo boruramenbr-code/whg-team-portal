@@ -144,15 +144,15 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
       {/* Sub-tab bar — Handbook & Policies (visible on both mobile + desktop) */}
       {activeTop === 'handbook' && (
-        <div className="flex items-center justify-between border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-3 md:px-4 flex-shrink-0">
-          <div className="flex gap-1">
+        <div className="flex items-center justify-between border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-2 md:px-4 flex-shrink-0">
+          <div className="flex gap-0.5 min-w-0">
             {handbookSubTabs.map((t) => {
               const isActive = activeHandbookSub === t.key;
               return (
                 <button
                   key={t.key}
                   onClick={() => setActiveHandbookSub(t.key)}
-                  className={`tap-highlight relative flex items-center gap-1.5 px-4 md:px-4 py-3 md:py-2 text-sm md:text-xs font-semibold transition-colors ${
+                  className={`tap-highlight relative flex items-center gap-1 px-3 md:px-4 py-3 md:py-2 text-sm md:text-xs font-semibold transition-colors ${
                     isActive
                       ? 'text-[#2E86C1]'
                       : 'text-gray-400 hover:text-gray-600'
@@ -168,10 +168,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
             })}
           </div>
           {/* Language toggle */}
-          <div className="flex items-center gap-0.5 bg-white/60 rounded-full p-0.5 border border-gray-200/60">
+          <div className="flex-shrink-0 flex items-center gap-0.5 bg-white/60 rounded-full p-0.5 border border-gray-200/60 mr-1">
             <button
               onClick={() => setLanguage('en')}
-              className={`tap-highlight px-2.5 py-1 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
+              className={`tap-highlight px-3 py-1.5 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
                 language === 'en'
                   ? 'bg-[#1B3A6B] text-white'
                   : 'text-gray-500 hover:text-gray-700'
@@ -181,7 +181,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
             </button>
             <button
               onClick={() => setLanguage('es')}
-              className={`tap-highlight px-2.5 py-1 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
+              className={`tap-highlight px-3 py-1.5 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
                 language === 'es'
                   ? 'bg-[#1B3A6B] text-white'
                   : 'text-gray-500 hover:text-gray-700'
@@ -236,10 +236,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 />
               </div>
 
-              {/* Mobile Topics button — positioned above bottom nav */}
+              {/* Mobile Topics button — above bottom nav + chat input */}
               <button
                 onClick={() => setMobileTopicsOpen(true)}
-                className={`lg:hidden fixed bottom-24 right-4 z-20 px-4 py-2.5 rounded-full shadow-lg text-xs font-bold text-white flex items-center gap-1.5 transition-colors ${
+                className={`lg:hidden fixed bottom-36 md:bottom-20 right-4 z-20 px-4 py-2.5 rounded-full shadow-lg text-xs font-bold text-white flex items-center gap-1.5 transition-colors ${
                   handbookSource === 'manager' ? 'bg-amber-600' : 'bg-[#1B3A6B]'
                 }`}
               >
