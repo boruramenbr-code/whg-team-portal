@@ -209,14 +209,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
         {/* HANDBOOK & POLICIES → Read */}
         {activeTop === 'handbook' && activeHandbookSub === 'read' && (
-          <div className="flex-1 overflow-hidden tab-content-enter">
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <HandbookReaderTab language={language} />
           </div>
         )}
 
         {/* HANDBOOK & POLICIES → Policies */}
         {activeTop === 'handbook' && activeHandbookSub === 'policies' && (
-          <div className="flex-1 overflow-hidden tab-content-enter">
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <PoliciesTab language={language} />
           </div>
         )}
@@ -288,7 +288,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
         {/* OUR TEAM */}
         {activeTop === 'ourteam' && (
-          <div className="flex-1 overflow-hidden tab-content-enter">
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <OurTeamTab
               restaurantId={profile.restaurant_id}
               restaurantName={restaurantName}
@@ -300,14 +300,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
         {/* PRE-SHIFT */}
         {activeTop === 'preshift' && (
-          <div className="flex-1 overflow-hidden tab-content-enter">
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <PreshiftTab language={language} restaurantName={restaurantName} />
           </div>
         )}
 
         {/* COMPLIANCE (manager-only) */}
         {activeTop === 'compliance' && isManager && (
-          <div className="flex-1 overflow-hidden tab-content-enter">
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <ComplianceTab />
           </div>
         )}

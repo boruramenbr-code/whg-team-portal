@@ -32,7 +32,7 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
   };
 
   return (
-    <header className="bg-[#1B3A6B] text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
+    <header className="bg-[#1B3A6B] text-white px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0.75rem))' }}>
       {/* Left: Brand */}
       <div className="flex items-center gap-3">
         {currentPage === 'admin' && (
