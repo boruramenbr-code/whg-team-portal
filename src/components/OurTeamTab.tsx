@@ -97,28 +97,18 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
           <div className="flex flex-wrap gap-2 justify-center">
             {locations.map((loc) => {
               const isActive = activeLocationId === loc.id;
-              const locLogo = getRestaurantLogo(loc.name);
 
               return (
                 <button
                   key={loc.id}
                   onClick={() => handleLocationChange(loc.id)}
-                  className={`tap-highlight flex items-center justify-center px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+                  className={`tap-highlight px-5 py-2 rounded-full text-sm font-semibold transition-all ${
                     isActive
                       ? 'bg-white text-[#1B3A6B] shadow-md border-2 border-[#1B3A6B]/20'
                       : 'bg-white/40 text-gray-500 hover:bg-white/70 hover:text-gray-700 border-2 border-transparent'
                   }`}
                 >
-                  {locLogo ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={locLogo}
-                      alt={loc.name}
-                      className={`h-5 w-auto object-contain ${isActive ? '' : 'opacity-60'}`}
-                    />
-                  ) : (
-                    <span>{loc.name}</span>
-                  )}
+                  {loc.name}
                 </button>
               );
             })}
