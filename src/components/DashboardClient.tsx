@@ -102,7 +102,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
     { key: 'read', label: 'Read', labelEs: 'Leer', emoji: '📖' },
     { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
-    { key: 'ask', label: 'Ask', labelEs: 'Preguntar', emoji: '💬' },
+    { key: 'ask', label: 'Ask', labelEs: 'Chat', emoji: '💬' },
   ];
 
   return (

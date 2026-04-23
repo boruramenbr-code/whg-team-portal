@@ -93,8 +93,8 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* ── Location switcher (only if multiple locations) ── */}
       {hasMultipleLocations && (
-        <div className="flex items-center border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-3 md:px-4 flex-shrink-0">
-          <div className="flex gap-1 overflow-x-auto py-1.5 scrollbar-hide">
+        <div className="border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-3 md:px-4 py-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2 justify-center">
             {locations.map((loc) => {
               const isActive = activeLocationId === loc.id;
               const locLogo = getRestaurantLogo(loc.name);
@@ -103,10 +103,10 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
                 <button
                   key={loc.id}
                   onClick={() => handleLocationChange(loc.id)}
-                  className={`tap-highlight relative flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap rounded-lg ${
+                  className={`tap-highlight flex items-center justify-center px-5 py-2 rounded-full text-sm font-semibold transition-all ${
                     isActive
-                      ? 'text-[#1B3A6B] bg-white/80 shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-white/30'
+                      ? 'bg-white text-[#1B3A6B] shadow-md border-2 border-[#1B3A6B]/20'
+                      : 'bg-white/40 text-gray-500 hover:bg-white/70 hover:text-gray-700 border-2 border-transparent'
                   }`}
                 >
                   {locLogo ? (
@@ -114,12 +114,11 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
                     <img
                       src={locLogo}
                       alt={loc.name}
-                      className="h-6 md:h-5 w-auto object-contain"
+                      className={`h-5 w-auto object-contain ${isActive ? '' : 'opacity-60'}`}
                     />
                   ) : (
-                    <span className="text-lg">🏪</span>
+                    <span>{loc.name}</span>
                   )}
-                  <span>{loc.name}</span>
                 </button>
               );
             })}

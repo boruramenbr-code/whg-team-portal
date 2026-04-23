@@ -186,14 +186,14 @@ export default function OrgChartTab({ restaurantId, restaurantName }: Props) {
             <img
               src={logo}
               alt={currentName || 'Restaurant'}
-              className="mx-auto mb-3 h-10 md:h-16 w-auto object-contain"
+              className="mx-auto mb-3 h-20 md:h-20 w-auto object-contain"
             />
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src="/logos/whg.png"
               alt="WHG"
-              className="mx-auto mb-3 h-10 md:h-16 w-auto object-contain rounded-lg"
+              className="mx-auto mb-3 h-20 md:h-20 w-auto object-contain rounded-lg"
             />
           )}
           <h1 className="text-xl md:text-2xl font-bold text-[#1B3A6B]">Meet Your Team</h1>
