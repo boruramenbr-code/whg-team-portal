@@ -8,9 +8,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
  * POST /api/bar-cards/ocr
- * Analyze a bar card image using OpenAI Vision to extract name + expiration date + crop region.
+ * Analyze a bar card image using OpenAI Vision to extract name + expiration date.
  * Body: FormData with field "file" (the card image).
- * Returns: { employee_name, expiration_date, crop } or error.
+ * Returns: { employee_name, expiration_date } or error.
  */
 export async function POST(req: NextRequest) {
   const supabase = createClient();
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
-    // Use auto detail so GPT can see card edges for accurate cropping
+    // low detail keeps payload small and fast — only extracting text
     const dataUrl = `data:${file.type};base64,${base64}`;
 
     console.log(`OCR request: file=${file.name}, size=${file.size}, type=${file.type}, base64len=${base64.length}`);
@@ -58,17 +58,23 @@ export async function POST(req: NextRequest) {
             },
             {
               type: 'text',
-              text: `This is a photo of an alcohol service certification card (bar card, RBS card, ATC card, or similar). The card may be on a table, held in hand, or at an angle.
+              text: `This is a photo of an alcohol service certification card (bar card, RBS card, ATC card, or similar).
+
+These cards typically have MULTIPLE dates on them:
+- An issue date or completion date (when the person earned or received the card)
+- An EXPIRATION date (when the card expires and must be renewed)
+
+I need ONLY the EXPIRATION date — this is the LATEST/FURTHEST date on the card, usually labeled "Exp", "Expires", "Expiration", or "Valid Through". It is always later than the issue date. Do NOT return the issue date, completion date, date of birth, or any other date.
 
 Extract:
 1. The cardholder's full name
-2. The expiration date
+2. The EXPIRATION date only (the latest date on the card)
 
 Respond ONLY with valid JSON:
 {"employee_name": "First Last", "expiration_date": "YYYY-MM-DD"}
 
 If you cannot read the name, use "Unknown".
-If you cannot read the expiration date, use null.
+If you cannot determine which date is the expiration, use null.
 No other text.`,
             },
           ],
