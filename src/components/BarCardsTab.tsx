@@ -53,14 +53,34 @@ const STATUS_CONFIG: Record<CardStatus, { label: string; bg: string; text: strin
 };
 
 /* ───────── image conversion helper ───────── */
-// Converts HEIC or oversized images to JPEG. Does NOT attempt rotation —
-// auto-rotate via Canvas/createImageBitmap proved unreliable across browsers.
+// Converts HEIC files to JPEG using heic2any (WASM decoder — works in any browser).
+// Also compresses oversized JPEGs/PNGs via Canvas.
 async function convertToJpeg(file: File): Promise<File> {
-  const supported = ['image/jpeg', 'image/png', 'image/webp'];
-  if (supported.includes(file.type) && file.size < 4 * 1024 * 1024) {
-    return file; // Already a small supported format — use as-is
+  // Detect HEIC by MIME type OR file extension (some browsers report empty MIME for HEIC)
+  const isHeic =
+    file.type === 'image/heic' ||
+    file.type === 'image/heif' ||
+    file.type === '' && /\.heic$/i.test(file.name) ||
+    file.type === '' && /\.heif$/i.test(file.name) ||
+    /\.heic$/i.test(file.name) ||
+    /\.heif$/i.test(file.name);
+
+  if (isHeic) {
+    // Dynamically import heic2any (WASM-based, ~400KB, loads only when needed)
+    const heic2any = (await import('heic2any')).default;
+    const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+    const jpegBlob = Array.isArray(result) ? result[0] : result;
+    const name = file.name.replace(/\.[^.]+$/, '.jpg');
+    return new File([jpegBlob], name, { type: 'image/jpeg' });
   }
 
+  // Already a supported format and under 4MB — use as-is
+  const supported = ['image/jpeg', 'image/png', 'image/webp'];
+  if (supported.includes(file.type) && file.size < 4 * 1024 * 1024) {
+    return file;
+  }
+
+  // Compress oversized images via Canvas
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
