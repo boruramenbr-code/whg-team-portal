@@ -571,16 +571,61 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
         <div className="px-5 py-4 space-y-4">
           {/* File picker */}
           {!preview ? (
-            <label className="tap-highlight flex flex-col items-center justify-center gap-2 py-10 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#1B3A6B]/40 hover:bg-blue-50/30 transition-colors">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <p className="text-sm text-gray-500 font-medium">Tap to take photo or choose file</p>
-              <p className="text-xs text-gray-400">JPEG, PNG, or WebP up to 5MB</p>
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handleFileSelect} />
-            </label>
+            <>
+              {/* Instruction banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                <p className="text-xs font-semibold text-[#1B3A6B] mb-1">Photo Tips</p>
+                <ul className="text-[11px] text-blue-800 space-y-0.5 list-disc list-inside">
+                  <li>Hold the card <strong>upright</strong> (landscape orientation)</li>
+                  <li>Make sure the <strong>name</strong> and <strong>expiration date</strong> are visible</li>
+                  <li>Crop or rotate your photo <strong>before uploading</strong> if needed</li>
+                </ul>
+              </div>
+
+              {/* Card outline guide + file picker */}
+              <label className="tap-highlight flex flex-col items-center justify-center gap-3 py-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#1B3A6B]/40 hover:bg-blue-50/30 transition-colors">
+                {/* Card cutout illustration */}
+                <div className="relative w-64 h-40 mx-auto">
+                  {/* Card outline */}
+                  <div className="absolute inset-0 border-2 border-dashed border-[#1B3A6B]/30 rounded-lg bg-gradient-to-br from-blue-50/50 to-slate-50/50">
+                    {/* Corner brackets */}
+                    <div className="absolute top-0 left-0 w-5 h-5 border-t-[3px] border-l-[3px] border-[#1B3A6B]/60 rounded-tl-md" />
+                    <div className="absolute top-0 right-0 w-5 h-5 border-t-[3px] border-r-[3px] border-[#1B3A6B]/60 rounded-tr-md" />
+                    <div className="absolute bottom-0 left-0 w-5 h-5 border-b-[3px] border-l-[3px] border-[#1B3A6B]/60 rounded-bl-md" />
+                    <div className="absolute bottom-0 right-0 w-5 h-5 border-b-[3px] border-r-[3px] border-[#1B3A6B]/60 rounded-br-md" />
+                    {/* Simulated card content lines */}
+                    <div className="absolute top-5 left-5 right-5 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#1B3A6B]/10 flex items-center justify-center">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                          </svg>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <div className="h-2 w-24 bg-[#1B3A6B]/12 rounded-full" />
+                          <div className="h-1.5 w-16 bg-[#1B3A6B]/8 rounded-full" />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 pt-1">
+                        <div className="h-1.5 w-full bg-[#1B3A6B]/8 rounded-full" />
+                        <div className="h-1.5 w-3/4 bg-[#1B3A6B]/8 rounded-full" />
+                        <div className="flex items-center gap-1 pt-1">
+                          <div className="h-1.5 w-10 bg-amber-400/40 rounded-full" />
+                          <div className="h-1.5 w-14 bg-[#1B3A6B]/10 rounded-full" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 font-semibold">Tap to take photo or choose file</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Line up the card to fill the frame</p>
+                </div>
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handleFileSelect} />
+              </label>
+            </>
           ) : (
             <div className="relative">
               {/* eslint-disable-next-line @next/next/no-img-element */}
