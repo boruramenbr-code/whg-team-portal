@@ -76,11 +76,12 @@ export async function GET(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('restaurant_id, role')
+    .select('restaurant_id, role, status')
     .eq('id', user.id)
     .single();
 
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+  if (profile.status === 'archived') return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
 
   const dateParam = req.nextUrl.searchParams.get('date');
   const restaurantIdParam = req.nextUrl.searchParams.get('restaurant_id');
@@ -144,11 +145,12 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('restaurant_id, role, full_name')
+    .select('restaurant_id, role, full_name, status')
     .eq('id', user.id)
     .single();
 
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+  if (profile.status === 'archived') return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
 
   if (!MANAGER_ROLES.includes(profile.role)) {
     return NextResponse.json({ error: 'Only managers can post pre-shift notes' }, { status: 403 });

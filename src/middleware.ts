@@ -2,7 +2,10 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Add request ID for log correlation and debugging
+  const requestId = crypto.randomUUID().slice(0, 8);
   let supabaseResponse = NextResponse.next({ request });
+  supabaseResponse.headers.set('x-request-id', requestId);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

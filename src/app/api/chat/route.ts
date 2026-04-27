@@ -241,13 +241,18 @@ ${isSpanish ? '🔴 REMINDER: Your entire response must be in Spanish (Español)
     { role: 'user', content: question },
   ];
 
-  const stream = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: primedMessages,
-    stream: true,
-    temperature: 0.5,
-    max_tokens: 600,
-  });
+  let stream;
+  try {
+    stream = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: primedMessages,
+      stream: true,
+      temperature: 0.5,
+      max_tokens: 600,
+    });
+  } catch {
+    return Response.json({ error: 'AI service unavailable. Please try again in a moment.' }, { status: 503 });
+  }
 
   const encoder = new TextEncoder();
   let fullAnswer = '';
@@ -272,7 +277,7 @@ ${isSpanish ? '🔴 REMINDER: Your entire response must be in Spanish (Español)
           fullAnswer.includes("That's not something I have in the handbook") ||
           fullAnswer.includes("Eso no está en el manual");
 
-        // Save to chat history (fire and forget)
+        // Save to chat history (best-effort with error logging)
         supabase
           .from('chat_history')
           .insert({
@@ -282,7 +287,11 @@ ${isSpanish ? '🔴 REMINDER: Your entire response must be in Spanish (Español)
             handbook_source: source,
             is_unanswered: isUnanswered,
           })
-          .then(() => {});
+          .then(({ error: insertError }) => {
+            if (insertError) {
+              console.error('Chat history save failed:', insertError.message);
+            }
+          });
       } catch {
         controller.enqueue(
           encoder.encode(

@@ -112,6 +112,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, handbookSource, language, history: historyForServer }),
+        signal: AbortSignal.timeout(60000),
       });
 
       if (!res.ok || !res.body) {

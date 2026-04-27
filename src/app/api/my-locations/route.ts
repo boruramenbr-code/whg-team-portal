@@ -14,11 +14,14 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, restaurant_id, restaurants(id, name, slug)')
+    .select('id, role, restaurant_id, status, restaurants(id, name, slug)')
     .eq('id', user.id)
     .single();
 
   if (!profile) return Response.json({ error: 'Profile not found' }, { status: 404 });
+  if (profile.status === 'archived') {
+    return Response.json({ error: 'Account inactive' }, { status: 403 });
+  }
 
   // Admin: return all active restaurants
   if (profile.role === 'admin') {

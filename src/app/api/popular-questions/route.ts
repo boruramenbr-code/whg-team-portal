@@ -16,6 +16,15 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .single();
+  if (!profile || profile.status === 'archived') {
+    return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
+  }
+
   // Service role to read all questions across all users
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

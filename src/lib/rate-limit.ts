@@ -3,11 +3,15 @@
  *
  * This uses a sliding-window approach stored in a module-level Map.
  * On Vercel, each serverless instance keeps its own Map, so this
- * provides per-instance protection. For a small-to-medium app like
- * WHG Team Portal this is more than sufficient.
+ * provides per-instance protection — limits reset on cold starts.
+ * For a small-to-medium app like WHG Team Portal this is more than
+ * sufficient. The main goal is preventing runaway OpenAI costs from
+ * a single abusive session, not global enforcement.
  *
- * If you later need cross-instance rate limiting, swap this for
- * Upstash Redis or Vercel KV — the interface stays the same.
+ * To upgrade to cross-instance rate limiting later:
+ *   1. Add Upstash Redis (free tier covers this volume)
+ *   2. Replace the Map reads/writes with Redis INCR + EXPIRE
+ *   3. Keep the same checkRateLimit() interface — callers don't change
  */
 
 interface RateLimitEntry {

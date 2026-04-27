@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    // Log the failure so we can debug auth issues in Vercel logs
+    console.error('Auth callback failed:', error.message, { code: code.slice(0, 8) + '...' });
+  } else {
+    console.error('Auth callback called without code param');
   }
 
   return NextResponse.redirect(`${origin}/?error=auth_callback_failed`);

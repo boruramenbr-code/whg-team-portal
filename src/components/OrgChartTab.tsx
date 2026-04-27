@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 
 /* ───────── types ───────── */
 interface Position {
@@ -21,26 +21,26 @@ interface Props {
   isAdmin?: boolean;
 }
 
-/* ───────── color palette by role level ───────── */
-const LEVEL_COLORS: Record<number, { bg: string; text: string; border: string; gradient: string }> = {
-  1: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', gradient: 'from-amber-500 to-yellow-600' },
-  2: { bg: 'bg-blue-50', text: 'text-[#1B3A6B]', border: 'border-blue-200', gradient: 'from-[#1B3A6B] to-[#2E86C1]' },
-  3: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', gradient: 'from-blue-500 to-indigo-500' },
-  4: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', gradient: 'from-cyan-500 to-blue-500' },
-  5: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', gradient: 'from-teal-400 to-emerald-500' },
+/* ───────── gradient palette by role level ───────── */
+const LEVEL_GRADIENT: Record<number, string> = {
+  1: 'from-violet-400 to-purple-600',
+  2: 'from-blue-400 to-blue-700',
+  3: 'from-indigo-400 to-indigo-600',
+  4: 'from-cyan-400 to-blue-500',
+  5: 'from-teal-400 to-emerald-600',
 };
 
-const SPECIAL_COLORS = {
-  silentPartner: { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200', gradient: 'from-slate-400 to-gray-500' },
-  boh: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', gradient: 'from-violet-400 to-purple-500' },
-  foh: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200', gradient: 'from-teal-400 to-emerald-500' },
+const SPECIAL_GRADIENT: Record<string, string> = {
+  silentPartner: 'from-slate-300 to-gray-500',
+  boh: 'from-violet-400 to-purple-500',
+  foh: 'from-teal-400 to-emerald-500',
 };
 
-function getColors(p: Position) {
-  if (p.title === 'Silent Partner') return SPECIAL_COLORS.silentPartner;
-  if (p.role_level === 5 && p.title === 'BOH') return SPECIAL_COLORS.boh;
-  if (p.role_level === 5 && p.title === 'FOH') return SPECIAL_COLORS.foh;
-  return LEVEL_COLORS[Math.min(p.role_level, 5)];
+function getGradient(p: Position): string {
+  if (p.title === 'Silent Partner') return SPECIAL_GRADIENT.silentPartner;
+  if (p.role_level === 5 && p.title === 'BOH') return SPECIAL_GRADIENT.boh;
+  if (p.role_level === 5 && p.title === 'FOH') return SPECIAL_GRADIENT.foh;
+  return LEVEL_GRADIENT[Math.min(p.role_level, 5)] || LEVEL_GRADIENT[5];
 }
 
 const LEVEL_LABEL: Record<number, string> = {
@@ -51,12 +51,12 @@ const LEVEL_LABEL: Record<number, string> = {
   5: 'Staff',
 };
 
-const LEVEL_ICON: Record<number, string> = {
-  1: '👑',
-  2: '🎯',
-  3: '📋',
-  4: '⭐',
-  5: '💪',
+const LEVEL_LABEL_COLOR: Record<number, string> = {
+  1: 'text-purple-700',
+  2: 'text-blue-700',
+  3: 'text-indigo-600',
+  4: 'text-cyan-700',
+  5: 'text-teal-700',
 };
 
 /* ───────── restaurant logo mapping ───────── */
@@ -76,14 +76,16 @@ function getRestaurantLogo(name: string | null): string | null {
 }
 
 /* ───────── main component ───────── */
-export default function OrgChartTab({ restaurantId, restaurantName }: Props) {
+export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: Props) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
 
   const currentId = restaurantId;
   const currentName = restaurantName;
+  const canUpload = isAdmin === true;
 
   useEffect(() => {
     if (!currentId) { setLoading(false); return; }
@@ -148,6 +150,59 @@ export default function OrgChartTab({ restaurantId, restaurantName }: Props) {
     return positions.filter((p) => p.reports_to === id).sort((a, b) => a.sort_order - b.sort_order);
   }, [positions]);
 
+  // Photo upload handler
+  const handlePhotoUpload = useCallback(async (positionId: string, file: File) => {
+    setUploadingId(positionId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('positionId', positionId);
+
+      const res = await fetch('/api/org-chart/photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Upload failed');
+      }
+
+      const { photo_url } = await res.json();
+
+      // Update position in local state
+      setPositions((prev) =>
+        prev.map((p) => (p.id === positionId ? { ...p, photo_url } : p))
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+    } finally {
+      setUploadingId(null);
+    }
+  }, []);
+
+  // Photo remove handler
+  const handlePhotoRemove = useCallback(async (positionId: string) => {
+    if (!confirm('Remove this photo?')) return;
+    setUploadingId(positionId);
+    try {
+      const res = await fetch(`/api/org-chart/photo?positionId=${positionId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || 'Failed to remove');
+      }
+      setPositions((prev) =>
+        prev.map((p) => (p.id === positionId ? { ...p, photo_url: null } : p))
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to remove photo.');
+    } finally {
+      setUploadingId(null);
+    }
+  }, []);
+
   /* ── Loading / Error / Empty states ── */
   if (loading) {
     return (
@@ -177,118 +232,130 @@ export default function OrgChartTab({ restaurantId, restaurantName }: Props) {
   const logo = getRestaurantLogo(currentName);
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
-      <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#EFF3F7]">
+      <div className="max-w-lg mx-auto px-4 py-6 md:py-8">
         {/* Header */}
         <div className="text-center mb-6">
-          {logo ? (
+          {logo && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={logo}
               alt={currentName || 'Restaurant'}
-              className="mx-auto mb-3 h-20 md:h-20 w-auto object-contain"
-            />
-          ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src="/logos/whg.png"
-              alt="WHG"
-              className="mx-auto mb-3 h-20 md:h-20 w-auto object-contain rounded-lg"
+              className="mx-auto mb-2 h-14 md:h-16 w-auto object-contain"
             />
           )}
-          <h1 className="text-xl md:text-2xl font-bold text-[#1B3A6B]">Meet Your Team</h1>
-          <p className="text-sm text-gray-500 mt-1">Tap anyone to see their role and who they manage</p>
+          <p className="text-[11px] uppercase tracking-[1.5px] text-gray-400 font-medium mb-1">
+            {currentName || 'Wong Hospitality Group'}
+          </p>
+          <h1 className="text-xl font-semibold text-[#1B3A6B]">Meet your team</h1>
+          <p className="text-xs text-gray-400 mt-1">Tap anyone to learn more</p>
         </div>
 
         {/* ── Tier sections ── */}
-        <div className="space-y-5">
+        <div className="space-y-3">
           {tierKeys.map((level) => {
             const tier = tiers.get(level) || [];
-            const levelColors = LEVEL_COLORS[Math.min(level, 5)];
 
-            // Group level 5 by FOH/BOH
+            // Level 1 (Ownership): centered avatar layout
+            if (level === 1) {
+              return (
+                <TierCard key={level} level={level}>
+                  <div className="flex flex-wrap justify-center gap-6">
+                    {tier.map((p) => (
+                      <OwnerAvatar
+                        key={p.id}
+                        position={p}
+                        expanded={expandedId === p.id}
+                        onToggle={handleToggle}
+                        directReports={getDirectReports(p.id)}
+                        canUpload={canUpload}
+                        uploading={uploadingId === p.id}
+                        onPhotoUpload={handlePhotoUpload}
+                        onPhotoRemove={handlePhotoRemove}
+                      />
+                    ))}
+                  </div>
+                </TierCard>
+              );
+            }
+
+            // Level 5 (Staff): compact grid split by FOH/BOH
             if (level === 5) {
               const foh = tier.filter((p) => p.title === 'FOH');
               const boh = tier.filter((p) => p.title === 'BOH');
               const other = tier.filter((p) => p.title !== 'FOH' && p.title !== 'BOH');
 
               return (
-                <div key={level}>
-                  <TierHeader level={level} />
-
+                <div key={level} className="space-y-3">
                   {foh.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-teal-600 uppercase tracking-wider px-1 mb-2">Front of House</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <TierCard level={level} subLabel="Front of house">
+                      <div className="grid grid-cols-2 gap-2">
                         {foh.map((p) => (
-                          <TeamCard
+                          <StaffChip
                             key={p.id}
                             position={p}
                             expanded={expandedId === p.id}
                             onToggle={handleToggle}
                             reportsToName={getReportsToName(p)}
-                            directReports={getDirectReports(p.id)}
-                            compact
                           />
                         ))}
                       </div>
-                    </div>
+                    </TierCard>
                   )}
-
                   {boh.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-bold text-purple-600 uppercase tracking-wider px-1 mb-2">Back of House</p>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <TierCard level={level} subLabel="Back of house">
+                      <div className="grid grid-cols-2 gap-2">
                         {boh.map((p) => (
-                          <TeamCard
+                          <StaffChip
                             key={p.id}
                             position={p}
                             expanded={expandedId === p.id}
                             onToggle={handleToggle}
                             reportsToName={getReportsToName(p)}
-                            directReports={getDirectReports(p.id)}
-                            compact
                           />
                         ))}
                       </div>
-                    </div>
+                    </TierCard>
                   )}
-
                   {other.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {other.map((p) => (
-                        <TeamCard
-                          key={p.id}
-                          position={p}
-                          expanded={expandedId === p.id}
-                          onToggle={handleToggle}
-                          reportsToName={getReportsToName(p)}
-                          directReports={getDirectReports(p.id)}
-                          compact
-                        />
-                      ))}
-                    </div>
+                    <TierCard level={level}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {other.map((p) => (
+                          <StaffChip
+                            key={p.id}
+                            position={p}
+                            expanded={expandedId === p.id}
+                            onToggle={handleToggle}
+                            reportsToName={getReportsToName(p)}
+                          />
+                        ))}
+                      </div>
+                    </TierCard>
                   )}
                 </div>
               );
             }
 
+            // Levels 2-4: list layout with chevron
             return (
-              <div key={level}>
-                <TierHeader level={level} />
+              <TierCard key={level} level={level}>
                 <div className="space-y-2">
                   {tier.map((p) => (
-                    <TeamCard
+                    <ListCard
                       key={p.id}
                       position={p}
                       expanded={expandedId === p.id}
                       onToggle={handleToggle}
                       reportsToName={getReportsToName(p)}
                       directReports={getDirectReports(p.id)}
+                      canUpload={canUpload}
+                      uploading={uploadingId === p.id}
+                      onPhotoUpload={handlePhotoUpload}
+                      onPhotoRemove={handlePhotoRemove}
                     />
                   ))}
                 </div>
-              </div>
+              </TierCard>
             );
           })}
         </div>
@@ -300,122 +367,211 @@ export default function OrgChartTab({ restaurantId, restaurantName }: Props) {
   );
 }
 
-/* ───────── tier header ───────── */
-function TierHeader({ level }: { level: number }) {
-  const colors = LEVEL_COLORS[Math.min(level, 5)];
+/* ───────── tier card wrapper ───────── */
+function TierCard({ level, subLabel, children }: { level: number; subLabel?: string; children: React.ReactNode }) {
+  const labelColor = LEVEL_LABEL_COLOR[Math.min(level, 5)] || 'text-gray-600';
   return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="text-lg">{LEVEL_ICON[Math.min(level, 5)]}</span>
-      <h2 className={`text-sm font-bold uppercase tracking-wider ${colors.text}`}>
-        {LEVEL_LABEL[Math.min(level, 5)]}
-      </h2>
-      <div className={`flex-1 h-px ${colors.border} border-t`} />
+    <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+      <p className={`text-[11px] uppercase tracking-[1px] font-semibold ${labelColor} mb-3`}>
+        {subLabel || LEVEL_LABEL[Math.min(level, 5)]}
+      </p>
+      {children}
     </div>
   );
 }
 
-/* ───────── team member card ───────── */
-function TeamCard({
+/* ───────── photo upload button (reused across layouts) ───────── */
+function PhotoUploadOverlay({
+  positionId,
+  hasPhoto,
+  uploading,
+  onUpload,
+  onRemove,
+  size = 'md',
+}: {
+  positionId: string;
+  hasPhoto: boolean;
+  uploading: boolean;
+  onUpload: (id: string, file: File) => void;
+  onRemove: (id: string) => void;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const sizeClasses = size === 'lg' ? 'w-7 h-7 -bottom-0.5 -right-0.5' : size === 'md' ? 'w-6 h-6 -bottom-0.5 -right-0.5' : 'w-5 h-5 -bottom-0 -right-0';
+  const iconSize = size === 'sm' ? '10' : '12';
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onUpload(positionId, file);
+          e.target.value = '';
+        }}
+      />
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (hasPhoto) {
+            // Show options: replace or remove
+            if (confirm('Replace photo? (Cancel to remove instead)')) {
+              inputRef.current?.click();
+            } else {
+              onRemove(positionId);
+            }
+          } else {
+            inputRef.current?.click();
+          }
+        }}
+        className={`absolute ${sizeClasses} rounded-full bg-[#1B3A6B] border-2 border-white flex items-center justify-center shadow-md hover:bg-[#2E86C1] transition-colors`}
+        disabled={uploading}
+      >
+        {uploading ? (
+          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+        )}
+      </button>
+    </>
+  );
+}
+
+/* ───────── ownership avatar (centered, large) ───────── */
+function OwnerAvatar({
+  position,
+  expanded,
+  onToggle,
+  directReports,
+  canUpload,
+  uploading,
+  onPhotoUpload,
+  onPhotoRemove,
+}: {
+  position: Position;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+  directReports: Position[];
+  canUpload: boolean;
+  uploading: boolean;
+  onPhotoUpload: (id: string, file: File) => void;
+  onPhotoRemove: (id: string) => void;
+}) {
+  const gradient = getGradient(position);
+  const isSilent = position.title === 'Silent Partner';
+  const initials = position.last_initial
+    ? `${position.first_name[0]}${position.last_initial}`
+    : position.first_name.split(' ').map((w) => w[0]).join('');
+  const fullName = `${position.first_name}${position.last_initial ? ` ${position.last_initial}.` : ''}`;
+
+  return (
+    <button onClick={() => onToggle(position.id)} className="tap-highlight text-center group">
+      <div className="relative mx-auto mb-2">
+        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border-[3px] border-white shadow-md transition-transform group-active:scale-95 ${expanded ? 'ring-2 ring-blue-200 ring-offset-2' : ''}`}>
+          {position.photo_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={position.photo_url} alt={fullName} className="w-full h-full rounded-full object-cover" />
+          ) : (
+            <span className="text-white font-semibold text-base">{initials}</span>
+          )}
+        </div>
+        {canUpload && (
+          <PhotoUploadOverlay
+            positionId={position.id}
+            hasPhoto={!!position.photo_url}
+            uploading={uploading}
+            onUpload={onPhotoUpload}
+            onRemove={onPhotoRemove}
+            size="md"
+          />
+        )}
+      </div>
+      <p className="text-sm font-semibold text-[#1B3A6B]">{fullName}</p>
+      <p className={`text-[11px] ${isSilent ? 'text-slate-400' : 'text-gray-400'}`}>{position.title}</p>
+
+      {expanded && (
+        <div className="mt-2 text-left bg-gray-50 rounded-lg p-2.5 animate-fadeIn">
+          {directReports.length > 0 && (
+            <p className="text-xs text-gray-500">
+              Manages <span className="font-semibold text-[#1B3A6B]">{directReports.length}</span> {directReports.length === 1 ? 'person' : 'people'}
+            </p>
+          )}
+          {position.detail && (
+            <p className="text-xs text-gray-400 mt-1">{position.detail}</p>
+          )}
+        </div>
+      )}
+    </button>
+  );
+}
+
+/* ───────── list card (management / dept heads / supervisors) ───���───── */
+function ListCard({
   position,
   expanded,
   onToggle,
   reportsToName,
   directReports,
-  compact,
+  canUpload,
+  uploading,
+  onPhotoUpload,
+  onPhotoRemove,
 }: {
   position: Position;
   expanded: boolean;
   onToggle: (id: string) => void;
   reportsToName: string | null;
   directReports: Position[];
-  compact?: boolean;
+  canUpload: boolean;
+  uploading: boolean;
+  onPhotoUpload: (id: string, file: File) => void;
+  onPhotoRemove: (id: string) => void;
 }) {
-  const colors = getColors(position);
-  const isSilent = position.title === 'Silent Partner';
-  const isOwner = position.role_level === 1;
-
+  const gradient = getGradient(position);
   const initials = position.last_initial
     ? `${position.first_name[0]}${position.last_initial}`
     : position.first_name.split(' ').map((w) => w[0]).join('');
-
   const fullName = `${position.first_name}${position.last_initial ? ` ${position.last_initial}.` : ''}`;
 
-  if (compact) {
-    // Compact card for staff level — smaller, grid layout
-    return (
-      <button
-        onClick={() => onToggle(position.id)}
-        className={`tap-highlight text-left w-full rounded-xl p-3 transition-all ${
-          expanded
-            ? `bg-white shadow-lg border-2 ${colors.border} col-span-2 md:col-span-1`
-            : 'bg-white/80 shadow-sm border border-gray-100 hover:shadow-md hover:bg-white'
-        }`}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${colors.gradient} flex items-center justify-center flex-shrink-0`}>
-            <span className="text-white font-bold text-xs">{initials}</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-[#1B3A6B] truncate">{fullName}</p>
-            <p className={`text-[10px] font-medium ${colors.text} opacity-70`}>{position.title}</p>
-          </div>
-        </div>
-
-        {expanded && (
-          <div className="mt-3 pt-2.5 border-t border-gray-100 animate-fadeIn">
-            {reportsToName && (
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
-                  <polyline points="18 15 12 9 6 15" />
-                </svg>
-                <p className="text-xs text-gray-500">Reports to <span className="font-semibold text-[#1B3A6B]">{reportsToName}</span></p>
-              </div>
-            )}
-            {position.detail && (
-              <p className="text-xs text-gray-500 leading-relaxed">{position.detail}</p>
-            )}
-          </div>
-        )}
-      </button>
-    );
-  }
-
-  // Full card for leadership levels
   return (
     <button
       onClick={() => onToggle(position.id)}
-      className={`tap-highlight text-left w-full rounded-xl p-4 transition-all ${
-        expanded
-          ? `bg-white shadow-lg border-2 ${colors.border}`
-          : 'bg-white/80 shadow-sm border border-gray-100 hover:shadow-md hover:bg-white'
+      className={`tap-highlight text-left w-full rounded-xl p-3 transition-all ${
+        expanded ? 'bg-blue-50/60 border border-blue-100' : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
       }`}
     >
-      <div className="flex items-center gap-3.5">
-        {/* Avatar */}
-        <div className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${colors.gradient} flex items-center justify-center flex-shrink-0 shadow-md ${
-          isOwner && !isSilent ? 'ring-2 ring-amber-300/50 ring-offset-2 ring-offset-white' : ''
-        }`}>
-          {position.photo_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={position.photo_url}
-              alt={fullName}
-              className="w-full h-full rounded-full object-cover"
+      <div className="flex items-center gap-3">
+        <div className="relative flex-shrink-0">
+          <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
+            {position.photo_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={position.photo_url} alt={fullName} className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <span className="text-white font-semibold text-sm">{initials}</span>
+            )}
+          </div>
+          {canUpload && (
+            <PhotoUploadOverlay
+              positionId={position.id}
+              hasPhoto={!!position.photo_url}
+              uploading={uploading}
+              onUpload={onPhotoUpload}
+              onRemove={onPhotoRemove}
+              size="sm"
             />
-          ) : (
-            <span className="text-white font-bold text-base">{initials}</span>
           )}
         </div>
-
-        {/* Name + Title */}
         <div className="flex-1 min-w-0">
-          <p className="text-base font-bold text-[#1B3A6B]">{fullName}</p>
-          <p className={`text-xs font-semibold ${isSilent ? 'text-slate-400' : isOwner ? 'text-amber-600' : colors.text} ${isSilent ? '' : 'opacity-80'}`}>
-            {position.title}
-          </p>
+          <p className="text-sm font-semibold text-[#1B3A6B]">{fullName}</p>
+          <p className="text-xs text-gray-400">{position.title}</p>
         </div>
-
-        {/* Expand indicator */}
         <svg
           width="16"
           height="16"
@@ -423,54 +579,108 @@ function TeamCard({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className={`text-gray-300 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          className={`text-gray-300 flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
         >
-          <polyline points="6 9 12 15 18 9" />
+          <polyline points="9 18 15 12 9 6" />
         </svg>
       </div>
 
-      {/* Expanded detail */}
       {expanded && (
-        <div className="mt-3 pt-3 border-t border-gray-100 animate-fadeIn space-y-2">
+        <div className="mt-3 pt-2.5 border-t border-gray-200/60 animate-fadeIn space-y-1.5 ml-14">
           {reportsToName && (
-            <div className="flex items-center gap-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0">
-                <polyline points="18 15 12 9 6 15" />
-              </svg>
-              <p className="text-sm text-gray-500">Reports to <span className="font-semibold text-[#1B3A6B]">{reportsToName}</span></p>
-            </div>
+            <p className="text-xs text-gray-400">
+              Reports to <span className="font-semibold text-[#1B3A6B]">{reportsToName}</span>
+            </p>
           )}
-
           {directReports.length > 0 && (
-            <div className="flex items-start gap-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-400 flex-shrink-0 mt-0.5">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-              <div>
-                <p className="text-sm text-gray-500 mb-1">
-                  Manages <span className="font-semibold text-[#1B3A6B]">{directReports.length}</span> {directReports.length === 1 ? 'person' : 'people'}:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {directReports.map((dr) => {
-                    const drColors = getColors(dr);
-                    return (
-                      <span
-                        key={dr.id}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${drColors.bg} ${drColors.text}`}
-                      >
-                        {dr.first_name}{dr.last_initial ? ` ${dr.last_initial}.` : ''}
-                      </span>
-                    );
-                  })}
-                </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">
+                Manages <span className="font-semibold text-[#1B3A6B]">{directReports.length}</span>:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {directReports.map((dr) => (
+                  <span key={dr.id} className="px-2 py-0.5 bg-white rounded-full text-[11px] font-medium text-[#1B3A6B] border border-gray-100 shadow-sm">
+                    {dr.first_name}{dr.last_initial ? ` ${dr.last_initial}.` : ''}
+                  </span>
+                ))}
               </div>
             </div>
           )}
-
           {position.detail && (
-            <p className="text-sm text-gray-500 leading-relaxed pl-6">{position.detail}</p>
+            <p className="text-xs text-gray-400 leading-relaxed">{position.detail}</p>
           )}
         </div>
+      )}
+    </button>
+  );
+}
+
+/* ───────── staff role icon (replaces initials for level 5) ───────── */
+function StaffRoleIcon({ title }: { title: string }) {
+  if (title === 'FOH') {
+    // Person with tray — server/host icon
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="7" r="3" />
+        <path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" />
+      </svg>
+    );
+  }
+  if (title === 'BOH') {
+    // Chef hat icon
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6z" />
+        <line x1="6" y1="17" x2="18" y2="17" />
+      </svg>
+    );
+  }
+  // Generic staff
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="7" r="3" />
+      <path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" />
+    </svg>
+  );
+}
+
+/* ───────── staff chip (compact grid) ───────── */
+function StaffChip({
+  position,
+  expanded,
+  onToggle,
+  reportsToName,
+}: {
+  position: Position;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+  reportsToName: string | null;
+  canUpload?: boolean;
+  uploading?: boolean;
+  onPhotoUpload?: (id: string, file: File) => void;
+  onPhotoRemove?: (id: string) => void;
+}) {
+  const gradient = getGradient(position);
+  const fullName = `${position.first_name}${position.last_initial ? ` ${position.last_initial}.` : ''}`;
+
+  return (
+    <button
+      onClick={() => onToggle(position.id)}
+      className={`tap-highlight text-center w-full rounded-xl py-3 px-2 transition-all ${
+        expanded ? 'bg-blue-50/60 border border-blue-100 col-span-2' : 'bg-gray-50 border border-transparent hover:bg-gray-100'
+      }`}
+    >
+      <div className="relative mx-auto mb-1.5 w-10 h-10">
+        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
+          <StaffRoleIcon title={position.title} />
+        </div>
+      </div>
+      <p className="text-xs font-semibold text-[#1B3A6B] truncate">{fullName}</p>
+
+      {expanded && reportsToName && (
+        <p className="text-[11px] text-gray-400 mt-1.5 animate-fadeIn">
+          Reports to <span className="font-medium text-[#1B3A6B]">{reportsToName}</span>
+        </p>
       )}
     </button>
   );

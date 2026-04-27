@@ -14,6 +14,15 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .single();
+  if (!profile || profile.status === 'archived') {
+    return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
+  }
+
   const restaurantId = req.nextUrl.searchParams.get('restaurant_id');
   if (!restaurantId) {
     return NextResponse.json({ error: 'restaurant_id is required' }, { status: 400 });

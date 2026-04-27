@@ -122,7 +122,7 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
           key={`org-${activeLocationId}`}
           restaurantId={activeLocationId}
           restaurantName={activeLocationName || null}
-          isAdmin={false}
+          isAdmin={['admin', 'manager', 'assistant_manager'].includes(role)}
         />
       </div>
     </div>
