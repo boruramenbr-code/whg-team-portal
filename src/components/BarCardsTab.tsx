@@ -52,6 +52,51 @@ const STATUS_CONFIG: Record<CardStatus, { label: string; bg: string; text: strin
   valid:    { label: 'Valid',          bg: 'bg-emerald-50',text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-200' },
 };
 
+/* ───────── image conversion helper ───────── */
+// Converts any image (including HEIC from iPhones) to JPEG via Canvas.
+// iOS Safari can render HEIC natively in <img>, so we load it into a
+// canvas and export as JPEG. This also compresses large photos.
+async function convertToJpeg(file: File): Promise<File> {
+  // If already a supported type and under 4MB, skip conversion
+  const supported = ['image/jpeg', 'image/png', 'image/webp'];
+  if (supported.includes(file.type) && file.size < 4 * 1024 * 1024) {
+    return file;
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      // Cap at 2048px on longest side for upload efficiency
+      const maxDim = 2048;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas not supported')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob) { reject(new Error('Conversion failed')); return; }
+          const name = file.name.replace(/\.[^.]+$/, '.jpg');
+          resolve(new File([blob], name, { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.85
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+    img.src = url;
+  });
+}
+
 /* ───────── main component ───────── */
 export default function BarCardsTab({ restaurantId, role }: Props) {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -387,8 +432,17 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
   const [ocrDone, setOcrDone] = useState(false);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+
+    // Convert HEIC/large images to JPEG via Canvas
+    let f: File;
+    try {
+      f = await convertToJpeg(raw);
+    } catch {
+      f = raw; // fallback to original if conversion fails
+    }
+
     setFile(f);
     setPreview(URL.createObjectURL(f));
 
@@ -462,7 +516,7 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
               </svg>
               <p className="text-sm text-gray-500 font-medium">Tap to take photo or choose file</p>
               <p className="text-xs text-gray-400">JPEG, PNG, or WebP up to 5MB</p>
-              <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" onChange={handleFileSelect} />
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" capture="environment" className="hidden" onChange={handleFileSelect} />
             </label>
           ) : (
             <div className="relative">
