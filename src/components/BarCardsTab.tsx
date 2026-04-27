@@ -500,16 +500,9 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
           setExpirationDate(data.expiration_date);
         }
 
-        // Auto-crop to just the card if crop data was returned
-        if (data.crop) {
-          try {
-            const cropped = await cropImage(f, data.crop);
-            setFile(cropped);
-            setPreview(URL.createObjectURL(cropped));
-          } catch {
-            // Crop failed — keep original image
-          }
-        }
+        // Auto-crop disabled — AI vision crop detection is not accurate
+        // enough yet. The image is already auto-rotated via Canvas above.
+        // TODO: Add manual drag-to-crop tool if needed later.
 
         setOcrDone(true);
       }

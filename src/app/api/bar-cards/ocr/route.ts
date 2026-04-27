@@ -47,30 +47,26 @@ export async function POST(req: NextRequest) {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0,
-      max_tokens: 400,
+      max_tokens: 200,
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'image_url',
-              image_url: { url: dataUrl, detail: 'auto' },
+              image_url: { url: dataUrl, detail: 'low' },
             },
             {
               type: 'text',
-              text: `This is a photo of an alcohol service certification card (bar card, RBS card, ATC card, or similar). The card may be on a table, held in hand, or at an angle. There is likely background visible around the card (table, hand, counter, etc.).
+              text: `This is a photo of an alcohol service certification card (bar card, RBS card, ATC card, or similar). The card may be on a table, held in hand, or at an angle.
 
 Extract:
 1. The cardholder's full name
 2. The expiration date
-3. The bounding box of JUST the card — the tightest rectangle that contains only the card itself, excluding any background, fingers, table, or other objects. Express as percentages of total image dimensions.
-
-IMPORTANT for crop: Look carefully at where the card edges are. Most photos will have significant background around the card. The crop should tightly fit the card, not the whole image.
 
 Respond ONLY with valid JSON:
-{"employee_name": "First Last", "expiration_date": "YYYY-MM-DD", "crop": {"top": 10, "left": 5, "width": 80, "height": 60}}
+{"employee_name": "First Last", "expiration_date": "YYYY-MM-DD"}
 
-Crop values are 0-100 percentages of the full image. Only use {"top": 0, "left": 0, "width": 100, "height": 100} if the card truly fills the entire photo edge-to-edge.
 If you cannot read the name, use "Unknown".
 If you cannot read the expiration date, use null.
 No other text.`,
@@ -94,7 +90,6 @@ No other text.`,
     return NextResponse.json({
       employee_name: parsed.employee_name || 'Unknown',
       expiration_date: parsed.expiration_date || null,
-      crop: parsed.crop || null,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
