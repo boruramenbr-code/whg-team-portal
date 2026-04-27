@@ -47,34 +47,44 @@ export async function POST(req: NextRequest) {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0,
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'image_url',
-              image_url: { url: dataUrl, detail: 'low' },
+              image_url: { url: dataUrl, detail: 'high' },
             },
             {
               type: 'text',
-              text: `This is a photo of an alcohol service certification card (bar card, RBS card, ATC card, or similar).
+              text: `You are reading an alcohol service certification card (bar card, RBS card, ATC card, server permit, or similar).
 
-These cards typically have MULTIPLE dates on them:
-- An issue date or completion date (when the person earned or received the card)
-- An EXPIRATION date (when the card expires and must be renewed)
+IMPORTANT — These cards have MULTIPLE dates. You must read the LABEL next to each date to identify which is which:
 
-I need ONLY the EXPIRATION date — this is the LATEST/FURTHEST date on the card, usually labeled "Exp", "Expires", "Expiration", or "Valid Through". It is always later than the issue date. Do NOT return the issue date, completion date, date of birth, or any other date.
+IGNORE these dates:
+- "Date of Birth" / "DOB" / "Birth Date"
+- "Issue Date" / "Issued" / "Date Issued"
+- "Completion Date" / "Completed" / "Date Completed"
+- "Effective Date" / "Date"
+- Any date in the PAST or near-past
+
+RETURN ONLY this date:
+- "Expiration Date" / "Exp Date" / "Expires" / "Exp" / "Valid Through" / "Valid Until" / "Expiry"
+- This is typically the FURTHEST FUTURE date on the card
+- It is usually 2-4 years after the issue date
+
+Read the label next to each date carefully. Do NOT guess — if you cannot find a date specifically labeled as an expiration, return null.
 
 Extract:
 1. The cardholder's full name
-2. The EXPIRATION date only (the latest date on the card)
+2. The EXPIRATION date only
 
 Respond ONLY with valid JSON:
 {"employee_name": "First Last", "expiration_date": "YYYY-MM-DD"}
 
 If you cannot read the name, use "Unknown".
-If you cannot determine which date is the expiration, use null.
+If no date is clearly labeled as expiration, use null.
 No other text.`,
             },
           ],

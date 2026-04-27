@@ -53,39 +53,44 @@ const STATUS_CONFIG: Record<CardStatus, { label: string; bg: string; text: strin
 };
 
 /* ───────── image conversion helper ───────── */
-// Converts any image (including HEIC from iPhones) to correctly-rotated JPEG.
-// Uses createImageBitmap which handles EXIF orientation automatically in all
-// modern browsers (Chrome 50+, Safari 15+, Firefox 42+).
+// Converts HEIC or oversized images to JPEG. Does NOT attempt rotation —
+// auto-rotate via Canvas/createImageBitmap proved unreliable across browsers.
 async function convertToJpeg(file: File): Promise<File> {
-  const bitmap = await createImageBitmap(file);
-
-  const maxDim = 2048;
-  let w = bitmap.width;
-  let h = bitmap.height;
-  if (w > maxDim || h > maxDim) {
-    const ratio = Math.min(maxDim / w, maxDim / h);
-    w = Math.round(w * ratio);
-    h = Math.round(h * ratio);
+  const supported = ['image/jpeg', 'image/png', 'image/webp'];
+  if (supported.includes(file.type) && file.size < 4 * 1024 * 1024) {
+    return file; // Already a small supported format — use as-is
   }
 
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas not supported');
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
-
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) { reject(new Error('Conversion failed')); return; }
-        const name = file.name.replace(/\.[^.]+$/, '.jpg');
-        resolve(new File([blob], name, { type: 'image/jpeg' }));
-      },
-      'image/jpeg',
-      0.85
-    );
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const maxDim = 2048;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const ratio = Math.min(maxDim / width, maxDim / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas not supported')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob) { reject(new Error('Conversion failed')); return; }
+          const name = file.name.replace(/\.[^.]+$/, '.jpg');
+          resolve(new File([blob], name, { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.85
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+    img.src = url;
   });
 }
 
