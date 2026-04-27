@@ -579,7 +579,7 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
               </svg>
               <p className="text-sm text-gray-500 font-medium">Tap to take photo or choose file</p>
               <p className="text-xs text-gray-400">JPEG, PNG, or WebP up to 5MB</p>
-              <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" capture="environment" className="hidden" onChange={handleFileSelect} />
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handleFileSelect} />
             </label>
           ) : (
             <div className="relative">
