@@ -146,7 +146,12 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
       visited.add(current.reports_to);
       const boss = posById.get(current.reports_to);
       if (!boss) break;
-      chain.push(`${boss.first_name}${boss.last_initial ? ` ${boss.last_initial}.` : ''} (${boss.title})`);
+      // Owners show as just "Owner" since staff can report to any owner
+      if (boss.role_level === 1) {
+        chain.push('Owner');
+      } else {
+        chain.push(`${boss.first_name}${boss.last_initial ? ` ${boss.last_initial}.` : ''} (${boss.title})`);
+      }
       current = boss;
     }
     return chain;
