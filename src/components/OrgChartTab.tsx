@@ -137,7 +137,22 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
 
   const tierKeys = useMemo(() => Array.from(tiers.keys()).sort((a, b) => a - b), [tiers]);
 
-  // Find who a person reports to
+  // Build full chain of command (walk up the reports_to tree)
+  const getChainOfCommand = useCallback((p: Position): string[] => {
+    const chain: string[] = [];
+    let current = p;
+    const visited = new Set<string>();
+    while (current.reports_to && !visited.has(current.reports_to)) {
+      visited.add(current.reports_to);
+      const boss = posById.get(current.reports_to);
+      if (!boss) break;
+      chain.push(`${boss.first_name}${boss.last_initial ? ` ${boss.last_initial}.` : ''} (${boss.title})`);
+      current = boss;
+    }
+    return chain;
+  }, [posById]);
+
+  // Legacy single reports-to (kept for backward compat)
   const getReportsToName = useCallback((p: Position): string | null => {
     if (!p.reports_to) return null;
     const boss = posById.get(p.reports_to);
@@ -296,7 +311,7 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
                             position={p}
                             expanded={expandedId === p.id}
                             onToggle={handleToggle}
-                            reportsToName={getReportsToName(p)}
+                            chain={getChainOfCommand(p)}
                           />
                         ))}
                       </div>
@@ -311,7 +326,7 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
                             position={p}
                             expanded={expandedId === p.id}
                             onToggle={handleToggle}
-                            reportsToName={getReportsToName(p)}
+                            chain={getChainOfCommand(p)}
                           />
                         ))}
                       </div>
@@ -326,7 +341,7 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
                             position={p}
                             expanded={expandedId === p.id}
                             onToggle={handleToggle}
-                            reportsToName={getReportsToName(p)}
+                            chain={getChainOfCommand(p)}
                           />
                         ))}
                       </div>
@@ -347,6 +362,7 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
                       expanded={expandedId === p.id}
                       onToggle={handleToggle}
                       reportsToName={getReportsToName(p)}
+                      chain={getChainOfCommand(p)}
                       directReports={getDirectReports(p.id)}
                       canUpload={canUpload}
                       uploading={uploadingId === p.id}
@@ -517,7 +533,7 @@ function ListCard({
   position,
   expanded,
   onToggle,
-  reportsToName,
+  chain,
   directReports,
   canUpload,
   uploading,
@@ -528,6 +544,7 @@ function ListCard({
   expanded: boolean;
   onToggle: (id: string) => void;
   reportsToName: string | null;
+  chain: string[];
   directReports: Position[];
   canUpload: boolean;
   uploading: boolean;
@@ -587,10 +604,20 @@ function ListCard({
 
       {expanded && (
         <div className="mt-3 pt-2.5 border-t border-gray-200/60 animate-fadeIn space-y-1.5 ml-14">
-          {reportsToName && (
-            <p className="text-xs text-gray-400">
-              Reports to <span className="font-semibold text-[#1B3A6B]">{reportsToName}</span>
-            </p>
+          {chain.length > 0 && (
+            <div>
+              <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium mb-1.5">Chain of Command</p>
+              <div className="flex flex-wrap items-center gap-1">
+                {chain.map((name, i) => (
+                  <span key={i} className="flex items-center gap-1">
+                    <span className="px-2 py-0.5 bg-white rounded-full text-[11px] font-medium text-[#1B3A6B] border border-gray-100 shadow-sm">
+                      {name}
+                    </span>
+                    {i < chain.length - 1 && <span className="text-gray-300 text-[10px]">→</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
           {directReports.length > 0 && (
             <div>
@@ -649,12 +676,12 @@ function StaffChip({
   position,
   expanded,
   onToggle,
-  reportsToName,
+  chain,
 }: {
   position: Position;
   expanded: boolean;
   onToggle: (id: string) => void;
-  reportsToName: string | null;
+  chain: string[];
   canUpload?: boolean;
   uploading?: boolean;
   onPhotoUpload?: (id: string, file: File) => void;
@@ -677,10 +704,20 @@ function StaffChip({
       </div>
       <p className="text-xs font-semibold text-[#1B3A6B] truncate">{fullName}</p>
 
-      {expanded && reportsToName && (
-        <p className="text-[11px] text-gray-400 mt-1.5 animate-fadeIn">
-          Reports to <span className="font-medium text-[#1B3A6B]">{reportsToName}</span>
-        </p>
+      {expanded && chain.length > 0 && (
+        <div className="mt-2 animate-fadeIn text-center">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1">Chain of Command</p>
+          <div className="flex flex-wrap justify-center items-center gap-1">
+            {chain.map((name, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <span className="px-1.5 py-0.5 bg-white rounded-full text-[10px] font-medium text-[#1B3A6B] border border-gray-100 shadow-sm">
+                  {name}
+                </span>
+                {i < chain.length - 1 && <span className="text-gray-300 text-[9px]">→</span>}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
     </button>
   );
