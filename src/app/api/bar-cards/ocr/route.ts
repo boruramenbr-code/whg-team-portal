@@ -8,9 +8,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
  * POST /api/bar-cards/ocr
- * Analyze a bar card image using OpenAI Vision to extract name + expiration date.
+ * Analyze a bar card image using OpenAI Vision to extract name + expiration date + crop region.
  * Body: FormData with field "file" (the card image).
- * Returns: { employee_name, expiration_date } or error.
+ * Returns: { employee_name, expiration_date, crop } or error.
  */
 export async function POST(req: NextRequest) {
   const supabase = createClient();
@@ -38,38 +38,40 @@ export async function POST(req: NextRequest) {
     // Convert file to base64 data URL
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
+
+    // Use low detail mode to keep payload small and fast
     const dataUrl = `data:${file.type};base64,${base64}`;
 
+    console.log(`OCR request: file=${file.name}, size=${file.size}, type=${file.type}, base64len=${base64.length}`);
+
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       temperature: 0,
-      max_tokens: 200,
+      max_tokens: 300,
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'image_url',
-              image_url: { url: dataUrl, detail: 'high' },
+              image_url: { url: dataUrl, detail: 'low' },
             },
             {
               type: 'text',
-              text: `This is a photo that contains an alcohol service certification card (bar card, RBS card, ATC card, or similar). The card may be sitting on a table, held in someone's hand, or photographed at an angle.
+              text: `This is a photo of an alcohol service certification card (bar card, RBS card, ATC card, or similar). The card may be on a table, held in hand, or at an angle.
 
-Extract the following information:
+Extract:
 1. The cardholder's full name
 2. The expiration date
-3. The crop region of JUST the card within the image, as percentages of total image dimensions (top, left, width, height). Estimate where the card edges are.
+3. The crop region of JUST the card as percentages of total image (top, left, width, height)
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON:
 {"employee_name": "First Last", "expiration_date": "YYYY-MM-DD", "crop": {"top": 10, "left": 5, "width": 90, "height": 80}}
 
-The crop values are percentages (0-100). For example, if the card takes up the middle 80% of the image, top might be 10, left 10, width 80, height 80.
-
-If the card fills the entire image, use {"top": 0, "left": 0, "width": 100, "height": 100}.
+Crop values are 0-100 percentages. If card fills the whole image: {"top": 0, "left": 0, "width": 100, "height": 100}.
 If you cannot read the name, use "Unknown".
 If you cannot read the expiration date, use null.
-Do not include any other text or explanation.`,
+No other text.`,
             },
           ],
         },
@@ -77,19 +79,24 @@ Do not include any other text or explanation.`,
     });
 
     const content = response.choices[0]?.message?.content?.trim();
+    console.log('OCR response:', content);
+
     if (!content) {
       return NextResponse.json({ error: 'Could not read card. Please enter details manually.' }, { status: 422 });
     }
 
-    // Parse the JSON response
-    const parsed = JSON.parse(content);
+    // Strip markdown code fence if GPT wraps the JSON
+    const jsonStr = content.replace(/^```json?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    const parsed = JSON.parse(jsonStr);
     return NextResponse.json({
       employee_name: parsed.employee_name || 'Unknown',
       expiration_date: parsed.expiration_date || null,
       crop: parsed.crop || null,
     });
   } catch (err) {
-    console.error('OCR failed:', err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: 'Could not read card. Please enter details manually.' }, { status: 422 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('OCR failed:', msg);
+    return NextResponse.json({ error: `OCR failed: ${msg}` }, { status: 422 });
   }
 }
