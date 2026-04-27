@@ -52,32 +52,101 @@ const STATUS_CONFIG: Record<CardStatus, { label: string; bg: string; text: strin
   valid:    { label: 'Valid',          bg: 'bg-emerald-50',text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-200' },
 };
 
+/* ───────── EXIF orientation reader ───────── */
+// Reads EXIF orientation tag (0x0112) from a JPEG file's raw bytes.
+// Returns orientation 1-8, or 1 (normal) if not found.
+async function getExifOrientation(file: File): Promise<number> {
+  try {
+    const buf = await file.slice(0, 65536).arrayBuffer();
+    const view = new DataView(buf);
+    // Check JPEG SOI marker
+    if (view.getUint16(0) !== 0xFFD8) return 1;
+    let offset = 2;
+    while (offset < view.byteLength - 2) {
+      const marker = view.getUint16(offset);
+      if (marker === 0xFFE1) {
+        // APP1 — EXIF
+        const length = view.getUint16(offset + 2);
+        const exifStart = offset + 4;
+        // Check "Exif\0\0"
+        if (view.getUint32(exifStart) !== 0x45786966) return 1;
+        const tiffStart = exifStart + 6;
+        const bigEndian = view.getUint16(tiffStart) === 0x4D4D;
+        const ifdOffset = view.getUint32(tiffStart + 4, !bigEndian);
+        const numEntries = view.getUint16(tiffStart + ifdOffset, !bigEndian);
+        for (let i = 0; i < numEntries; i++) {
+          const entryOffset = tiffStart + ifdOffset + 2 + i * 12;
+          if (entryOffset + 12 > view.byteLength) break;
+          const tag = view.getUint16(entryOffset, !bigEndian);
+          if (tag === 0x0112) {
+            return view.getUint16(entryOffset + 8, !bigEndian);
+          }
+        }
+        return 1;
+      } else if ((marker & 0xFF00) === 0xFF00) {
+        offset += 2 + view.getUint16(offset + 2);
+      } else {
+        break;
+      }
+    }
+  } catch {
+    // Can't read EXIF — assume normal
+  }
+  return 1;
+}
+
 /* ───────── image conversion helper ───────── */
 // Converts any image (including HEIC from iPhones) to JPEG via Canvas.
-// iOS Safari can render HEIC natively in <img>, so we load it into a
-// canvas and export as JPEG. This also compresses large photos.
+// Reads EXIF orientation and applies rotation so the saved image is upright.
 async function convertToJpeg(file: File): Promise<File> {
-  // Always run through Canvas — this fixes EXIF rotation from iPhones
-  // and compresses large images. Canvas auto-applies EXIF orientation
-  // in modern browsers, so the output is always correctly rotated.
+  const orientation = await getExifOrientation(file);
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      // Cap at 2048px on longest side for upload efficiency
       const maxDim = 2048;
-      let { width, height } = img;
-      if (width > maxDim || height > maxDim) {
-        const ratio = Math.min(maxDim / width, maxDim / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
+      let { naturalWidth: w, naturalHeight: h } = img;
+      // For orientations 5-8, the image is rotated 90°, so swap dimensions
+      const swapped = orientation >= 5 && orientation <= 8;
+      let srcW = w;
+      let srcH = h;
+      if (swapped) { srcW = h; srcH = w; }
+
+      // Scale down if needed
+      if (srcW > maxDim || srcH > maxDim) {
+        const ratio = Math.min(maxDim / srcW, maxDim / srcH);
+        srcW = Math.round(srcW * ratio);
+        srcH = Math.round(srcH * ratio);
       }
+
       const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
+      canvas.width = srcW;
+      canvas.height = srcH;
       const ctx = canvas.getContext('2d');
       if (!ctx) { reject(new Error('Canvas not supported')); return; }
-      ctx.drawImage(img, 0, 0, width, height);
+
+      // Apply EXIF orientation transform
+      ctx.save();
+      switch (orientation) {
+        case 2: ctx.transform(-1, 0, 0, 1, srcW, 0); break;          // flip H
+        case 3: ctx.transform(-1, 0, 0, -1, srcW, srcH); break;      // rotate 180
+        case 4: ctx.transform(1, 0, 0, -1, 0, srcH); break;          // flip V
+        case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;              // transpose
+        case 6: ctx.transform(0, 1, -1, 0, srcW, 0); break;          // rotate 90 CW
+        case 7: ctx.transform(0, -1, -1, 0, srcW, srcH); break;      // transverse
+        case 8: ctx.transform(0, -1, 1, 0, 0, srcH); break;          // rotate 90 CCW
+        default: break; // orientation 1 = normal
+      }
+
+      // Draw — after transform, always draw at original (non-swapped) size
+      if (swapped) {
+        ctx.drawImage(img, 0, 0, srcH, srcW);
+      } else {
+        ctx.drawImage(img, 0, 0, srcW, srcH);
+      }
+      ctx.restore();
+
       canvas.toBlob(
         (blob) => {
           URL.revokeObjectURL(url);
