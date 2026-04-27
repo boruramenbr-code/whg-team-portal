@@ -97,6 +97,47 @@ async function convertToJpeg(file: File): Promise<File> {
   });
 }
 
+/* ───────── auto-crop helper ───────── */
+// Crops an image file to the given region (percentages) using Canvas.
+async function cropImage(
+  file: File,
+  crop: { top: number; left: number; width: number; height: number }
+): Promise<File> {
+  // Skip if crop is basically the full image
+  if (crop.top <= 2 && crop.left <= 2 && crop.width >= 96 && crop.height >= 96) {
+    return file;
+  }
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const sx = Math.round((crop.left / 100) * img.width);
+      const sy = Math.round((crop.top / 100) * img.height);
+      const sw = Math.round((crop.width / 100) * img.width);
+      const sh = Math.round((crop.height / 100) * img.height);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas not supported')); return; }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          if (!blob) { reject(new Error('Crop failed')); return; }
+          resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.9
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
+    img.src = url;
+  });
+}
+
 /* ───────── main component ───────── */
 export default function BarCardsTab({ restaurantId, role }: Props) {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -446,7 +487,7 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
     setFile(f);
     setPreview(URL.createObjectURL(f));
 
-    // Run OCR
+    // Run OCR + auto-crop
     setScanning(true);
     setOcrDone(false);
     try {
@@ -461,6 +502,18 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
         if (data.expiration_date) {
           setExpirationDate(data.expiration_date);
         }
+
+        // Auto-crop to just the card if crop data was returned
+        if (data.crop) {
+          try {
+            const cropped = await cropImage(f, data.crop);
+            setFile(cropped);
+            setPreview(URL.createObjectURL(cropped));
+          } catch {
+            // Crop failed — keep original image
+          }
+        }
+
         setOcrDone(true);
       }
     } catch {
