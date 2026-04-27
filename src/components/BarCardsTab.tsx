@@ -57,12 +57,9 @@ const STATUS_CONFIG: Record<CardStatus, { label: string; bg: string; text: strin
 // iOS Safari can render HEIC natively in <img>, so we load it into a
 // canvas and export as JPEG. This also compresses large photos.
 async function convertToJpeg(file: File): Promise<File> {
-  // If already a supported type and under 4MB, skip conversion
-  const supported = ['image/jpeg', 'image/png', 'image/webp'];
-  if (supported.includes(file.type) && file.size < 4 * 1024 * 1024) {
-    return file;
-  }
-
+  // Always run through Canvas — this fixes EXIF rotation from iPhones
+  // and compresses large images. Canvas auto-applies EXIF orientation
+  // in modern browsers, so the output is always correctly rotated.
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
