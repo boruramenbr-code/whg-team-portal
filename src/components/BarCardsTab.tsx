@@ -11,6 +11,8 @@ interface BarCard {
   card_image_url: string;
   notes: string | null;
   uploaded_by: string | null;
+  archived: boolean;
+  profile_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -201,33 +203,60 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
 
   useEffect(() => { fetchCards(); }, [fetchCards]);
 
-  // Stats
-  const stats = useMemo(() => {
-    const expired = cards.filter(c => getCardStatus(c.expiration_date) === 'expired').length;
-    const critical = cards.filter(c => getCardStatus(c.expiration_date) === 'critical').length;
-    const warning = cards.filter(c => getCardStatus(c.expiration_date) === 'warning').length;
-    const valid = cards.filter(c => getCardStatus(c.expiration_date) === 'valid').length;
-    return { expired, critical, warning, valid, total: cards.length };
-  }, [cards]);
+  const [showArchived, setShowArchived] = useState(false);
 
-  // Sort: expired first, then critical, warning, valid
+  // Split active vs archived
+  const activeCards = useMemo(() => cards.filter(c => !c.archived), [cards]);
+  const archivedCards = useMemo(() => cards.filter(c => c.archived), [cards]);
+
+  // Stats (active only)
+  const stats = useMemo(() => {
+    const expired = activeCards.filter(c => getCardStatus(c.expiration_date) === 'expired').length;
+    const critical = activeCards.filter(c => getCardStatus(c.expiration_date) === 'critical').length;
+    const warning = activeCards.filter(c => getCardStatus(c.expiration_date) === 'warning').length;
+    const valid = activeCards.filter(c => getCardStatus(c.expiration_date) === 'valid').length;
+    return { expired, critical, warning, valid, total: activeCards.length };
+  }, [activeCards]);
+
+  // Sort active: expired first, then critical, warning, valid
   const sortedCards = useMemo(() => {
     const order: Record<CardStatus, number> = { expired: 0, critical: 1, warning: 2, valid: 3 };
-    return [...cards].sort((a, b) => {
+    return [...activeCards].sort((a, b) => {
       const sa = getCardStatus(a.expiration_date);
       const sb = getCardStatus(b.expiration_date);
       if (order[sa] !== order[sb]) return order[sa] - order[sb];
       return new Date(a.expiration_date).getTime() - new Date(b.expiration_date).getTime();
     });
-  }, [cards]);
+  }, [activeCards]);
 
-  const alertCards = useMemo(() =>
-    cards.filter(c => ['expired', 'critical'].includes(getCardStatus(c.expiration_date))),
-    [cards]
+  // Sort archived by name
+  const sortedArchivedCards = useMemo(() =>
+    [...archivedCards].sort((a, b) => a.employee_name.localeCompare(b.employee_name)),
+    [archivedCards]
   );
 
+  const alertCards = useMemo(() =>
+    activeCards.filter(c => ['expired', 'critical'].includes(getCardStatus(c.expiration_date))),
+    [activeCards]
+  );
+
+  const handleArchive = async (id: string, archived: boolean) => {
+    try {
+      const res = await fetch(`/api/bar-cards/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived }),
+      });
+      if (res.ok) {
+        setCards(prev => prev.map(c => c.id === id ? { ...c, archived } : c));
+      }
+    } catch {
+      alert('Failed to update card.');
+    }
+  };
+
   const handleDelete = async (id: string) => {
-    if (!confirm('Remove this bar card? This cannot be undone.')) return;
+    if (!confirm('Permanently delete this bar card? This cannot be undone.')) return;
     try {
       await fetch(`/api/bar-cards/${id}`, { method: 'DELETE' });
       setCards(prev => prev.filter(c => c.id !== id));
@@ -355,7 +384,7 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
           {/* Card list */}
           {loading ? (
             <div className="text-center py-12 text-sm text-gray-400">Loading bar cards...</div>
-          ) : sortedCards.length === 0 ? (
+          ) : sortedCards.length === 0 && archivedCards.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -367,17 +396,62 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
               <p className="text-xs text-gray-400 mt-1">Upload your team&apos;s alcohol certification cards to track expirations</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {sortedCards.map(card => (
-                <CardRow
-                  key={card.id}
-                  card={card}
-                  onView={() => setViewingCard(card)}
-                  onEdit={() => setEditingCard(card)}
-                  onDelete={() => handleDelete(card.id)}
-                />
-              ))}
-            </div>
+            <>
+              {/* Active staff cards */}
+              {sortedCards.length > 0 && (
+                <div className="space-y-2">
+                  {sortedCards.map(card => (
+                    <CardRow
+                      key={card.id}
+                      card={card}
+                      onView={() => setViewingCard(card)}
+                      onEdit={() => setEditingCard(card)}
+                      onDelete={() => handleDelete(card.id)}
+                      onArchive={() => handleArchive(card.id, true)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Past staff (archived) — collapsible */}
+              {sortedArchivedCards.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-150 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="21 8 21 21 3 21 3 8"/>
+                        <rect x="1" y="3" width="22" height="5"/>
+                        <line x1="10" y1="12" x2="14" y2="12"/>
+                      </svg>
+                      Past Staff ({sortedArchivedCards.length})
+                    </div>
+                    <svg
+                      width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      className={`transition-transform ${showArchived ? 'rotate-180' : ''}`}
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                  {showArchived && (
+                    <div className="space-y-2 mt-2">
+                      {sortedArchivedCards.map(card => (
+                        <CardRow
+                          key={card.id}
+                          card={card}
+                          onView={() => setViewingCard(card)}
+                          onEdit={() => setEditingCard(card)}
+                          onDelete={() => handleDelete(card.id)}
+                          onArchive={() => handleArchive(card.id, false)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -400,6 +474,7 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
           card={viewingCard}
           onClose={() => setViewingCard(null)}
           onDelete={() => handleDelete(viewingCard.id)}
+          onArchive={() => { handleArchive(viewingCard.id, !viewingCard.archived); setViewingCard(null); }}
         />
       )}
 
@@ -416,11 +491,12 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
 }
 
 /* ───────── card row ───────── */
-function CardRow({ card, onView, onEdit, onDelete }: {
+function CardRow({ card, onView, onEdit, onDelete, onArchive }: {
   card: BarCard;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onArchive: () => void;
 }) {
   const status = getCardStatus(card.expiration_date);
   const cfg = STATUS_CONFIG[status];
@@ -430,25 +506,27 @@ function CardRow({ card, onView, onEdit, onDelete }: {
   });
 
   return (
-    <div className={`rounded-xl border ${cfg.border} ${cfg.bg} p-3 transition-all`}>
+    <div className={`rounded-xl border ${card.archived ? 'border-gray-200 bg-gray-50' : `${cfg.border} ${cfg.bg}`} p-3 transition-all`}>
       <div className="flex items-center gap-3">
         {/* Thumbnail */}
-        <button onClick={onView} className="tap-highlight flex-shrink-0 w-14 h-10 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm">
+        <button onClick={onView} className={`tap-highlight flex-shrink-0 w-14 h-10 rounded-lg overflow-hidden border border-gray-200 bg-white shadow-sm ${card.archived ? 'opacity-60' : ''}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={card.card_image_url} alt={card.employee_name} className="w-full h-full object-cover" />
         </button>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-[#1B3A6B] truncate">{card.employee_name}</p>
+          <p className={`text-sm font-bold truncate ${card.archived ? 'text-gray-400' : 'text-[#1B3A6B]'}`}>{card.employee_name}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-            <span className={`text-xs font-medium ${cfg.text}`}>
-              {status === 'expired'
-                ? `Expired ${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''} ago`
-                : status === 'valid'
-                  ? `Exp. ${expDate}`
-                  : `${days} day${days !== 1 ? 's' : ''} left — ${expDate}`
+            {!card.archived && <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />}
+            <span className={`text-xs font-medium ${card.archived ? 'text-gray-400' : cfg.text}`}>
+              {card.archived
+                ? `Archived — Exp. ${expDate}`
+                : status === 'expired'
+                  ? `Expired ${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''} ago`
+                  : status === 'valid'
+                    ? `Exp. ${expDate}`
+                    : `${days} day${days !== 1 ? 's' : ''} left — ${expDate}`
               }
             </span>
           </div>
@@ -456,11 +534,27 @@ function CardRow({ card, onView, onEdit, onDelete }: {
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          <button onClick={onEdit} className="tap-highlight p-2 rounded-lg hover:bg-white/60 transition-colors" title="Edit">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+          {!card.archived && (
+            <button onClick={onEdit} className="tap-highlight p-2 rounded-lg hover:bg-white/60 transition-colors" title="Edit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          )}
+          <button onClick={onArchive} className="tap-highlight p-2 rounded-lg hover:bg-gray-200/60 transition-colors" title={card.archived ? 'Restore' : 'Archive'}>
+            {card.archived ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2E86C1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="21 8 21 21 3 21 3 8"/>
+                <rect x="1" y="3" width="22" height="5"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+              </svg>
+            )}
           </button>
           <button onClick={onDelete} className="tap-highlight p-2 rounded-lg hover:bg-red-100/60 transition-colors" title="Delete">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -870,10 +964,11 @@ function CameraOverlay({ onCapture, onClose }: {
 }
 
 /* ───────── view modal (full card image) ───────── */
-function ViewModal({ card, onClose, onDelete }: {
+function ViewModal({ card, onClose, onDelete, onArchive }: {
   card: BarCard;
   onClose: () => void;
   onDelete: () => void;
+  onArchive: () => void;
 }) {
   const status = getCardStatus(card.expiration_date);
   const cfg = STATUS_CONFIG[status];
@@ -889,8 +984,14 @@ function ViewModal({ card, onClose, onDelete }: {
           <div>
             <h2 className="text-lg font-bold text-[#1B3A6B]">{card.employee_name}</h2>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-              <span className={`text-xs font-medium ${cfg.text}`}>{cfg.label} — {expDate}</span>
+              {card.archived ? (
+                <span className="text-xs font-medium text-gray-400">Archived — {expDate}</span>
+              ) : (
+                <>
+                  <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                  <span className={`text-xs font-medium ${cfg.text}`}>{cfg.label} — {expDate}</span>
+                </>
+              )}
             </div>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl font-light">✕</button>
@@ -901,12 +1002,24 @@ function ViewModal({ card, onClose, onDelete }: {
           {card.notes && (
             <p className="mt-3 text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">{card.notes}</p>
           )}
-          <button
-            onClick={onDelete}
-            className="mt-4 w-full py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
-          >
-            Remove Bar Card
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={onArchive}
+              className={`w-full py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+                card.archived
+                  ? 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                  : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {card.archived ? 'Restore to Active' : 'Archive to Past Staff'}
+            </button>
+            <button
+              onClick={onDelete}
+              className="w-full py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition-colors"
+            >
+              Permanently Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>

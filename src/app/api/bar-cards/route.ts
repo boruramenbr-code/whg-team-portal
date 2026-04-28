@@ -127,6 +127,14 @@ export async function POST(req: NextRequest) {
     .from('bar-cards')
     .getPublicUrl(filePath);
 
+  // Try to match a profile by name for auto-archive linking
+  const { data: matchedProfile } = await adminClient
+    .from('profiles')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+    .ilike('full_name', employeeName.trim())
+    .single();
+
   // Insert record
   const { data: card, error: insertError } = await adminClient
     .from('bar_cards')
@@ -137,6 +145,7 @@ export async function POST(req: NextRequest) {
       card_image_url: urlData.publicUrl,
       notes: notes?.trim() || null,
       uploaded_by: user.id,
+      profile_id: matchedProfile?.id || null,
     })
     .select()
     .single();

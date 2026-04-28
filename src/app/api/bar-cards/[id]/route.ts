@@ -54,7 +54,7 @@ export async function PATCH(
   }
 
   // Only allow updating specific fields
-  const allowedFields = ['employee_name', 'expiration_date', 'notes'];
+  const allowedFields = ['employee_name', 'expiration_date', 'notes', 'archived'];
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
