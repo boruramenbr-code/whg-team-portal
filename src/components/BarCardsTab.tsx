@@ -36,8 +36,8 @@ function getCardStatus(expirationDate: string): CardStatus {
   const exp = new Date(expirationDate + 'T23:59:59');
   const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return 'expired';
-  if (diffDays <= 14) return 'critical';
-  if (diffDays <= 45) return 'warning';
+  if (diffDays <= 30) return 'critical';
+  if (diffDays <= 90) return 'warning';
   return 'valid';
 }
 

@@ -80,24 +80,42 @@ const TAB_GUIDE = [
   },
 ];
 
+/* ───────── Birthday types ───────── */
+interface Birthday {
+  id: string;
+  full_name: string;
+  date_of_birth: string;
+  birth_month: number;
+  birth_day: number;
+  days_until: number;
+  restaurant_name: string | null;
+}
+
 /* ───────── Component ───────── */
 export default function HomeTab({ firstName, restaurantName, language, onNavigate }: Props) {
   const [note, setNote] = useState<PreshiftNote | null>(null);
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [loading, setLoading] = useState(true);
   const isES = language === 'es';
 
   const loadPreshift = useCallback(async () => {
     setLoading(true);
     try {
-      const [noteRes, ownerRes] = await Promise.all([
+      const [noteRes, ownerRes, bdayRes] = await Promise.all([
         fetch(`/api/preshift-notes?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/owner-messages?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
       const noteData = await noteRes.json();
       const ownerData = await ownerRes.json();
       setNote(noteData.note || null);
       setOwnerMessages(ownerData.messages || []);
+
+      if (bdayRes.ok) {
+        const bdayData = await bdayRes.json();
+        setBirthdays(bdayData.birthdays || []);
+      }
     } catch {
       // ignore
     } finally {
@@ -285,6 +303,73 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
             </div>
           )}
         </section>
+
+        {/* ── Upcoming Birthdays ── */}
+        {birthdays.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+              <span className="text-base">🎂</span>
+              {isES ? 'Cumpleaños Próximos' : 'Upcoming Birthdays'}
+            </h2>
+            <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
+              <div className="divide-y divide-gray-100">
+                {birthdays.map((b) => {
+                  const isToday = b.days_until === 0;
+                  const monthNames = isES
+                    ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+                    : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                  return (
+                    <div
+                      key={b.id}
+                      className={`px-4 py-3 flex items-center gap-3 ${isToday ? 'bg-amber-50' : ''}`}
+                    >
+                      {/* Date badge */}
+                      <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex flex-col items-center justify-center ${
+                        isToday ? 'bg-amber-100 border border-amber-200' : 'bg-gray-50 border border-gray-100'
+                      }`}>
+                        <span className={`text-[10px] font-bold uppercase leading-none ${isToday ? 'text-amber-600' : 'text-gray-400'}`}>
+                          {monthNames[b.birth_month - 1]}
+                        </span>
+                        <span className={`text-base font-bold leading-tight ${isToday ? 'text-amber-700' : 'text-gray-600'}`}>
+                          {b.birth_day}
+                        </span>
+                      </div>
+
+                      {/* Name + restaurant */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1B3A6B] truncate">
+                          {b.full_name}
+                          {isToday && <span className="ml-1.5">🎉</span>}
+                        </p>
+                        {b.restaurant_name && (
+                          <p className="text-[11px] text-gray-400 truncate">{b.restaurant_name}</p>
+                        )}
+                      </div>
+
+                      {/* Days until */}
+                      <div className="flex-shrink-0 text-right">
+                        {isToday ? (
+                          <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
+                            {isES ? '¡Hoy!' : 'Today!'}
+                          </span>
+                        ) : b.days_until === 1 ? (
+                          <span className="text-xs font-semibold text-amber-600">
+                            {isES ? 'Mañana' : 'Tomorrow'}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-gray-400">
+                            {isES ? `en ${b.days_until} días` : `in ${b.days_until} days`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── Two-column: Latest Review + Leaderboard ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

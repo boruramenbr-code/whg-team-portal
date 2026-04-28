@@ -17,8 +17,8 @@ interface HeaderProps {
 }
 
 function getDashboardLabel(role: string): string {
-  if (role === 'admin') return 'Owner Dashboard';
-  return 'Manager Dashboard';
+  if (role === 'admin') return 'Mission Control';
+  return 'Mission Control';
 }
 
 export default function Header({ profile, showAdminLink, currentPage }: HeaderProps) {
@@ -84,7 +84,7 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
             onClick={() => router.push('/admin')}
             className="tap-highlight text-sm md:text-xs bg-white/15 hover:bg-white/25 px-4 py-2 md:px-3 md:py-1.5 rounded-lg transition-colors font-semibold"
           >
-            Dashboard
+            Mission Control
           </button>
         )}
 

@@ -479,6 +479,31 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       )}
                     </div>
 
+                    {/* Birthday */}
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                        Birthday
+                      </label>
+                      <input
+                        type="date"
+                        defaultValue={u.date_of_birth || ''}
+                        onBlur={(e) => {
+                          const val = e.target.value || null;
+                          if (val !== (u.date_of_birth || null)) {
+                            fetch(`/api/admin/users/${u.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ date_of_birth: val }),
+                            }).then(() => fetchUsers());
+                          }
+                        }}
+                        className="w-full md:w-48 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        Used for birthday reminders on the home screen.
+                      </p>
+                    </div>
+
                     {/* Multi-location assignments — admin only */}
                     {isAdmin && (
                       <div className="mt-4">
