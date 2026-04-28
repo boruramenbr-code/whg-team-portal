@@ -748,14 +748,18 @@ function CameraOverlay({ onCapture, onClose }: {
 
     setCapturing(true);
 
-    // Draw the full video frame to canvas
+    // Crop to just the card cutout region (matches overlay: left 8%, top 28%, width 84%, height 38%)
     const vw = video.videoWidth;
     const vh = video.videoHeight;
-    canvas.width = vw;
-    canvas.height = vh;
+    const sx = Math.round(vw * 0.08);
+    const sy = Math.round(vh * 0.28);
+    const sw = Math.round(vw * 0.84);
+    const sh = Math.round(vh * 0.38);
+    canvas.width = sw;
+    canvas.height = sh;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.drawImage(video, 0, 0, vw, vh);
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
 
     // Stop the camera
     if (stream) stream.getTracks().forEach(t => t.stop());
