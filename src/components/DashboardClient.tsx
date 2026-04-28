@@ -7,8 +7,6 @@ import Sidebar from './Sidebar';
 import WelcomeSplash from './WelcomeSplash';
 import PreshiftTab from './PreshiftTab';
 import PoliciesTab from './PoliciesTab';
-import ComplianceTab from './ComplianceTab';
-import BarCardsTab from './BarCardsTab';
 import HandbookReaderTab from './HandbookReaderTab';
 import OurTeamTab from './OurTeamTab';
 import HomeTab from './HomeTab';
@@ -18,9 +16,8 @@ interface Props {
   isManager: boolean;
 }
 
-type TopTabKey = 'home' | 'handbook' | 'preshift' | 'compliance' | 'ourteam';
+type TopTabKey = 'home' | 'handbook' | 'preshift' | 'ourteam';
 type HandbookSubTab = 'read' | 'policies' | 'ask';
-type ComplianceSubTab = 'policies' | 'barcards';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ── */
 const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -52,18 +49,11 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <line x1="16" y1="17" x2="8" y2="17" stroke={a ? 'white' : 'currentColor'} />
     </svg>
   ),
-  compliance: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill={a ? '#1B3A6B' : 'none'} />
-      <polyline points="9 12 11 14 15 10" stroke={a ? 'white' : 'currentColor'} />
-    </svg>
-  ),
 };
 
 export default function DashboardClient({ profile, isManager }: Props) {
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');
   const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>('read');
-  const [activeComplianceSub, setActiveComplianceSub] = useState<ComplianceSubTab>('barcards');
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
@@ -88,9 +78,6 @@ export default function DashboardClient({ profile, isManager }: Props) {
     { key: 'handbook', label: 'Handbook & Policies', labelEs: 'Manual y Políticas', emoji: '📘' },
     { key: 'ourteam', label: 'Our Team', labelEs: 'Nuestro Equipo', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', labelEs: 'Pre-Turno', emoji: '📋' },
-    ...(isManager
-      ? [{ key: 'compliance' as TopTabKey, label: 'Compliance', labelEs: 'Cumplimiento', emoji: '✅' }]
-      : []),
   ];
 
   /* Short labels for bottom nav on mobile */
@@ -99,18 +86,12 @@ export default function DashboardClient({ profile, isManager }: Props) {
     handbook: { en: 'Handbook', es: 'Manual' },
     ourteam: { en: 'Team', es: 'Equipo' },
     preshift: { en: 'Pre-Shift', es: 'Pre-Turno' },
-    compliance: { en: 'Comply', es: 'Cumplir' },
   };
 
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
     { key: 'read', label: 'Read', labelEs: 'Leer', emoji: '📖' },
     { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
     { key: 'ask', label: 'Ask', labelEs: 'Chat', emoji: '💬' },
-  ];
-
-  const complianceSubTabs: { key: ComplianceSubTab; label: string; labelEs: string; emoji: string }[] = [
-    { key: 'barcards', label: 'Bar Cards', labelEs: 'Tarjetas de Bar', emoji: '🪪' },
-    { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
   ];
 
   return (
@@ -197,34 +178,6 @@ export default function DashboardClient({ profile, isManager }: Props) {
             >
               ES
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Sub-tab bar — Compliance (manager-only, visible on both mobile + desktop) */}
-      {activeTop === 'compliance' && isManager && (
-        <div className="flex items-center border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-2 md:px-4 flex-shrink-0">
-          <div className="flex gap-0.5 min-w-0">
-            {complianceSubTabs.map((t) => {
-              const isActive = activeComplianceSub === t.key;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setActiveComplianceSub(t.key)}
-                  className={`tap-highlight relative flex items-center gap-1 px-3 md:px-4 py-3 md:py-2 text-sm md:text-xs font-semibold transition-colors ${
-                    isActive
-                      ? 'text-[#2E86C1]'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <span className="text-base md:text-sm">{t.emoji}</span>
-                  <span>{isES ? t.labelEs : t.label}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2E86C1] rounded-t-full" />
-                  )}
-                </button>
-              );
-            })}
           </div>
         </div>
       )}
@@ -338,20 +291,6 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {activeTop === 'preshift' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <PreshiftTab language={language} restaurantName={restaurantName} />
-          </div>
-        )}
-
-        {/* COMPLIANCE → Bar Cards (manager-only) */}
-        {activeTop === 'compliance' && isManager && activeComplianceSub === 'barcards' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
-          </div>
-        )}
-
-        {/* COMPLIANCE → Policies (manager-only) */}
-        {activeTop === 'compliance' && isManager && activeComplianceSub === 'policies' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <ComplianceTab />
           </div>
         )}
       </div>

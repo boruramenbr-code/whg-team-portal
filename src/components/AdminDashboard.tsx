@@ -5,13 +5,15 @@ import { Profile, Restaurant } from '@/lib/types';
 import AdminPanel from './AdminPanel';
 import PreshiftEditor from './PreshiftEditor';
 import OwnerMessageEditor from './OwnerMessageEditor';
+import BarCardsTab from './BarCardsTab';
+import ComplianceTab from './ComplianceTab';
 
 interface Props {
   profile: Profile;
   restaurants: Restaurant[];
 }
 
-type DashboardTab = 'staff' | 'preshift' | 'settings';
+type DashboardTab = 'staff' | 'preshift' | 'compliance' | 'barcards' | 'settings';
 
 /* ── SVG icons for admin bottom nav ── */
 const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -31,6 +33,18 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <line x1="16" y1="17" x2="8" y2="17" stroke={a ? 'white' : 'currentColor'} />
     </svg>
   ),
+  barcards: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="2" fill={a ? '#1B3A6B' : 'none'} />
+      <line x1="3" y1="10" x2="21" y2="10" stroke={a ? 'white' : 'currentColor'} />
+    </svg>
+  ),
+  compliance: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill={a ? '#1B3A6B' : 'none'} />
+      <polyline points="9 12 11 14 15 10" stroke={a ? 'white' : 'currentColor'} />
+    </svg>
+  ),
   settings: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" fill={a ? '#1B3A6B' : 'none'} />
@@ -46,6 +60,8 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   const tabs: { key: DashboardTab; label: string; emoji: string; adminOnly?: boolean; disabled?: boolean }[] = [
     { key: 'staff', label: 'Staff', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
+    { key: 'barcards', label: 'Bar Cards', emoji: '🪪' },
+    { key: 'compliance', label: 'Compliance', emoji: '✅' },
     ...(isAdmin
       ? [{ key: 'settings' as DashboardTab, label: 'Settings', emoji: '⚙️', adminOnly: true, disabled: true }]
       : []),
@@ -108,6 +124,18 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
           </div>
         )}
 
+        {activeTab === 'barcards' && (
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 200px)' }}>
+            <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
+          </div>
+        )}
+
+        {activeTab === 'compliance' && (
+          <div className="tab-content-enter">
+            <ComplianceTab />
+          </div>
+        )}
+
         {activeTab === 'settings' && isAdmin && (
           <div className="max-w-3xl mx-auto px-4 md:px-6 py-12 text-center tab-content-enter">
             <div className="text-4xl mb-3">⚙️</div>
@@ -127,7 +155,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
                 key={t.key}
                 onClick={() => !t.disabled && setActiveTab(t.key)}
                 disabled={t.disabled}
-                className={`tap-highlight flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg min-w-[60px] transition-colors ${
+                className={`tap-highlight flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg min-w-[52px] transition-colors ${
                   t.disabled
                     ? 'text-gray-300 opacity-50'
                     : isActive
