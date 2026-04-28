@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 
 /* ───────── types ───────── */
 interface BarCard {
@@ -488,23 +488,21 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [ocrDone, setOcrDone] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.files?.[0];
-    if (!raw) return;
-
-    // Convert HEIC/large images to JPEG via Canvas
+  // Shared: process a file (from camera capture or file picker) — convert, preview, OCR
+  const processFile = async (raw: File) => {
     let f: File;
     try {
       f = await convertToJpeg(raw);
     } catch {
-      f = raw; // fallback to original if conversion fails
+      f = raw;
     }
 
     setFile(f);
     setPreview(URL.createObjectURL(f));
 
-    // Run OCR + auto-crop
+    // Run OCR
     setScanning(true);
     setOcrDone(false);
     try {
@@ -519,11 +517,6 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
         if (data.expiration_date) {
           setExpirationDate(data.expiration_date);
         }
-
-        // Auto-crop disabled — AI vision crop detection is not accurate
-        // enough yet. The image is already auto-rotated via Canvas above.
-        // TODO: Add manual drag-to-crop tool if needed later.
-
         setOcrDone(true);
       }
     } catch {
@@ -531,6 +524,17 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
     } finally {
       setScanning(false);
     }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.files?.[0];
+    if (!raw) return;
+    await processFile(raw);
+  };
+
+  const handleCameraCapture = async (capturedFile: File) => {
+    setShowCamera(false);
+    await processFile(capturedFile);
   };
 
   const handleSubmit = async () => {
@@ -576,55 +580,35 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
               <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                 <p className="text-xs font-semibold text-[#1B3A6B] mb-1">Photo Tips</p>
                 <ul className="text-[11px] text-blue-800 space-y-0.5 list-disc list-inside">
-                  <li>Hold the card <strong>upright</strong> (landscape orientation)</li>
-                  <li>Make sure the <strong>name</strong> and <strong>expiration date</strong> are visible</li>
-                  <li>Crop or rotate your photo <strong>before uploading</strong> if needed</li>
+                  <li>Hold the card <strong>flat</strong> in <strong>landscape</strong> orientation</li>
+                  <li>Make sure the <strong>name</strong> and <strong>expiration date</strong> are readable</li>
+                  <li>Use the scanner for best results — it has a card guide overlay</li>
                 </ul>
               </div>
 
-              {/* Card outline guide + file picker */}
-              <label className="tap-highlight flex flex-col items-center justify-center gap-3 py-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#1B3A6B]/40 hover:bg-blue-50/30 transition-colors">
-                {/* Card cutout illustration */}
-                <div className="relative w-64 h-40 mx-auto">
-                  {/* Card outline */}
-                  <div className="absolute inset-0 border-2 border-dashed border-[#1B3A6B]/30 rounded-lg bg-gradient-to-br from-blue-50/50 to-slate-50/50">
-                    {/* Corner brackets */}
-                    <div className="absolute top-0 left-0 w-5 h-5 border-t-[3px] border-l-[3px] border-[#1B3A6B]/60 rounded-tl-md" />
-                    <div className="absolute top-0 right-0 w-5 h-5 border-t-[3px] border-r-[3px] border-[#1B3A6B]/60 rounded-tr-md" />
-                    <div className="absolute bottom-0 left-0 w-5 h-5 border-b-[3px] border-l-[3px] border-[#1B3A6B]/60 rounded-bl-md" />
-                    <div className="absolute bottom-0 right-0 w-5 h-5 border-b-[3px] border-r-[3px] border-[#1B3A6B]/60 rounded-br-md" />
-                    {/* Simulated card content lines */}
-                    <div className="absolute top-5 left-5 right-5 space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-[#1B3A6B]/10 flex items-center justify-center">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                          </svg>
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <div className="h-2 w-24 bg-[#1B3A6B]/12 rounded-full" />
-                          <div className="h-1.5 w-16 bg-[#1B3A6B]/8 rounded-full" />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5 pt-1">
-                        <div className="h-1.5 w-full bg-[#1B3A6B]/8 rounded-full" />
-                        <div className="h-1.5 w-3/4 bg-[#1B3A6B]/8 rounded-full" />
-                        <div className="flex items-center gap-1 pt-1">
-                          <div className="h-1.5 w-10 bg-amber-400/40 rounded-full" />
-                          <div className="h-1.5 w-14 bg-[#1B3A6B]/10 rounded-full" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* Two action buttons: Scan Card + Choose from Library */}
+              <div className="space-y-2.5">
+                <button
+                  onClick={() => setShowCamera(true)}
+                  className="w-full flex items-center justify-center gap-3 py-4 bg-[#1B3A6B] text-white rounded-xl font-semibold text-sm shadow-sm hover:bg-[#15305a] active:scale-[0.98] transition-all"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  Scan Card
+                </button>
 
-                <div className="text-center">
-                  <p className="text-sm text-gray-600 font-semibold">Tap to take photo or choose file</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">Line up the card to fill the frame</p>
-                </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handleFileSelect} />
-              </label>
+                <label className="w-full flex items-center justify-center gap-3 py-3.5 bg-white border-2 border-gray-200 text-gray-600 rounded-xl font-semibold text-sm cursor-pointer hover:border-[#1B3A6B]/40 hover:text-[#1B3A6B] active:scale-[0.98] transition-all">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  Choose from Library
+                  <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={handleFileSelect} />
+                </label>
+              </div>
             </>
           ) : (
             <div className="relative">
@@ -704,6 +688,179 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
           </button>
         </div>
       </div>
+
+      {/* In-app camera with card overlay */}
+      {showCamera && (
+        <CameraOverlay
+          onCapture={handleCameraCapture}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ───────── in-app camera with card cutout ───────── */
+function CameraOverlay({ onCapture, onClose }: {
+  onCapture: (file: File) => void;
+  onClose: () => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
+
+  // Start camera on mount
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+        if (!active) { s.getTracks().forEach(t => t.stop()); return; }
+        setStream(s);
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+        }
+      } catch {
+        if (active) setError('Camera not available. Please use "Choose from Library" instead.');
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Clean up stream on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, [stream]);
+
+  const handleCapture = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || capturing) return;
+
+    setCapturing(true);
+
+    // Draw the full video frame to canvas
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    canvas.width = vw;
+    canvas.height = vh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, vw, vh);
+
+    // Stop the camera
+    if (stream) stream.getTracks().forEach(t => t.stop());
+
+    // Export as JPEG
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) { setCapturing(false); return; }
+        const file = new File([blob], `barcard-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        onCapture(file);
+      },
+      'image/jpeg',
+      0.92
+    );
+  };
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-[60] bg-black flex flex-col items-center justify-center p-6">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <p className="text-white text-sm font-medium mb-1">Camera Unavailable</p>
+          <p className="text-white/60 text-xs mb-6">{error}</p>
+          <button onClick={onClose} className="px-6 py-2.5 bg-white text-gray-800 rounded-xl text-sm font-semibold">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+      {/* Camera viewfinder */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }}
+        />
+
+        {/* Dark overlay with transparent card cutout — forced above video layer on iOS */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 2, WebkitTransform: 'translateZ(0)', transform: 'translateZ(0)', pointerEvents: 'none' }}>
+          {/* Top dark band */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '28%', background: 'rgba(0,0,0,0.55)' }} />
+          {/* Bottom dark band */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '34%', background: 'rgba(0,0,0,0.55)' }} />
+          {/* Left dark band */}
+          <div style={{ position: 'absolute', top: '28%', left: 0, width: '8%', height: '38%', background: 'rgba(0,0,0,0.55)' }} />
+          {/* Right dark band */}
+          <div style={{ position: 'absolute', top: '28%', right: 0, width: '8%', height: '38%', background: 'rgba(0,0,0,0.55)' }} />
+
+          {/* Card outline border + corner brackets */}
+          <div style={{ position: 'absolute', left: '8%', top: '28%', width: '84%', height: '38%' }}>
+            <div className="absolute inset-0 border-2 border-white/80 rounded-xl" />
+            {/* Corner brackets */}
+            <div className="absolute -top-0.5 -left-0.5 w-8 h-8 border-t-[3px] border-l-[3px] border-white rounded-tl-xl" />
+            <div className="absolute -top-0.5 -right-0.5 w-8 h-8 border-t-[3px] border-r-[3px] border-white rounded-tr-xl" />
+            <div className="absolute -bottom-0.5 -left-0.5 w-8 h-8 border-b-[3px] border-l-[3px] border-white rounded-bl-xl" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-8 h-8 border-b-[3px] border-r-[3px] border-white rounded-br-xl" />
+          </div>
+
+          {/* Guide text */}
+          <div style={{ position: 'absolute', left: 0, right: 0, top: '18%' }}>
+            <p className="text-white text-center text-sm font-semibold drop-shadow-lg">
+              Line up the card in the frame
+            </p>
+            <p className="text-white/70 text-center text-xs mt-1 drop-shadow">
+              Hold steady and make sure text is readable
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom controls */}
+      <div className="bg-black px-6 py-6 flex items-center justify-between flex-shrink-0">
+        <button
+          onClick={() => { if (stream) stream.getTracks().forEach(t => t.stop()); onClose(); }}
+          className="text-white/80 text-sm font-medium px-4 py-2"
+        >
+          Cancel
+        </button>
+
+        {/* Capture button */}
+        <button
+          onClick={handleCapture}
+          disabled={capturing}
+          className="w-[72px] h-[72px] rounded-full border-4 border-white flex items-center justify-center active:scale-95 transition-transform disabled:opacity-50"
+        >
+          <div className={`w-[58px] h-[58px] rounded-full ${capturing ? 'bg-gray-400' : 'bg-white'} transition-colors`} />
+        </button>
+
+        {/* Spacer for centering */}
+        <div className="w-16" />
+      </div>
+
+      {/* Hidden canvas for capture */}
+      <canvas ref={canvasRef} className="hidden" />
     </div>
   );
 }
