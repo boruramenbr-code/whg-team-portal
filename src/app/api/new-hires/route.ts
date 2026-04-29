@@ -29,10 +29,10 @@ export async function GET() {
 
   if (!me) return NextResponse.json({ new_hires: [] });
 
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-  const cutoffISO = fourteenDaysAgo.toISOString();
-  // Use whichever is later: 14-day window OR the feature-live timestamp
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoffISO = thirtyDaysAgo.toISOString();
+  // Use whichever is later: 30-day window OR the feature-live timestamp
   const startISO = cutoffISO > FEATURE_LIVE_AT ? cutoffISO : FEATURE_LIVE_AT;
 
   let query = supabase
