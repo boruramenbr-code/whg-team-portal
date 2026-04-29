@@ -25,8 +25,8 @@ export async function GET() {
   const currentMonth = now.getMonth() + 1; // 1-12
   const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
 
-  // Fetch all active profiles with birthdays in current or next month
-  // Admin sees all restaurants, others see their own
+  // Fetch all active profiles with non-null birthdays.
+  // Admin sees all restaurants, others see their own.
   let query = supabase
     .from('profiles')
     .select('id, full_name, date_of_birth, restaurant_id, restaurants(name)')
@@ -44,26 +44,30 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to load birthdays' }, { status: 500 });
   }
 
-  // Filter by current month and next month, calculate days until birthday
+  // Window: today through last day of next month.
+  // Birthdays already passed this month are EXCLUDED — their next occurrence is
+  // next year and falls outside the window. This avoids the "in 338 days" entries.
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // new Date(year, monthIndex + 2, 0) → day 0 of the month after next = last day of next month.
+  // Correctly handles year rollover (e.g. Dec → Jan of next year).
+  const windowEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  windowEnd.setHours(23, 59, 59, 999);
 
   const birthdays = (profiles || [])
-    .filter((p) => {
-      if (!p.date_of_birth) return false;
-      const dob = new Date(p.date_of_birth + 'T00:00:00');
-      const birthMonth = dob.getMonth() + 1;
-      return birthMonth === currentMonth || birthMonth === nextMonth;
-    })
     .map((p) => {
-      const dob = new Date(p.date_of_birth! + 'T00:00:00');
+      if (!p.date_of_birth) return null;
+      const dob = new Date(p.date_of_birth + 'T00:00:00');
       const birthMonth = dob.getMonth();
       const birthDay = dob.getDate();
 
-      // Calculate next birthday this year or next
+      // Compute the next occurrence (this year if still upcoming, else next year).
       let nextBirthday = new Date(today.getFullYear(), birthMonth, birthDay);
       if (nextBirthday < today) {
         nextBirthday = new Date(today.getFullYear() + 1, birthMonth, birthDay);
       }
+
+      // Drop anything whose next occurrence is past the end of next month.
+      if (nextBirthday > windowEnd) return null;
 
       const diffMs = nextBirthday.getTime() - today.getTime();
       const daysUntil = Math.round(diffMs / (1000 * 60 * 60 * 24));
@@ -78,6 +82,7 @@ export async function GET() {
         restaurant_name: (p.restaurants as { name?: string } | null)?.name || null,
       };
     })
+    .filter((b): b is NonNullable<typeof b> => b !== null)
     .sort((a, b) => a.days_until - b.days_until);
 
   return NextResponse.json({
