@@ -191,6 +191,7 @@ export default function BulkImportModal({ restaurants, onClose, onComplete }: Bu
   const [rawText, setRawText] = useState('');
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<ImportResult[] | null>(null);
+  const [progress, setProgress] = useState<{ current: number; total: number; batch: number; batchCount: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const parsed: ParsedRow[] = useMemo(() => {
@@ -280,37 +281,84 @@ export default function BulkImportModal({ restaurants, onClose, onComplete }: Bu
     if (validRows.length === 0) return;
     setImporting(true);
     setResults(null);
+    setProgress({ current: 0, total: validRows.length, batch: 0, batchCount: 0 });
 
-    const payload = {
-      rows: validRows.map((r) => ({
-        full_name: r.full_name,
-        restaurant_id: r.restaurant_id,
-        role: r.role,
-        pin: r.pin,
-        email: r.email,
-        password: r.password,
-        date_of_birth: r.date_of_birth,
-        preferred_language: r.preferred_language,
-      })),
-    };
-
-    try {
-      const res = await fetch('/api/admin/users/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setResults([{ index: 0, full_name: '', success: false, error: data.error || 'Import failed' }]);
-      } else {
-        setResults(data.results || []);
-      }
-    } catch (err) {
-      setResults([{ index: 0, full_name: '', success: false, error: err instanceof Error ? err.message : 'Network error' }]);
-    } finally {
-      setImporting(false);
+    // Batch into chunks of 8 — each batch creates ~8 Supabase auth users sequentially
+    // (~5-8s per batch), which stays well under any serverless function timeout.
+    const BATCH_SIZE = 8;
+    const batches: typeof validRows[] = [];
+    for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+      batches.push(validRows.slice(i, i + BATCH_SIZE));
     }
+
+    const allResults: ImportResult[] = [];
+    let processed = 0;
+
+    for (let b = 0; b < batches.length; b++) {
+      setProgress({
+        current: processed,
+        total: validRows.length,
+        batch: b + 1,
+        batchCount: batches.length,
+      });
+
+      const payload = {
+        rows: batches[b].map((r) => ({
+          full_name: r.full_name,
+          restaurant_id: r.restaurant_id,
+          role: r.role,
+          pin: r.pin,
+          email: r.email,
+          password: r.password,
+          date_of_birth: r.date_of_birth,
+          preferred_language: r.preferred_language,
+        })),
+      };
+
+      try {
+        const res = await fetch('/api/admin/users/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          // Endpoint-level failure — mark every row in this batch as failed
+          for (const r of batches[b]) {
+            allResults.push({
+              index: allResults.length,
+              full_name: r.full_name,
+              success: false,
+              error: data.error || `Batch ${b + 1} failed`,
+            });
+          }
+        } else {
+          for (const r of (data.results || [])) {
+            allResults.push({ ...r, index: allResults.length });
+          }
+        }
+      } catch (err) {
+        for (const r of batches[b]) {
+          allResults.push({
+            index: allResults.length,
+            full_name: r.full_name,
+            success: false,
+            error: err instanceof Error ? err.message : 'Network error',
+          });
+        }
+      }
+
+      processed += batches[b].length;
+      setProgress({
+        current: processed,
+        total: validRows.length,
+        batch: b + 1,
+        batchCount: batches.length,
+      });
+    }
+
+    setResults(allResults);
+    setImporting(false);
   };
 
   const handleClose = () => {
@@ -540,7 +588,9 @@ export default function BulkImportModal({ restaurants, onClose, onComplete }: Bu
                 disabled={importing || validRows.length === 0}
                 className="flex-1 py-2.5 bg-[#1B3A6B] hover:bg-[#2E86C1] text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
               >
-                {importing
+                {importing && progress
+                  ? `Importing batch ${progress.batch}/${progress.batchCount} — ${progress.current}/${progress.total} done...`
+                  : importing
                   ? 'Importing...'
                   : validRows.length === 0
                   ? 'Nothing to import'
