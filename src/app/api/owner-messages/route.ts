@@ -1,8 +1,19 @@
 import { createClient } from '@/lib/supabase-server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+// Service-role client for writes that need to bypass RLS (already gated by
+// admin-role check in the route handlers).
+function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 /**
  * GET /api/owner-messages
@@ -77,8 +88,10 @@ export async function POST(req: NextRequest) {
   }
 
   // If id is provided, update; otherwise insert.
+  // Use admin client for update to bypass RLS (admin role already verified above).
   if (id) {
-    const { data: updated, error } = await supabase
+    const adminClient = getAdminClient();
+    const { data: updated, error } = await adminClient
       .from('owner_messages')
       .update({
         message: message.trim(),
@@ -139,13 +152,22 @@ export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-  const { error } = await supabase
+  // Use admin client to ensure the update bypasses RLS (admin role already verified above).
+  // Verify the row actually changed — Supabase returns no error on RLS-blocked updates.
+  const adminClient = getAdminClient();
+  const { data, error } = await adminClient
     .from('owner_messages')
     .update({ is_active: false })
-    .eq('id', id);
+    .eq('id', id)
+    .select();
 
   if (error) {
+    console.error('Failed to delete owner message:', error.message);
     return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 });
+  }
+
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: 'Message not found' }, { status: 404 });
   }
 
   return NextResponse.json({ success: true });

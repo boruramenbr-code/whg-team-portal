@@ -99,10 +99,15 @@ export default function OwnerMessageEditor() {
   const handleDelete = async (id: string) => {
     if (!confirm('Remove this owner message? Staff will stop seeing it immediately.')) return;
     try {
-      await fetch(`/api/owner-messages?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/owner-messages?id=${id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || 'Failed to delete message');
+        return;
+      }
       await loadMessages();
     } catch {
-      // ignore
+      setError('Connection error. Please try again.');
     }
   };
 
