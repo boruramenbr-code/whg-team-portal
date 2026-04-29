@@ -19,6 +19,7 @@ export interface Profile {
   preferred_language: PreferredLanguage;
   employee_pin?: string;
   date_of_birth?: string | null;
+  welcome_until?: string | null;
   created_at: string;
   updated_at: string;
   restaurants?: Restaurant;

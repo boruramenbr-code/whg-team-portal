@@ -28,6 +28,7 @@ interface BulkRow {
   password?: string;
   date_of_birth?: string | null;
   preferred_language?: string;
+  welcome_until?: string | null;
 }
 
 interface RowResult {
@@ -91,6 +92,7 @@ export async function POST(req: NextRequest) {
       const targetRole = (row.role || 'employee').trim();
       const language = (row.preferred_language || 'en').trim() as 'en' | 'es';
       const dob = row.date_of_birth ? row.date_of_birth.trim() : null;
+      const welcomeUntil = row.welcome_until ? row.welcome_until.trim() : null;
 
       // Basic validation
       if (!fullName) throw new Error('Full name is required');
@@ -133,6 +135,7 @@ export async function POST(req: NextRequest) {
           preferred_language: language,
         };
         if (dob) profilePayload.date_of_birth = dob;
+        if (welcomeUntil) profilePayload.welcome_until = welcomeUntil;
 
         const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
         if (profileError) {
@@ -171,6 +174,7 @@ export async function POST(req: NextRequest) {
         preferred_language: language,
       };
       if (dob) profilePayload.date_of_birth = dob;
+      if (welcomeUntil) profilePayload.welcome_until = welcomeUntil;
 
       const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
       if (profileError) {

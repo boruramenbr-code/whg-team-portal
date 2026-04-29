@@ -88,6 +88,14 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
   const [userLocations, setUserLocations] = useState<UserLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
 
+  // Helper: today + 30 days as YYYY-MM-DD
+  const defaultWelcomeUntil = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split('T')[0];
+  })();
+  const todayStr = new Date().toISOString().split('T')[0];
+
   // Add member modal
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -99,6 +107,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     role: 'employee' as UserRole,
     preferred_language: 'en' as 'en' | 'es',
     date_of_birth: '',
+    welcome_until: defaultWelcomeUntil,
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -194,6 +203,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       role: 'employee',
       preferred_language: 'en',
       date_of_birth: '',
+      welcome_until: defaultWelcomeUntil,
     });
   };
 
@@ -212,8 +222,12 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     setFormError('');
     setFormSuccess('');
 
-    // Strip empty date_of_birth so we send null instead of ""
-    const payload = { ...form, date_of_birth: form.date_of_birth || null };
+    // Strip empty dates so we send null instead of ""
+    const payload = {
+      ...form,
+      date_of_birth: form.date_of_birth || null,
+      welcome_until: form.welcome_until || null,
+    };
 
     const res = await fetch('/api/admin/users', {
       method: 'POST',
@@ -524,6 +538,66 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       </p>
                     </div>
 
+                    {/* Highlight on home — welcome_until */}
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                        🎉 Highlight on Home Until
+                      </label>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <input
+                          type="date"
+                          value={u.welcome_until || ''}
+                          min={todayStr}
+                          onChange={(e) => {
+                            const val = e.target.value || null;
+                            fetch(`/api/admin/users/${u.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ welcome_until: val }),
+                            }).then(() => fetchUsers());
+                          }}
+                          className="w-full md:w-48 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            fetch(`/api/admin/users/${u.id}`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ welcome_until: defaultWelcomeUntil }),
+                            }).then(() => fetchUsers());
+                          }}
+                          className="px-3 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
+                        >
+                          🎉 Highlight 30 days
+                        </button>
+                        {u.welcome_until && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              fetch(`/api/admin/users/${u.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ welcome_until: null }),
+                              }).then(() => fetchUsers());
+                            }}
+                            className="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-red-500 border border-gray-200 hover:border-red-200 rounded-lg transition-colors"
+                          >
+                            Stop highlighting
+                          </button>
+                        )}
+                      </div>
+                      {u.welcome_until && u.welcome_until >= todayStr ? (
+                        <p className="text-[10px] text-amber-600 mt-1 font-semibold">
+                          ✓ Featured on home tab through {new Date(u.welcome_until + 'T00:00:00').toLocaleDateString()}
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          Not currently featured. Use a date or the 30-day button to spotlight them.
+                        </p>
+                      )}
+                    </div>
+
                     {/* Multi-location assignments — admin only */}
                     {isAdmin && (
                       <div className="mt-4">
@@ -681,6 +755,33 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   />
                   <p className="text-[11px] text-gray-400 mt-1.5">
                     Powers birthday reminders on the home screen.
+                  </p>
+                </div>
+
+                {/* Highlight as new — until what date */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    🎉 Highlight on home until
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="date"
+                      value={form.welcome_until}
+                      min={todayStr}
+                      onChange={(e) => setForm({ ...form, welcome_until: e.target.value })}
+                      className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, welcome_until: '' })}
+                      className="px-3 py-2.5 text-xs font-semibold text-gray-500 hover:text-red-500 border border-gray-200 hover:border-red-200 rounded-xl transition-colors"
+                      title="Don't highlight this person on the home tab"
+                    >
+                      Off
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Featured in the &quot;Welcome to the team&quot; spotlight on the home tab. Default: 30 days.
                   </p>
                 </div>
 

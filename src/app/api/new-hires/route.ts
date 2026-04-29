@@ -6,16 +6,15 @@ export const revalidate = 0;
 
 /**
  * GET /api/new-hires
- * Returns staff who joined in the last 14 days. The home tab uses this to
- * render a "Welcome our newest teammates" section that auto-rotates off.
+ * Returns staff who are currently featured in the home tab "Welcome to the
+ * team" section — i.e. profiles whose `welcome_until` date is today or later.
  *
- * Important: profiles created BEFORE the FEATURE_LIVE_AT timestamp are
- * excluded. This protects against the bulk-import day showing 96 "Welcome!"
- * cards. Going forward, every single-added profile will appear here for
- * exactly 14 days.
+ * Default behavior: Add Member sets welcome_until = today + 30 days, so new
+ * hires automatically appear for a month. Admin can also manually highlight
+ * any active profile by setting welcome_until via the AdminPanel inline edit.
+ *
+ * Bulk-imported staff have welcome_until = NULL → never auto-featured.
  */
-const FEATURE_LIVE_AT = '2026-04-30T00:00:00Z';
-
 export async function GET() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -29,17 +28,13 @@ export async function GET() {
 
   if (!me) return NextResponse.json({ new_hires: [] });
 
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const cutoffISO = thirtyDaysAgo.toISOString();
-  // Use whichever is later: 30-day window OR the feature-live timestamp
-  const startISO = cutoffISO > FEATURE_LIVE_AT ? cutoffISO : FEATURE_LIVE_AT;
+  const today = new Date().toISOString().split('T')[0];
 
   let query = supabase
     .from('profiles')
-    .select('id, full_name, restaurant_id, role, created_at, restaurants(name)')
+    .select('id, full_name, restaurant_id, role, created_at, welcome_until, restaurants(name)')
     .eq('status', 'active')
-    .gte('created_at', startISO)
+    .gte('welcome_until', today)
     .neq('id', user.id) // don't show self as new hire
     .order('created_at', { ascending: false })
     .limit(8);
@@ -55,11 +50,14 @@ export async function GET() {
     return NextResponse.json({ new_hires: [] });
   }
 
-  // Add days_since for display
-  const today = new Date();
+  // Compute days_since (using created_at) for the spotlight label
+  const now = new Date();
   const new_hires = (data || []).map((p) => {
     const created = new Date(p.created_at);
-    const daysSince = Math.max(0, Math.round((today.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysSince = Math.max(
+      0,
+      Math.round((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
+    );
     return {
       id: p.id,
       full_name: p.full_name,

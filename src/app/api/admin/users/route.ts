@@ -69,10 +69,27 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, restaurant_id, role, pin, email, password, preferred_language, date_of_birth } = body;
+  const { full_name, restaurant_id, role, pin, email, password, preferred_language, date_of_birth, welcome_until } = body;
 
   if (!full_name || !restaurant_id) {
     return Response.json({ error: 'Name and restaurant are required' }, { status: 400 });
+  }
+
+  if (welcome_until && !/^\d{4}-\d{2}-\d{2}$/.test(welcome_until)) {
+    return Response.json({ error: 'welcome_until must be in YYYY-MM-DD format' }, { status: 400 });
+  }
+
+  // Default: highlight new staff for 30 days unless caller explicitly passed null/empty
+  // (welcome_until === null disables auto-highlight; undefined = use default)
+  let resolvedWelcomeUntil: string | null;
+  if (welcome_until === null) {
+    resolvedWelcomeUntil = null;
+  } else if (welcome_until) {
+    resolvedWelcomeUntil = welcome_until;
+  } else {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    resolvedWelcomeUntil = d.toISOString().split('T')[0];
   }
 
   // date_of_birth (optional): require YYYY-MM-DD if provided
@@ -130,6 +147,7 @@ export async function POST(req: NextRequest) {
       preferred_language: preferred_language || 'en',
     };
     if (date_of_birth) profilePayload.date_of_birth = date_of_birth;
+    if (resolvedWelcomeUntil !== null) profilePayload.welcome_until = resolvedWelcomeUntil;
 
     const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
 
@@ -168,6 +186,7 @@ export async function POST(req: NextRequest) {
     preferred_language: preferred_language || 'en',
   };
   if (date_of_birth) profilePayload.date_of_birth = date_of_birth;
+  if (resolvedWelcomeUntil !== null) profilePayload.welcome_until = resolvedWelcomeUntil;
 
   const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
 

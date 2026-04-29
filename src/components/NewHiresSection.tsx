@@ -51,10 +51,14 @@ export default function NewHiresSection({ language }: Props) {
 
   if (loading || newHires.length === 0) return null;
 
+  // For true new hires (within 30 days) we show how recent they are.
+  // For admin-highlighted older staff, we just say "Welcome them!" to avoid
+  // an awkward "started 180 days ago" label on someone we're spotlighting now.
   const dayLabel = (d: number) => {
     if (d === 0) return isES ? 'comenzó hoy' : 'started today';
     if (d === 1) return isES ? 'comenzó ayer' : 'started yesterday';
-    return isES ? `hace ${d} días` : `${d} days ago`;
+    if (d <= 30) return isES ? `hace ${d} días` : `${d} days ago`;
+    return isES ? '¡salúdalo(a)!' : 'welcome them!';
   };
 
   const initials = (name: string) =>
@@ -110,10 +114,20 @@ export default function NewHiresSection({ language }: Props) {
 
           {/* Restaurant + days */}
           <p className="text-center text-xs text-amber-700 mt-2">
-            {isES ? 'Se unió al equipo de ' : 'Joined the '}
-            <span className="font-bold">{featured.restaurant_name || ''}</span>
-            {isES ? ' team — ' : ' team — '}
-            {dayLabel(featured.days_since)}
+            {featured.days_since <= 30 ? (
+              <>
+                {isES ? 'Se unió al equipo de ' : 'Joined the '}
+                <span className="font-bold">{featured.restaurant_name || ''}</span>
+                {isES ? ' — ' : ' team — '}
+                {dayLabel(featured.days_since)}
+              </>
+            ) : (
+              <>
+                {isES ? 'Parte del equipo de ' : 'Part of the '}
+                <span className="font-bold">{featured.restaurant_name || ''}</span>
+                {isES ? ' — ¡hagan que se sienta en casa!' : ' team — make them feel at home!'}
+              </>
+            )}
           </p>
 
           {/* Action prompt */}
