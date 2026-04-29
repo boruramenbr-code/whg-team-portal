@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import WelcomeNoteModal from './WelcomeNoteModal';
+import HolidaysWidget from './HolidaysWidget';
+import NewHiresSection from './NewHiresSection';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -97,6 +100,8 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [loading, setLoading] = useState(true);
+  // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
+  const [reopenWelcome, setReopenWelcome] = useState(false);
   const isES = language === 'es';
 
   const loadPreshift = useCallback(async () => {
@@ -150,10 +155,25 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
 
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
+      {/* Welcome note modal — shows on first login OR when user taps ℹ️ */}
+      <WelcomeNoteModal
+        forceOpen={reopenWelcome}
+        onClose={() => setReopenWelcome(false)}
+      />
+
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8 space-y-6">
 
         {/* ── Hero greeting ── */}
-        <div className="text-center pb-2 bg-white/50 rounded-2xl py-6 -mx-1 px-1">
+        <div className="relative text-center pb-2 bg-white/50 rounded-2xl py-6 -mx-1 px-1">
+          {/* Info icon — re-opens welcome note */}
+          <button
+            onClick={() => setReopenWelcome(true)}
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/60 hover:bg-white text-[#1B3A6B] text-base font-bold transition-colors flex items-center justify-center shadow-sm"
+            title={isES ? 'Sobre esta app' : 'About this app'}
+            aria-label={isES ? 'Sobre esta app' : 'About this app'}
+          >
+            ℹ️
+          </button>
           {logo ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
@@ -304,6 +324,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
           )}
         </section>
 
+        {/* ── Welcome New Teammates ── */}
+        <NewHiresSection language={language} />
+
         {/* ── Upcoming Birthdays ── */}
         {birthdays.length > 0 && (
           <section>
@@ -370,6 +393,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
             </div>
           </section>
         )}
+
+        {/* ── Upcoming Holidays ── */}
+        <HolidaysWidget language={language} />
 
         {/* ── Two-column: Latest Review + Leaderboard ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

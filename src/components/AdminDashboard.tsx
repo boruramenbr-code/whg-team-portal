@@ -5,6 +5,8 @@ import { Profile, Restaurant } from '@/lib/types';
 import AdminPanel from './AdminPanel';
 import PreshiftEditor from './PreshiftEditor';
 import OwnerMessageEditor from './OwnerMessageEditor';
+import WelcomeNoteEditor from './WelcomeNoteEditor';
+import HolidaysEditor from './HolidaysEditor';
 import BarCardsTab from './BarCardsTab';
 import ComplianceTab from './ComplianceTab';
 
@@ -121,6 +123,8 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
               restaurants={isAdmin ? restaurants : undefined}
             />
             {isAdmin && <OwnerMessageEditor />}
+            {isAdmin && <WelcomeNoteEditor />}
+            {isAdmin && <HolidaysEditor restaurants={restaurants} />}
           </div>
         )}
 
