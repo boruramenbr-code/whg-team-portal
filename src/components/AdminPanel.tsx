@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Profile, Restaurant, UserRole } from '@/lib/types';
+import BulkImportModal from './BulkImportModal';
 
 interface ProfileWithRestaurant extends Profile {
   restaurants?: Restaurant;
@@ -43,7 +44,7 @@ function PinInput({
   disabled?: boolean;
 }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+    const v = e.target.value.replace(/\D/g, '').slice(0, 8);
     onChange(v);
   };
   return (
@@ -51,17 +52,17 @@ function PinInput({
       <input
         type="text"
         inputMode="numeric"
-        pattern="\d{4}"
-        maxLength={4}
+        pattern="\d{4,8}"
+        maxLength={8}
         value={value}
         onChange={handleChange}
         disabled={disabled}
         placeholder="0000"
-        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-mono tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-center text-gray-800 bg-gray-50 disabled:opacity-60"
+        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-mono tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-center text-gray-800 bg-gray-50 disabled:opacity-60"
         required
       />
       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-1">
-        {[0, 1, 2, 3].map((i) => (
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
           <div
             key={i}
             className={`w-1.5 h-1.5 rounded-full transition-colors ${
@@ -97,6 +98,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     restaurant_id: currentUser.restaurant_id || '',
     role: 'employee' as UserRole,
     preferred_language: 'en' as 'en' | 'es',
+    date_of_birth: '',
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -111,6 +113,9 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
+
+  // Bulk import modal
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   const isAdmin = currentUser.role === 'admin';
 
@@ -188,13 +193,14 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       restaurant_id: currentUser.restaurant_id || '',
       role: 'employee',
       preferred_language: 'en',
+      date_of_birth: '',
     });
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.role === 'employee' && form.pin.length !== 4) {
-      setFormError('PIN must be exactly 4 digits.');
+    if (form.role === 'employee' && (form.pin.length < 4 || form.pin.length > 8)) {
+      setFormError('PIN must be 4 to 8 digits.');
       return;
     }
     if (isElevatedRole && (!form.email || form.password.length < 8)) {
@@ -206,10 +212,13 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     setFormError('');
     setFormSuccess('');
 
+    // Strip empty date_of_birth so we send null instead of ""
+    const payload = { ...form, date_of_birth: form.date_of_birth || null };
+
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
@@ -256,8 +265,8 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
 
   const handleResetPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resetTarget || newPin.length !== 4) {
-      setResetError('PIN must be exactly 4 digits.');
+    if (!resetTarget || newPin.length < 4 || newPin.length > 8) {
+      setResetError('PIN must be 4 to 8 digits.');
       return;
     }
     setResetLoading(true);
@@ -305,7 +314,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 gap-2 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-[#1B3A6B]">Team Members</h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -314,16 +323,27 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
               : (currentUser as ProfileWithRestaurant).restaurants?.name}
           </p>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setFormError('');
-            setFormSuccess('');
-          }}
-          className="bg-[#1B3A6B] hover:bg-[#2E86C1] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
-        >
-          <span className="text-base leading-none">+</span> Add Member
-        </button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="bg-white hover:bg-gray-50 border border-gray-200 text-[#1B3A6B] text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+              title="Paste from a spreadsheet to add many staff at once"
+            >
+              <span className="text-base leading-none">📥</span> Bulk Import
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setFormError('');
+              setFormSuccess('');
+            }}
+            className="bg-[#1B3A6B] hover:bg-[#2E86C1] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <span className="text-base leading-none">+</span> Add Member
+          </button>
+        </div>
       </div>
 
       {/* Restaurant filter pills — admin only */}
@@ -648,6 +668,22 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </select>
                 </div>
 
+                {/* Birthday — applies to every role */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Birthday <span className="text-gray-300 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={form.date_of_birth}
+                    onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Powers birthday reminders on the home screen.
+                  </p>
+                </div>
+
                 {/* EMPLOYEE: PIN + Language */}
                 {isEmployeeRole && (
                   <>
@@ -749,7 +785,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                     type="submit"
                     disabled={
                       formLoading ||
-                      (isEmployeeRole && form.pin.length !== 4) ||
+                      (isEmployeeRole && (form.pin.length < 4 || form.pin.length > 8)) ||
                       (isElevatedRole && (!form.email || form.password.length < 8))
                     }
                     className="flex-1 py-2.5 bg-[#1B3A6B] hover:bg-[#2E86C1] text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
@@ -807,7 +843,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </button>
                   <button
                     type="submit"
-                    disabled={resetLoading || newPin.length !== 4}
+                    disabled={resetLoading || newPin.length < 4 || newPin.length > 8}
                     className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
                   >
                     {resetLoading ? 'Saving...' : 'Save PIN'}
@@ -817,6 +853,15 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
             )}
           </div>
         </div>
+      )}
+
+      {/* ─── BULK IMPORT MODAL ─── */}
+      {showBulkImport && (
+        <BulkImportModal
+          restaurants={restaurants}
+          onClose={() => setShowBulkImport(false)}
+          onComplete={fetchUsers}
+        />
       )}
     </div>
   );

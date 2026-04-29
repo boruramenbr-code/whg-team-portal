@@ -16,6 +16,9 @@ interface StaffMember {
 type LoginMode = 'staff' | 'manager';
 type StaffStep = 1 | 2 | 3; // 1=restaurant, 2=name, 3=pin
 
+const PIN_MIN = 4;
+const PIN_MAX = 8;
+
 const RESTAURANT_COLORS: Record<string, string> = {
   'Ichiban Sushi': 'from-red-600 to-red-800',
   'Boru Ramen': 'from-orange-500 to-orange-700',
@@ -43,13 +46,17 @@ const RESTAURANT_LOGO_BLACK: Record<string, string> = {
   'Shokudo': '/logos/shokudo-black.png',
 };
 
+/**
+ * PIN dot indicator. Renders 8 slots; fills based on length.
+ * Tighter gap so 8 dots still fit comfortably on phone screens.
+ */
 function PinDots({ pin }: { pin: string }) {
   return (
-    <div className="flex gap-4 justify-center my-6">
-      {[0, 1, 2, 3].map((i) => (
+    <div className="flex gap-2 justify-center my-6">
+      {Array.from({ length: PIN_MAX }).map((_, i) => (
         <div
           key={i}
-          className={`w-4 h-4 rounded-full border-2 transition-all duration-150 ${
+          className={`w-3 h-3 rounded-full border-2 transition-all duration-150 ${
             i < pin.length
               ? 'bg-white border-white scale-110'
               : 'bg-transparent border-white/40'
@@ -76,7 +83,12 @@ function PinPad({
       {keys.map((k) => {
         const isBackspace = k === '←';
         const isConfirm = k === '✓';
-        const isDisabled = loading || (isConfirm && pin.length !== 4) || (!isBackspace && !isConfirm && pin.length >= 4);
+        // Confirm is enabled when PIN is 4-8 digits.
+        // Digit keys are disabled once PIN reaches PIN_MAX (8).
+        const isDisabled =
+          loading ||
+          (isConfirm && (pin.length < PIN_MIN || pin.length > PIN_MAX)) ||
+          (!isBackspace && !isConfirm && pin.length >= PIN_MAX);
 
         return (
           <button
@@ -167,14 +179,13 @@ export default function LoginPage() {
       return;
     }
     if (k === '✓') {
-      if (pin.length === 4) await submitPinLogin(pin);
+      if (pin.length >= PIN_MIN && pin.length <= PIN_MAX) {
+        await submitPinLogin(pin);
+      }
       return;
     }
-    const newPin = pin + k;
-    setPin(newPin);
-    if (newPin.length === 4) {
-      await submitPinLogin(newPin);
-    }
+    if (pin.length >= PIN_MAX) return;
+    setPin((p) => p + k);
   };
 
   const submitPinLogin = async (enteredPin: string) => {
@@ -424,7 +435,9 @@ export default function LoginPage() {
                 <p className="text-white/60 text-xs mt-0.5">{selectedRestaurant?.name}</p>
               </div>
 
-              <p className="text-white/70 text-sm text-center mt-4">Enter your 4-digit PIN</p>
+              <p className="text-white/70 text-sm text-center mt-4">
+                Enter your clock-in code, then tap ✓
+              </p>
 
               <PinDots pin={pin} />
 

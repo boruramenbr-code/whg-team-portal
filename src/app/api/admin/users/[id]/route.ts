@@ -54,8 +54,8 @@ export async function PATCH(
 
   // Handle PIN reset — update auth password and profile PIN
   if (body.pin !== undefined) {
-    if (!/^\d{4}$/.test(body.pin)) {
-      return Response.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+    if (!/^\d{4,8}$/.test(body.pin)) {
+      return Response.json({ error: 'PIN must be 4 to 8 digits' }, { status: 400 });
     }
 
     const newPassword = `WHG${body.pin}!staff`;

@@ -69,10 +69,15 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, restaurant_id, role, pin, email, password, preferred_language } = body;
+  const { full_name, restaurant_id, role, pin, email, password, preferred_language, date_of_birth } = body;
 
   if (!full_name || !restaurant_id) {
     return Response.json({ error: 'Name and restaurant are required' }, { status: 400 });
+  }
+
+  // date_of_birth (optional): require YYYY-MM-DD if provided
+  if (date_of_birth && !/^\d{4}-\d{2}-\d{2}$/.test(date_of_birth)) {
+    return Response.json({ error: 'Date of birth must be in YYYY-MM-DD format' }, { status: 400 });
   }
 
   const targetRole = role || 'employee';
@@ -97,8 +102,8 @@ export async function POST(req: NextRequest) {
 
   // ── EMPLOYEE: PIN-based auth ──────────────────────────────────────────────
   if (targetRole === 'employee') {
-    if (!pin || !/^\d{4}$/.test(pin)) {
-      return Response.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+    if (!pin || !/^\d{4,8}$/.test(pin)) {
+      return Response.json({ error: 'PIN must be 4 to 8 digits' }, { status: 400 });
     }
 
     const staffId = randomUUID();
@@ -115,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     if (authError) return Response.json({ error: authError.message }, { status: 400 });
 
-    const { error: profileError } = await adminClient.from('profiles').insert({
+    const profilePayload: Record<string, unknown> = {
       id: authData.user.id,
       full_name,
       restaurant_id,
@@ -123,7 +128,10 @@ export async function POST(req: NextRequest) {
       status: 'active',
       employee_pin: pin,
       preferred_language: preferred_language || 'en',
-    });
+    };
+    if (date_of_birth) profilePayload.date_of_birth = date_of_birth;
+
+    const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
 
     if (profileError) {
       await adminClient.auth.admin.deleteUser(authData.user.id);
@@ -151,14 +159,17 @@ export async function POST(req: NextRequest) {
 
   if (authError) return Response.json({ error: authError.message }, { status: 400 });
 
-  const { error: profileError } = await adminClient.from('profiles').insert({
+  const profilePayload: Record<string, unknown> = {
     id: authData.user.id,
     full_name,
     restaurant_id,
     role: targetRole,
     status: 'active',
     preferred_language: preferred_language || 'en',
-  });
+  };
+  if (date_of_birth) profilePayload.date_of_birth = date_of_birth;
+
+  const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
 
   if (profileError) {
     await adminClient.auth.admin.deleteUser(authData.user.id);
