@@ -123,6 +123,13 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
 
+  // Password reset modal (managers / asst managers / admins)
+  const [resetPwTarget, setResetPwTarget] = useState<ProfileWithRestaurant | null>(null);
+  const [newPw, setNewPw] = useState('');
+  const [resetPwLoading, setResetPwLoading] = useState(false);
+  const [resetPwError, setResetPwError] = useState('');
+  const [resetPwSuccess, setResetPwSuccess] = useState('');
+
   // Bulk import modal
   const [showBulkImport, setShowBulkImport] = useState(false);
 
@@ -314,6 +321,40 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     setNewPin('');
     setResetError('');
     setResetSuccess('');
+  };
+
+  const openResetPassword = (u: ProfileWithRestaurant) => {
+    setResetPwTarget(u);
+    setNewPw('');
+    setResetPwError('');
+    setResetPwSuccess('');
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPwTarget || newPw.length < 8) {
+      setResetPwError('Password must be at least 8 characters.');
+      return;
+    }
+    setResetPwLoading(true);
+    setResetPwError('');
+    setResetPwSuccess('');
+
+    const res = await fetch(`/api/admin/users/${resetPwTarget.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: newPw }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      setResetPwError(data.error || 'Failed to reset password.');
+      setResetPwLoading(false);
+    } else {
+      setResetPwSuccess(`Password updated for ${resetPwTarget.full_name}!`);
+      setResetPwLoading(false);
+      // Don't auto-close — admin needs time to copy the password to share
+    }
   };
 
   const visibleRestaurants = isAdmin
@@ -641,7 +682,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                     )}
 
                     {/* Action buttons */}
-                    <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                    <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
                       {/* PIN Reset — employees only */}
                       {u.role === 'employee' && (
                         <button
@@ -649,6 +690,16 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                           className="text-xs px-3 py-1.5 rounded-lg font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
                         >
                           Reset PIN
+                        </button>
+                      )}
+
+                      {/* Password Reset — managers / asst managers / admins (admin only) */}
+                      {isAdmin && u.role !== 'employee' && (
+                        <button
+                          onClick={() => openResetPassword(u)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                        >
+                          🔑 Reset Password
                         </button>
                       )}
 
@@ -948,6 +999,110 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                     className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
                   >
                     {resetLoading ? 'Saving...' : 'Save PIN'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── PASSWORD RESET MODAL (managers / admins) ─── */}
+      {resetPwTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 className="text-lg font-bold text-[#1B3A6B] mb-1">🔑 Reset Password</h3>
+            <p className="text-xs text-gray-500 mb-5">
+              Setting a new password for{' '}
+              <span className="font-semibold text-gray-700">{resetPwTarget.full_name}</span>
+              <span className="block text-[11px] text-gray-400 mt-1">
+                Their current sessions will be signed out immediately.
+              </span>
+            </p>
+
+            {resetPwSuccess ? (
+              <div className="space-y-4">
+                <div className="text-center py-2">
+                  <div className="text-4xl mb-3">✅</div>
+                  <p className="text-green-700 font-semibold">{resetPwSuccess}</p>
+                </div>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wide mb-1">
+                    New Password
+                  </p>
+                  <p className="font-mono text-sm text-amber-900 break-all select-all">
+                    {newPw}
+                  </p>
+                  <p className="text-[11px] text-amber-700 mt-2">
+                    Copy this and share it with {resetPwTarget.full_name.split(' ')[0]} securely (in person, phone call, or encrypted message). It won&apos;t be shown again.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setResetPwTarget(null);
+                    setNewPw('');
+                    setResetPwSuccess('');
+                  }}
+                  className="w-full py-2.5 bg-[#1B3A6B] hover:bg-[#2E86C1] text-white rounded-xl text-sm font-semibold transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    New Password
+                  </label>
+                  <input
+                    type="text"
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    placeholder="Min. 8 characters"
+                    minLength={8}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 font-mono"
+                    autoFocus
+                    required
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Visible so you can copy it. Tell them to change it after first login if you want.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Generate a memorable but secure password: WHG-Word-####
+                    const words = ['River', 'Sushi', 'Ramen', 'Bayou', 'Tiger', 'Magnolia', 'Cypress', 'Pelican'];
+                    const word = words[Math.floor(Math.random() * words.length)];
+                    const num = Math.floor(1000 + Math.random() * 9000);
+                    setNewPw(`WHG-${word}-${num}`);
+                  }}
+                  className="w-full py-2 border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                >
+                  🎲 Generate a password
+                </button>
+
+                {resetPwError && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
+                    {resetPwError}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setResetPwTarget(null)}
+                    className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={resetPwLoading || newPw.length < 8}
+                    className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold disabled:opacity-60 transition-colors"
+                  >
+                    {resetPwLoading ? 'Saving...' : 'Save Password'}
                   </button>
                 </div>
               </form>

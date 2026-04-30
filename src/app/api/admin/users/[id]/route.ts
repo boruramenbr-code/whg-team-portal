@@ -76,14 +76,53 @@ export async function PATCH(
     return Response.json({ success: true });
   }
 
+  // Handle direct password reset (managers / admins / asst managers)
+  // Admin-only — caller already verified above. Reject for employee targets
+  // because employees authenticate via PIN-derived passwords.
+  if (body.password !== undefined) {
+    if (me.role !== 'admin') {
+      return Response.json({ error: 'Only admins can reset manager passwords' }, { status: 403 });
+    }
+    if (typeof body.password !== 'string' || body.password.length < 8) {
+      return Response.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    }
+
+    const { data: target } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', params.id)
+      .single();
+
+    if (!target) {
+      return Response.json({ error: 'User not found' }, { status: 404 });
+    }
+    if (target.role === 'employee') {
+      return Response.json(
+        { error: 'Employees authenticate by PIN — use Reset PIN instead.' },
+        { status: 400 }
+      );
+    }
+
+    const { error: pwError } = await adminClient.auth.admin.updateUserById(params.id, {
+      password: body.password,
+    });
+
+    if (pwError) return Response.json({ error: pwError.message }, { status: 400 });
+
+    // Force a sign-out of all existing sessions so the old password can't keep working.
+    await adminClient.auth.admin.signOut(params.id, 'global');
+
+    return Response.json({ success: true });
+  }
+
   // If archiving, immediately invalidate all active sessions
   if (body.status === 'archived') {
     await adminClient.auth.admin.signOut(params.id, 'global');
   }
 
-  // Build profile update — strip 'pin' key (handled separately above via auth password update)
+  // Build profile update — strip 'pin' and 'password' keys (handled separately above via auth password update)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { pin: _ignored, ...profileUpdate } = body;
+  const { pin: _ignoredPin, password: _ignoredPw, ...profileUpdate } = body;
 
   const { error } = await adminClient
     .from('profiles')
