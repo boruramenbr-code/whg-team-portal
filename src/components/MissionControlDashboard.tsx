@@ -175,12 +175,12 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
           variant="warning"
           emoji="🆕"
           title={`${bar_cards.missing.length} staff missing a bar card`}
-          description="Flagged as handling alcohol, but no card on file. Upload theirs to clear the alert."
+          description="Flagged as handling alcohol, but no card on file. Tap the names to expand the full list. Upload each person's card via Bar Cards once you have it."
           items={bar_cards.missing.map((c) => ({
             primary: c.full_name,
             secondary: c.restaurant_name,
           }))}
-          ctaLabel="Open Bar Cards →"
+          ctaLabel="Upload a Bar Card →"
           onCta={() => onNavigate('barcards')}
         />
       )}
@@ -312,6 +312,7 @@ function AlertCard({
   ctaLabel: string;
   onCta: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const styles: Record<AlertVariant, { bg: string; border: string; titleText: string; descText: string; cta: string }> = {
     urgent: {
       bg: 'bg-gradient-to-r from-red-50 to-rose-50',
@@ -337,9 +338,10 @@ function AlertCard({
   };
   const s = styles[variant];
 
-  // Collapse long lists
-  const visibleItems = items.slice(0, 5);
-  const overflow = items.length - visibleItems.length;
+  // Collapse long lists; user can expand to see all
+  const COLLAPSED_LIMIT = 5;
+  const visibleItems = expanded ? items : items.slice(0, COLLAPSED_LIMIT);
+  const overflow = items.length - COLLAPSED_LIMIT;
 
   return (
     <div className={`rounded-2xl border-2 shadow-sm overflow-hidden ${s.bg} ${s.border}`}>
@@ -360,10 +362,21 @@ function AlertCard({
                 <span className={`${s.descText} opacity-80`}>· {item.secondary}</span>
               </div>
             ))}
-            {overflow > 0 && (
-              <p className={`text-[11px] italic ${s.descText} opacity-75`}>
-                + {overflow} more
-              </p>
+            {overflow > 0 && !expanded && (
+              <button
+                onClick={() => setExpanded(true)}
+                className={`text-[11px] font-bold underline ${s.titleText} hover:opacity-75 transition-opacity`}
+              >
+                Show all {items.length} ↓
+              </button>
+            )}
+            {expanded && overflow > 0 && (
+              <button
+                onClick={() => setExpanded(false)}
+                className={`text-[11px] font-bold underline ${s.titleText} hover:opacity-75 transition-opacity`}
+              >
+                Show less ↑
+              </button>
             )}
           </div>
         )}
