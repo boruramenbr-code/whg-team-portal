@@ -72,7 +72,7 @@ export async function GET() {
   // ── Active staff (with bar card requirement + linked cards) ──────────────
   let staffQuery = adminClient
     .from('profiles')
-    .select('id, full_name, restaurant_id, requires_bar_card, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
+    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', 'active');
 
   if (!isAdmin) {
@@ -233,6 +233,73 @@ export async function GET() {
   }
   policyCompliance.sort((a, b) => b.unsigned_count - a.unsigned_count || a.full_name.localeCompare(b.full_name));
 
+  // ── Today's pre-shift status (per restaurant in scope) ───────────────────
+  // Flag any restaurant where today's preshift_note hasn't been posted.
+  let restaurantsQuery = adminClient
+    .from('restaurants')
+    .select('id, name')
+    .eq('is_active', true);
+  if (!isAdmin) {
+    restaurantsQuery = restaurantsQuery.in('id', Array.from(allowedRestaurantIds));
+  }
+  const { data: scopedRestaurants } = await restaurantsQuery;
+
+  const { data: todaysNotes } = await adminClient
+    .from('preshift_notes')
+    .select('restaurant_id')
+    .eq('shift_date', todayISO);
+  const restaurantsWithNote = new Set((todaysNotes || []).map((n) => n.restaurant_id));
+
+  const missingPreshift = (scopedRestaurants || [])
+    .filter((r) => !restaurantsWithNote.has(r.id))
+    .map((r) => ({ restaurant_id: r.id, restaurant_name: r.name }));
+
+  // ── Anniversaries this week ──────────────────────────────────────────────
+  // Staff whose hire_date anniversary falls in the next 7 days. Excludes
+  // anyone with a NULL hire_date (bulk-imported staff who haven't been
+  // backfilled). Excludes <1-year tenures.
+  const sevenDaysOut = new Date(today);
+  sevenDaysOut.setDate(today.getDate() + 7);
+
+  type AnniversaryItem = {
+    profile_id: string;
+    full_name: string;
+    restaurant_name: string;
+    days_until: number;
+    years: number;
+    hire_date: string;
+  };
+  const anniversaries: AnniversaryItem[] = [];
+
+  for (const s of staff || []) {
+    const hireDateStr = (s as { hire_date?: string | null }).hire_date;
+    if (!hireDateStr) continue;
+    const hired = new Date(hireDateStr + 'T00:00:00');
+    if (isNaN(hired.getTime())) continue;
+    const hiredMonth = hired.getMonth();
+    const hiredDay = hired.getDate();
+
+    // Find next anniversary occurrence
+    let nextAnniv = new Date(today.getFullYear(), hiredMonth, hiredDay);
+    if (nextAnniv < today) {
+      nextAnniv = new Date(today.getFullYear() + 1, hiredMonth, hiredDay);
+    }
+    const days = Math.round((nextAnniv.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (days > 6) continue;
+    const years = nextAnniv.getFullYear() - hired.getFullYear();
+    if (years < 1) continue; // not yet 1 year
+
+    anniversaries.push({
+      profile_id: s.id,
+      full_name: s.full_name,
+      restaurant_name: (s.restaurants as { name?: string } | null)?.name || '',
+      days_until: days,
+      years,
+      hire_date: hireDateStr,
+    });
+  }
+  anniversaries.sort((a, b) => a.days_until - b.days_until);
+
   return NextResponse.json(
     {
       bar_cards: {
@@ -249,6 +316,8 @@ export async function GET() {
       },
       holidays_upcoming: filteredHolidays,
       policy_compliance: policyCompliance,
+      missing_preshift: missingPreshift,
+      anniversaries,
       is_admin: isAdmin,
     },
     { headers: { 'Cache-Control': 'no-store' } }

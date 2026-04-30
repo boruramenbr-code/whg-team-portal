@@ -21,6 +21,7 @@ export interface Profile {
   date_of_birth?: string | null;
   welcome_until?: string | null;
   requires_bar_card?: boolean;
+  hire_date?: string | null;
   created_at: string;
   updated_at: string;
   restaurants?: Restaurant;

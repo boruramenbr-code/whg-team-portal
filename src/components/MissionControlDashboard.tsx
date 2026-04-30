@@ -33,6 +33,20 @@ interface PolicyComplianceItem {
   unsigned_count: number;
 }
 
+interface MissingPreshiftItem {
+  restaurant_id: string;
+  restaurant_name: string;
+}
+
+interface AnniversaryItem {
+  profile_id: string;
+  full_name: string;
+  restaurant_name: string;
+  days_until: number;
+  years: number;
+  hire_date: string;
+}
+
 interface MissionControlData {
   bar_cards: {
     expired: BarCardItem[];
@@ -48,6 +62,8 @@ interface MissionControlData {
   };
   holidays_upcoming: UpcomingHoliday[];
   policy_compliance: PolicyComplianceItem[];
+  missing_preshift: MissingPreshiftItem[];
+  anniversaries: AnniversaryItem[];
   is_admin: boolean;
 }
 
@@ -101,8 +117,8 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     );
   }
 
-  const { bar_cards, owner_message, stats, holidays_upcoming, policy_compliance } = data;
-  const totalUrgent = bar_cards.expired.length + bar_cards.critical.length;
+  const { bar_cards, owner_message, stats, holidays_upcoming, policy_compliance, missing_preshift, anniversaries } = data;
+  const totalUrgent = bar_cards.expired.length + bar_cards.critical.length + missing_preshift.length;
   const totalWarnings = bar_cards.expiring.length + bar_cards.missing.length + policy_compliance.length;
   const allClear = totalUrgent === 0 && totalWarnings === 0;
 
@@ -139,6 +155,21 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
       )}
 
       {/* ── URGENT (red) ────────────────────────────────────────────────── */}
+      {missing_preshift.length > 0 && (
+        <AlertCard
+          variant="urgent"
+          emoji="📋"
+          title={`Today's pre-shift not posted at ${missing_preshift.length} ${missing_preshift.length === 1 ? 'restaurant' : 'restaurants'}`}
+          description="Make sure today's specials, 86'd items, and focus go up before service starts."
+          items={missing_preshift.map((r) => ({
+            primary: r.restaurant_name,
+            secondary: 'No note for today yet',
+          }))}
+          ctaLabel="Open Pre-Shift →"
+          onCta={() => onNavigate('preshift')}
+        />
+      )}
+
       {bar_cards.expired.length > 0 && (
         <AlertCard
           variant="urgent"
@@ -234,6 +265,35 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
           ctaLabel="Open Compliance →"
           onCta={() => onNavigate('compliance')}
         />
+      )}
+
+      {/* ── ANNIVERSARIES THIS WEEK (info — celebration cue) ─────────────── */}
+      {anniversaries.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-2xl px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-2">
+            🎂 Anniversaries This Week
+          </p>
+          <div className="space-y-1.5">
+            {anniversaries.map((a) => {
+              const dayLabel =
+                a.days_until === 0 ? 'today' :
+                a.days_until === 1 ? 'tomorrow' :
+                `in ${a.days_until} days`;
+              const yearLabel = a.years === 1 ? '1-year' : `${a.years}-year`;
+              return (
+                <div key={a.profile_id} className="flex items-baseline gap-2 text-sm flex-wrap">
+                  <span className="font-bold text-emerald-900">{a.full_name}</span>
+                  <span className="text-xs text-emerald-700">
+                    · {a.restaurant_name} · {yearLabel} anniversary {dayLabel} 🎉
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-emerald-700/70 mt-2 italic">
+            Plan a card, a free meal, a public shoutout — small things, big retention impact.
+          </p>
+        </div>
       )}
 
       {/* ── HOLIDAYS (next 7 days) ──────────────────────────────────────── */}

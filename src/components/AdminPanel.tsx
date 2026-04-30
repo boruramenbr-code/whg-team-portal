@@ -114,6 +114,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     role: 'employee' as UserRole,
     preferred_language: 'en' as 'en' | 'es',
     date_of_birth: '',
+    hire_date: todayStr,
     welcome_until: defaultWelcomeUntil,
     requires_bar_card: false,
   });
@@ -218,6 +219,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       role: 'employee',
       preferred_language: 'en',
       date_of_birth: '',
+      hire_date: todayStr,
       welcome_until: defaultWelcomeUntil,
       requires_bar_card: false,
     });
@@ -242,6 +244,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     const payload = {
       ...form,
       date_of_birth: form.date_of_birth || null,
+      hire_date: form.hire_date || null,
       welcome_until: form.welcome_until || null,
     };
 
@@ -563,29 +566,51 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       )}
                     </div>
 
-                    {/* Birthday */}
-                    <div className="mt-4">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
-                        Birthday
-                      </label>
-                      <input
-                        type="date"
-                        defaultValue={u.date_of_birth || ''}
-                        onBlur={(e) => {
-                          const val = e.target.value || null;
-                          if (val !== (u.date_of_birth || null)) {
-                            fetch(`/api/admin/users/${u.id}`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ date_of_birth: val }),
-                            }).then(() => fetchUsers());
-                          }
-                        }}
-                        className="w-full md:w-48 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
-                      />
-                      <p className="text-[10px] text-gray-400 mt-1">
-                        Used for birthday reminders on the home screen.
-                      </p>
+                    {/* Birthday + Hire Date */}
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                          Birthday
+                        </label>
+                        <input
+                          type="date"
+                          defaultValue={u.date_of_birth || ''}
+                          onBlur={(e) => {
+                            const val = e.target.value || null;
+                            if (val !== (u.date_of_birth || null)) {
+                              fetch(`/api/admin/users/${u.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ date_of_birth: val }),
+                              }).then(() => fetchUsers());
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                          🎂 Hire Date
+                        </label>
+                        <input
+                          type="date"
+                          defaultValue={u.hire_date || ''}
+                          onBlur={(e) => {
+                            const val = e.target.value || null;
+                            if (val !== (u.hire_date || null)) {
+                              fetch(`/api/admin/users/${u.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ hire_date: val }),
+                              }).then(() => fetchUsers());
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                        />
+                        {!u.hire_date && (
+                          <p className="text-[10px] text-amber-600 mt-1">Set this to enable anniversary alerts</p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Highlight on home — welcome_until */}
@@ -889,21 +914,34 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </select>
                 </div>
 
-                {/* Birthday — applies to every role */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                    Birthday <span className="text-gray-300 font-normal">(optional)</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={form.date_of_birth}
-                    onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
-                  />
-                  <p className="text-[11px] text-gray-400 mt-1.5">
-                    Powers birthday reminders on the home screen.
-                  </p>
+                {/* Birthday + Hire Date — applies to every role */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                      Birthday <span className="text-gray-300 font-normal">(opt)</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={form.date_of_birth}
+                      onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                      🎂 Hire Date
+                    </label>
+                    <input
+                      type="date"
+                      value={form.hire_date}
+                      onChange={(e) => setForm({ ...form, hire_date: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                    />
+                  </div>
                 </div>
+                <p className="text-[11px] text-gray-400 -mt-2">
+                  Birthday powers reminders. Hire date powers anniversary alerts on Mission Control.
+                </p>
 
                 {/* Highlight as new — until what date */}
                 <div>
