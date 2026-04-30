@@ -19,18 +19,25 @@ function getAdminClient() {
  * GET /api/owner-messages
  * Returns all currently active owner messages where today is within [start_date, end_date].
  * Any authenticated user can read.
+ *
+ * Optional query: ?audience=staff (default) | managers
+ *   - staff    → returns messages with audience IN ('staff', 'both')
+ *   - managers → returns messages with audience IN ('managers', 'both')
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const today = new Date().toISOString().split('T')[0];
+  const audienceParam = req.nextUrl.searchParams.get('audience') === 'managers' ? 'managers' : 'staff';
+  const audienceFilter = audienceParam === 'managers' ? ['managers', 'both'] : ['staff', 'both'];
 
   const { data: messages, error } = await supabase
     .from('owner_messages')
     .select('*')
     .eq('is_active', true)
+    .in('audience', audienceFilter)
     .lte('start_date', today)
     .gte('end_date', today)
     .order('created_at', { ascending: false });
@@ -73,7 +80,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { message, startDate, endDate, id } = body;
+  const { message, startDate, endDate, id, audience } = body;
 
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -87,6 +94,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'End date must be on or after start date' }, { status: 400 });
   }
 
+  const validAudience = ['staff', 'managers', 'both'];
+  const aud = validAudience.includes(audience) ? audience : 'staff';
+
   // If id is provided, update; otherwise insert.
   // Use admin client for update to bypass RLS (admin role already verified above).
   if (id) {
@@ -97,6 +107,7 @@ export async function POST(req: NextRequest) {
         message: message.trim(),
         start_date: start,
         end_date: end,
+        audience: aud,
         is_active: true,
       })
       .eq('id', id)
@@ -116,6 +127,7 @@ export async function POST(req: NextRequest) {
       message: message.trim(),
       start_date: start,
       end_date: end,
+      audience: aud,
       created_by: user.id,
       is_active: true,
     })

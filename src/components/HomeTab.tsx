@@ -110,7 +110,7 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
     try {
       const [noteRes, ownerRes, bdayRes] = await Promise.all([
         fetch(`/api/preshift-notes?t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/owner-messages?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/owner-messages?audience=staff&t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
       const noteData = await noteRes.json();

@@ -25,6 +25,13 @@ interface UpcomingHoliday {
   type: 'closed' | 'slow' | 'normal' | 'busy' | 'all_hands';
 }
 
+interface PolicyComplianceItem {
+  profile_id: string;
+  full_name: string;
+  restaurant_name: string;
+  unsigned_count: number;
+}
+
 interface MissionControlData {
   bar_cards: {
     expired: BarCardItem[];
@@ -39,6 +46,7 @@ interface MissionControlData {
     holidays_next_7_days: number;
   };
   holidays_upcoming: UpcomingHoliday[];
+  policy_compliance: PolicyComplianceItem[];
   is_admin: boolean;
 }
 
@@ -92,9 +100,9 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     );
   }
 
-  const { bar_cards, owner_message, stats, holidays_upcoming } = data;
+  const { bar_cards, owner_message, stats, holidays_upcoming, policy_compliance } = data;
   const totalUrgent = bar_cards.expired.length + bar_cards.critical.length;
-  const totalWarnings = bar_cards.expiring.length + bar_cards.missing.length;
+  const totalWarnings = bar_cards.expiring.length + bar_cards.missing.length + policy_compliance.length;
   const allClear = totalUrgent === 0 && totalWarnings === 0;
 
   return (
@@ -191,21 +199,40 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
         />
       )}
 
-      {/* ── INFORMATION (blue) ──────────────────────────────────────────── */}
+      {/* ── LEADERSHIP MEMO (serious — slate) ───────────────────────────── */}
       {owner_message && (
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/60 rounded-2xl px-5 py-4 shadow-sm">
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 shadow-md">
           <div className="flex items-start gap-3">
-            <span className="text-xl mt-0.5">💙</span>
+            <span className="text-xl mt-0.5" aria-hidden>📋</span>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
-                Owner&apos;s Message
-              </p>
-              <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap line-clamp-6">
+              <div className="flex items-baseline gap-2 mb-1.5">
+                <p className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">
+                  Leadership Memo
+                </p>
+                <span className="text-[10px] text-slate-400">— from ownership</span>
+              </div>
+              <p className="text-sm text-slate-100 leading-relaxed whitespace-pre-wrap">
                 {owner_message.message}
               </p>
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── POLICY COMPLIANCE (orange warning) ──────────────────────────── */}
+      {policy_compliance.length > 0 && (
+        <AlertCard
+          variant="warning"
+          emoji="📝"
+          title={`${policy_compliance.length} staff with unsigned policies`}
+          description="They've got handbook policies they haven't acknowledged yet. Total signatures pending across all of them, ranked by who's furthest behind."
+          items={policy_compliance.map((p) => ({
+            primary: p.full_name,
+            secondary: `${p.restaurant_name} · ${p.unsigned_count} unsigned`,
+          }))}
+          ctaLabel="Open Compliance →"
+          onCta={() => onNavigate('compliance')}
+        />
       )}
 
       {/* ── HOLIDAYS (next 7 days) ──────────────────────────────────────── */}

@@ -47,7 +47,7 @@ export default function PreshiftTab({ language, restaurantName, restaurantId }: 
       const ridParam = restaurantId ? `&restaurant_id=${restaurantId}` : '';
       const [noteRes, ownerRes] = await Promise.all([
         fetch(`/api/preshift-notes?t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
-        fetch(`/api/owner-messages?t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
+        fetch(`/api/owner-messages?audience=staff&t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
       ]);
       const noteData = await noteRes.json();
       const ownerData = await ownerRes.json();

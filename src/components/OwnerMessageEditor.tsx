@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+type Audience = 'staff' | 'managers' | 'both';
+
 interface OwnerMessage {
   id: string;
   message: string;
   start_date: string;
   end_date: string;
+  audience: Audience;
   is_active: boolean;
   created_at: string;
 }
@@ -19,6 +22,7 @@ export default function OwnerMessageEditor() {
   const [messageText, setMessageText] = useState('');
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+  const [audience, setAudience] = useState<Audience>('staff');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -44,6 +48,7 @@ export default function OwnerMessageEditor() {
     setMessageText('');
     setStartDate(today);
     setEndDate(today);
+    setAudience('staff');
     setError('');
   };
 
@@ -52,6 +57,7 @@ export default function OwnerMessageEditor() {
     setMessageText(m.message);
     setStartDate(m.start_date);
     setEndDate(m.end_date);
+    setAudience(m.audience || 'staff');
     setError('');
   };
 
@@ -78,6 +84,7 @@ export default function OwnerMessageEditor() {
           message: messageText,
           startDate,
           endDate,
+          audience,
         }),
       });
       const data = await res.json();
@@ -149,6 +156,45 @@ export default function OwnerMessageEditor() {
               rows={3}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
             />
+          </div>
+
+          {/* Audience selector */}
+          <div>
+            <label className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2 block">
+              Audience
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'staff' as Audience,    label: '💙 Staff',       sub: 'Home tab' },
+                { value: 'managers' as Audience, label: '📋 Managers',    sub: 'Mission Control' },
+                { value: 'both' as Audience,     label: '🔀 Both',        sub: 'Everywhere' },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setAudience(opt.value)}
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all text-left ${
+                    audience === opt.value
+                      ? opt.value === 'managers'
+                        ? 'border-slate-700 bg-slate-100 text-slate-900'
+                        : opt.value === 'both'
+                        ? 'border-purple-400 bg-purple-50 text-purple-900'
+                        : 'border-indigo-400 bg-indigo-50 text-indigo-900'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  <div>{opt.label}</div>
+                  <div className="text-[10px] font-normal opacity-75 mt-0.5">{opt.sub}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              {audience === 'managers'
+                ? '⚠️ Manager messages appear in Mission Control with serious styling. Staff won\'t see this.'
+                : audience === 'both'
+                ? 'This message will appear on both the staff home tab AND Mission Control.'
+                : 'Visible to all staff on their home tab. Rotating leadership notes (bi-weekly cadence works well).'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -224,10 +270,24 @@ export default function OwnerMessageEditor() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-gray-800 mb-1">{m.message}</p>
-                    <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                    <div className="flex items-center gap-2 text-[11px] text-gray-500 flex-wrap">
                       <span>
                         {formatDate(m.start_date)} – {formatDate(m.end_date)}
                       </span>
+                      {/* Audience badge */}
+                      {m.audience === 'managers' ? (
+                        <span className="bg-slate-700 text-white px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider text-[9px]">
+                          📋 Managers
+                        </span>
+                      ) : m.audience === 'both' ? (
+                        <span className="bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">
+                          🔀 Both
+                        </span>
+                      ) : (
+                        <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-medium">
+                          💙 Staff
+                        </span>
+                      )}
                       {isActiveNow(m) && (
                         <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
                           Live

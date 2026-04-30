@@ -137,12 +137,15 @@ export async function GET() {
   expiring.sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
   missing.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
-  // ── Latest active owner message ──────────────────────────────────────────
+  // ── Latest active manager-audience owner message ────────────────────────
+  // Mission Control surfaces serious leadership memos — only audience IN
+  // ('managers', 'both'). Staff-audience messages stay on the home tab.
   const todayISO = today.toISOString().split('T')[0];
   const { data: ownerMsg } = await supabase
     .from('owner_messages')
-    .select('id, message, start_date, end_date')
+    .select('id, message, start_date, end_date, audience')
     .eq('is_active', true)
+    .in('audience', ['managers', 'both'])
     .lte('start_date', todayISO)
     .gte('end_date', todayISO)
     .order('created_at', { ascending: false })
@@ -181,6 +184,52 @@ export async function GET() {
     return allowedRestaurantIds.has(h.restaurant_id);
   });
 
+  // ── Policy signature compliance ──────────────────────────────────────────
+  // For each active staff at scoped restaurants, count active policies they
+  // haven't signed yet (matching current version). role_required determines
+  // applicability:
+  //   'all'      → applies to everyone
+  //   'employee' → only employees
+  //   'manager'  → manager / asst_manager / admin
+  const { data: activePolicies } = await adminClient
+    .from('policies')
+    .select('id, version, role_required')
+    .eq('active', true);
+
+  const { data: signatures } = await adminClient
+    .from('policy_signatures')
+    .select('user_id, policy_id, policy_version');
+
+  // Build signature lookup: user_id -> Set of "policy_id::version"
+  const signedByUser = new Map<string, Set<string>>();
+  for (const sig of signatures || []) {
+    const set = signedByUser.get(sig.user_id) || new Set<string>();
+    set.add(`${sig.policy_id}::${sig.policy_version}`);
+    signedByUser.set(sig.user_id, set);
+  }
+
+  const policyCompliance: { profile_id: string; full_name: string; restaurant_name: string; unsigned_count: number }[] = [];
+  for (const s of staff || []) {
+    const userRole = (s as { role?: string }).role || 'employee';
+    const applicable = (activePolicies || []).filter((p) => {
+      if (p.role_required === 'all') return true;
+      if (p.role_required === 'employee') return userRole === 'employee';
+      if (p.role_required === 'manager') return ['manager', 'assistant_manager', 'admin'].includes(userRole);
+      return false;
+    });
+    const userSigned = signedByUser.get(s.id) || new Set<string>();
+    const unsigned = applicable.filter((p) => !userSigned.has(`${p.id}::${p.version}`));
+    if (unsigned.length > 0) {
+      policyCompliance.push({
+        profile_id: s.id,
+        full_name: s.full_name,
+        restaurant_name: (s.restaurants as { name?: string } | null)?.name || '',
+        unsigned_count: unsigned.length,
+      });
+    }
+  }
+  policyCompliance.sort((a, b) => b.unsigned_count - a.unsigned_count || a.full_name.localeCompare(b.full_name));
+
   return NextResponse.json(
     {
       bar_cards: {
@@ -196,6 +245,7 @@ export async function GET() {
         holidays_next_7_days: filteredHolidays.length,
       },
       holidays_upcoming: filteredHolidays,
+      policy_compliance: policyCompliance,
       is_admin: isAdmin,
     },
     { headers: { 'Cache-Control': 'no-store' } }
