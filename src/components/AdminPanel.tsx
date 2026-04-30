@@ -4,8 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { Profile, Restaurant, UserRole } from '@/lib/types';
 import BulkImportModal from './BulkImportModal';
 
+interface BarCardSummary {
+  id: string;
+  expiration_date: string;
+  archived: boolean;
+}
+
 interface ProfileWithRestaurant extends Profile {
   restaurants?: Restaurant;
+  bar_cards?: BarCardSummary[];
 }
 
 interface UserLocation {
@@ -641,10 +648,10 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       )}
                     </div>
 
-                    {/* Requires bar card toggle */}
+                    {/* Requires bar card toggle + card status */}
                     <div className="mt-4">
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
-                        🍷 Bar Card Required
+                        🍷 Handles Alcohol
                       </label>
                       <button
                         type="button"
@@ -663,9 +670,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                         }`}
                       >
                         <span>
-                          {u.requires_bar_card
-                            ? '✓ Handles alcohol — card required'
-                            : 'Does not handle alcohol'}
+                          {u.requires_bar_card ? 'Yes — handles alcohol' : 'Does not handle alcohol'}
                         </span>
                         <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
                           u.requires_bar_card ? 'bg-rose-200 text-rose-900' : 'bg-gray-100 text-gray-500'
@@ -673,9 +678,61 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                           {u.requires_bar_card ? 'YES' : 'NO'}
                         </span>
                       </button>
-                      <p className="text-[10px] text-gray-400 mt-1">
-                        When YES, this person sees a bar card reminder on their home tab if their card is missing or expiring.
-                      </p>
+
+                      {/* Status block — only when person handles alcohol */}
+                      {u.requires_bar_card && (() => {
+                        const activeCards = (u.bar_cards || []).filter((c) => !c.archived);
+                        // Most recent expiration wins
+                        const latest = activeCards.length > 0
+                          ? activeCards.reduce((a, b) => (a.expiration_date > b.expiration_date ? a : b))
+                          : null;
+                        if (!latest) {
+                          return (
+                            <div className="mt-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-800 text-xs">
+                              <span className="font-bold">⚠️ No bar card on file</span>
+                              <span className="block text-[11px] mt-0.5 opacity-90">
+                                They&apos;re seeing &quot;Action needed&quot; on their home tab. Upload their card from the Bar Cards tab.
+                              </span>
+                            </div>
+                          );
+                        }
+                        const today = new Date(); today.setHours(0, 0, 0, 0);
+                        const exp = new Date(latest.expiration_date + 'T00:00:00');
+                        const days = Math.round((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        const expFormatted = exp.toLocaleDateString();
+                        if (days < 0) {
+                          return (
+                            <div className="mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs">
+                              <span className="font-bold">⚠️ Card EXPIRED on {expFormatted}</span>
+                              <span className="block text-[11px] mt-0.5">
+                                Expired {Math.abs(days)} day{Math.abs(days) === 1 ? '' : 's'} ago. They&apos;re seeing a critical alert on their home tab.
+                              </span>
+                            </div>
+                          );
+                        }
+                        if (days <= 7) {
+                          return (
+                            <div className="mt-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs">
+                              <span className="font-bold">🚨 Card expires in {days} day{days === 1 ? '' : 's'} ({expFormatted})</span>
+                              <span className="block text-[11px] mt-0.5">They&apos;re seeing a red alert on their home tab.</span>
+                            </div>
+                          );
+                        }
+                        if (days <= 30) {
+                          return (
+                            <div className="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                              <span className="font-bold">⚠️ Card expires in {days} days ({expFormatted})</span>
+                              <span className="block text-[11px] mt-0.5">They&apos;re seeing a yellow renewal reminder on their home tab.</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="mt-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+                            <span className="font-bold">✓ Card on file</span>
+                            <span className="ml-1.5">— expires {expFormatted} ({days} days)</span>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Multi-location assignments — admin only */}

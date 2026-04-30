@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('profiles')
-    .select('*, restaurants(name, slug)')
+    .select('*, restaurants(name, slug), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', status)
     .order('full_name');
 
