@@ -67,8 +67,11 @@ export async function PATCH(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Only admins can edit the welcome note' }, { status: 403 });
+  // Welcome note is editable by managers, assistant managers, and admins.
+  // Single canonical message — last write wins. If conflicts become an issue,
+  // we can tighten back to admin-only later.
+  if (!profile || !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Only managers and admins can edit the welcome note' }, { status: 403 });
   }
 
   const { content, content_es } = await req.json();

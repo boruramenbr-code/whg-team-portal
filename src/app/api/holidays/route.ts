@@ -38,9 +38,9 @@ export async function GET(req: NextRequest) {
 
   if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  // Admin "all" view requires admin role
-  if (showAll && profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  // "All holidays" view (used by the editor, includes past) requires manager+
+  if (showAll && !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Managers and admins only' }, { status: 403 });
   }
 
   // Multi-location assignments
@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  if (!profile || !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Only managers and admins can edit holidays' }, { status: 403 });
   }
 
   const { restaurant_id, date, name, name_es, type, notes, notes_es } = await req.json();
@@ -153,8 +153,8 @@ export async function PATCH(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  if (!profile || !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Only managers and admins can edit holidays' }, { status: 403 });
   }
 
   const id = req.nextUrl.searchParams.get('id');
@@ -207,8 +207,8 @@ export async function DELETE(req: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') {
-    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  if (!profile || !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Only managers and admins can edit holidays' }, { status: 403 });
   }
 
   const id = req.nextUrl.searchParams.get('id');

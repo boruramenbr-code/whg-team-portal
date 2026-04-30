@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Restaurant } from '@/lib/types';
 
 interface Holiday {
@@ -51,6 +51,8 @@ export default function HolidaysEditor({ restaurants }: Props) {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const formRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -80,6 +82,13 @@ export default function HolidaysEditor({ restaurants }: Props) {
       notes_es: h.notes_es || '',
     });
     setError('');
+    // Smooth-scroll the form into view so the editor doesn't have to scroll up
+    // manually after clicking Edit on a holiday far down the list.
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Focus the name field so they can immediately start typing
+      setTimeout(() => nameInputRef.current?.focus({ preventScroll: true }), 350);
+    });
   };
 
   const resetForm = () => {
@@ -170,9 +179,15 @@ export default function HolidaysEditor({ restaurants }: Props) {
 
       <div className="p-5 space-y-5">
         {/* Form */}
-        <div className="space-y-3 bg-gray-50 border border-gray-100 rounded-xl p-4">
-          <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-            {form.id ? '✏️ Edit Holiday' : '➕ Add Holiday'}
+        <div ref={formRef} className={`space-y-3 border rounded-xl p-4 transition-all ${
+          form.id
+            ? 'bg-amber-50/60 border-amber-200 ring-2 ring-amber-200/40'
+            : 'bg-gray-50 border-gray-100'
+        }`}>
+          <p className={`text-xs font-bold uppercase tracking-wide ${
+            form.id ? 'text-amber-800' : 'text-gray-600'
+          }`}>
+            {form.id ? `✏️ Editing: ${form.name || 'Holiday'}` : '➕ Add Holiday'}
           </p>
 
           <div className="grid grid-cols-2 gap-3">
@@ -216,6 +231,7 @@ export default function HolidaysEditor({ restaurants }: Props) {
             <div>
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Name (English)</label>
               <input
+                ref={nameInputRef}
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}

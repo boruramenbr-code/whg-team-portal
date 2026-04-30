@@ -3,10 +3,7 @@
 import { useState } from 'react';
 import { Profile, Restaurant } from '@/lib/types';
 import AdminPanel from './AdminPanel';
-import PreshiftEditor from './PreshiftEditor';
-import OwnerMessageEditor from './OwnerMessageEditor';
-import WelcomeNoteEditor from './WelcomeNoteEditor';
-import HolidaysEditor from './HolidaysEditor';
+import PreshiftAdminContent from './PreshiftAdminContent';
 import BarCardsTab from './BarCardsTab';
 import ComplianceTab from './ComplianceTab';
 
@@ -117,15 +114,10 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         )}
 
         {activeTab === 'preshift' && (
-          <div className="max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4 tab-content-enter">
-            <PreshiftEditor
-              isAdmin={isAdmin}
-              restaurants={isAdmin ? restaurants : undefined}
-            />
-            {isAdmin && <OwnerMessageEditor />}
-            {isAdmin && <WelcomeNoteEditor />}
-            {isAdmin && <HolidaysEditor restaurants={restaurants} />}
-          </div>
+          <PreshiftAdminContent
+            isAdmin={isAdmin}
+            restaurants={restaurants}
+          />
         )}
 
         {activeTab === 'barcards' && (
