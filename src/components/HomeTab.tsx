@@ -338,6 +338,8 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
               <div className="divide-y divide-gray-100">
                 {birthdays.map((b) => {
                   const isToday = b.days_until === 0;
+                  const isPast = b.days_until < 0;
+                  const isYesterday = b.days_until === -1;
                   const monthNames = isES
                     ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
                     : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -345,32 +347,45 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
                   return (
                     <div
                       key={b.id}
-                      className={`px-4 py-3 flex items-center gap-3 ${isToday ? 'bg-amber-50' : ''}`}
+                      className={`px-4 py-3 flex items-center gap-3 ${
+                        isToday ? 'bg-amber-50' : isPast ? 'bg-gray-50/60' : ''
+                      }`}
                     >
                       {/* Date badge */}
                       <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex flex-col items-center justify-center ${
-                        isToday ? 'bg-amber-100 border border-amber-200' : 'bg-gray-50 border border-gray-100'
+                        isToday
+                          ? 'bg-amber-100 border border-amber-200'
+                          : isPast
+                          ? 'bg-gray-100 border border-gray-200 opacity-70'
+                          : 'bg-gray-50 border border-gray-100'
                       }`}>
-                        <span className={`text-[10px] font-bold uppercase leading-none ${isToday ? 'text-amber-600' : 'text-gray-400'}`}>
+                        <span className={`text-[10px] font-bold uppercase leading-none ${
+                          isToday ? 'text-amber-600' : isPast ? 'text-gray-400' : 'text-gray-400'
+                        }`}>
                           {monthNames[b.birth_month - 1]}
                         </span>
-                        <span className={`text-base font-bold leading-tight ${isToday ? 'text-amber-700' : 'text-gray-600'}`}>
+                        <span className={`text-base font-bold leading-tight ${
+                          isToday ? 'text-amber-700' : isPast ? 'text-gray-500' : 'text-gray-600'
+                        }`}>
                           {b.birth_day}
                         </span>
                       </div>
 
                       {/* Name + restaurant */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#1B3A6B] truncate">
+                        <p className={`text-sm font-semibold truncate ${
+                          isPast ? 'text-gray-500' : 'text-[#1B3A6B]'
+                        }`}>
                           {b.full_name}
                           {isToday && <span className="ml-1.5">🎉</span>}
+                          {isPast && <span className="ml-1.5 text-xs">🎂</span>}
                         </p>
                         {b.restaurant_name && (
                           <p className="text-[11px] text-gray-400 truncate">{b.restaurant_name}</p>
                         )}
                       </div>
 
-                      {/* Days until */}
+                      {/* Days until / since */}
                       <div className="flex-shrink-0 text-right">
                         {isToday ? (
                           <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
@@ -379,6 +394,14 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
                         ) : b.days_until === 1 ? (
                           <span className="text-xs font-semibold text-amber-600">
                             {isES ? 'Mañana' : 'Tomorrow'}
+                          </span>
+                        ) : isYesterday ? (
+                          <span className="text-xs font-medium text-gray-500">
+                            {isES ? 'Ayer' : 'Yesterday'}
+                          </span>
+                        ) : isPast ? (
+                          <span className="text-xs font-medium text-gray-400">
+                            {isES ? `hace ${Math.abs(b.days_until)} días` : `${Math.abs(b.days_until)} days ago`}
                           </span>
                         ) : (
                           <span className="text-xs font-medium text-gray-400">

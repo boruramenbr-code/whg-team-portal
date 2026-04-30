@@ -44,12 +44,16 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to load birthdays' }, { status: 500 });
   }
 
-  // Window: today through last day of next month.
-  // Birthdays already passed this month are EXCLUDED — their next occurrence is
-  // next year and falls outside the window. This avoids the "in 338 days" entries.
+  // Window: 7 days BACK through end of next month.
+  // Recent past birthdays stay visible for a week so we can still celebrate
+  // people who had a birthday yesterday/this week. days_until is signed:
+  //   positive = future ("in 5 days")
+  //   0        = today
+  //   negative = past   ("yesterday" / "3 days ago")
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  // new Date(year, monthIndex + 2, 0) → day 0 of the month after next = last day of next month.
-  // Correctly handles year rollover (e.g. Dec → Jan of next year).
+  const windowStart = new Date(today);
+  windowStart.setDate(today.getDate() - 7); // 7 days ago
+  // new Date(year, monthIndex + 2, 0) → last day of next month. Year rollover handled.
   const windowEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
   windowEnd.setHours(23, 59, 59, 999);
 
@@ -60,16 +64,21 @@ export async function GET() {
       const birthMonth = dob.getMonth();
       const birthDay = dob.getDate();
 
-      // Compute the next occurrence (this year if still upcoming, else next year).
-      let nextBirthday = new Date(today.getFullYear(), birthMonth, birthDay);
-      if (nextBirthday < today) {
-        nextBirthday = new Date(today.getFullYear() + 1, birthMonth, birthDay);
-      }
+      // The closest occurrence of this birthday — could be earlier this year
+      // (recently passed) or later this year (upcoming) or next year (year rollover).
+      // We pick whichever falls inside the [windowStart, windowEnd] window.
+      const candidates = [
+        new Date(today.getFullYear() - 1, birthMonth, birthDay),
+        new Date(today.getFullYear(), birthMonth, birthDay),
+        new Date(today.getFullYear() + 1, birthMonth, birthDay),
+      ];
 
-      // Drop anything whose next occurrence is past the end of next month.
-      if (nextBirthday > windowEnd) return null;
+      const occurrence = candidates.find(
+        (d) => d >= windowStart && d <= windowEnd
+      );
+      if (!occurrence) return null;
 
-      const diffMs = nextBirthday.getTime() - today.getTime();
+      const diffMs = occurrence.getTime() - today.getTime();
       const daysUntil = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
       return {
@@ -83,7 +92,14 @@ export async function GET() {
       };
     })
     .filter((b): b is NonNullable<typeof b> => b !== null)
-    .sort((a, b) => a.days_until - b.days_until);
+    .sort((a, b) => {
+      // Today + future first (ascending), then past (most recent first at bottom)
+      const aPast = a.days_until < 0;
+      const bPast = b.days_until < 0;
+      if (aPast !== bPast) return aPast ? 1 : -1;
+      if (aPast) return b.days_until - a.days_until; // -1 before -3 before -7
+      return a.days_until - b.days_until;            // 0, 1, 2, ...
+    });
 
   return NextResponse.json({
     birthdays,
