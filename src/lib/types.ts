@@ -20,6 +20,7 @@ export interface Profile {
   employee_pin?: string;
   date_of_birth?: string | null;
   welcome_until?: string | null;
+  requires_bar_card?: boolean;
   created_at: string;
   updated_at: string;
   restaurants?: Restaurant;

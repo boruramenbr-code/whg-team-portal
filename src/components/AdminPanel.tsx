@@ -108,6 +108,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     preferred_language: 'en' as 'en' | 'es',
     date_of_birth: '',
     welcome_until: defaultWelcomeUntil,
+    requires_bar_card: false,
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -211,6 +212,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       preferred_language: 'en',
       date_of_birth: '',
       welcome_until: defaultWelcomeUntil,
+      requires_bar_card: false,
     });
   };
 
@@ -639,6 +641,43 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       )}
                     </div>
 
+                    {/* Requires bar card toggle */}
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                        🍷 Bar Card Required
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !u.requires_bar_card;
+                          fetch(`/api/admin/users/${u.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ requires_bar_card: next }),
+                          }).then(() => fetchUsers());
+                        }}
+                        className={`w-full md:w-auto md:min-w-[16rem] px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all flex items-center justify-between gap-3 ${
+                          u.requires_bar_card
+                            ? 'border-rose-300 bg-rose-50 text-rose-800'
+                            : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                        }`}
+                      >
+                        <span>
+                          {u.requires_bar_card
+                            ? '✓ Handles alcohol — card required'
+                            : 'Does not handle alcohol'}
+                        </span>
+                        <span className={`text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                          u.requires_bar_card ? 'bg-rose-200 text-rose-900' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {u.requires_bar_card ? 'YES' : 'NO'}
+                        </span>
+                      </button>
+                      <p className="text-[10px] text-gray-400 mt-1">
+                        When YES, this person sees a bar card reminder on their home tab if their card is missing or expiring.
+                      </p>
+                    </div>
+
                     {/* Multi-location assignments — admin only */}
                     {isAdmin && (
                       <div className="mt-4">
@@ -833,6 +872,36 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </div>
                   <p className="text-[11px] text-gray-400 mt-1.5">
                     Featured in the &quot;Welcome to the team&quot; spotlight on the home tab. Default: 30 days.
+                  </p>
+                </div>
+
+                {/* Requires bar card toggle */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    🍷 Bar Card Required
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, requires_bar_card: !form.requires_bar_card })}
+                    className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all flex items-center justify-between ${
+                      form.requires_bar_card
+                        ? 'border-rose-300 bg-rose-50 text-rose-800'
+                        : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+                    }`}
+                  >
+                    <span>
+                      {form.requires_bar_card
+                        ? '✓ This person handles alcohol — bar card required'
+                        : 'Tap if this person handles alcohol'}
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+                      form.requires_bar_card ? 'bg-rose-200 text-rose-900' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {form.requires_bar_card ? 'YES' : 'NO'}
+                    </span>
+                  </button>
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Servers, bartenders, hosts. They&apos;ll see a reminder on their home tab when their card is missing or expiring.
                   </p>
                 </div>
 

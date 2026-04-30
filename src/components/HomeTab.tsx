@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import WelcomeNoteModal from './WelcomeNoteModal';
 import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
+import MyBarCardWidget from './MyBarCardWidget';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -197,6 +198,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
 
         {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
         <NewHiresSection language={language} />
+
+        {/* ── Personal Bar Card alert (only renders when actionable) ── */}
+        <MyBarCardWidget language={language} />
 
         {/* ── Owner's Message (pinned, if any) ── */}
         {ownerMessages.length > 0 && (
