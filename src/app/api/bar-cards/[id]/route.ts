@@ -54,11 +54,24 @@ export async function PATCH(
   }
 
   // Only allow updating specific fields
-  const allowedFields = ['employee_name', 'expiration_date', 'notes', 'archived'];
+  const allowedFields = ['employee_name', 'expiration_date', 'notes', 'archived', 'profile_id'];
   const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
       update[field] = body[field];
+    }
+  }
+
+  // If setting profile_id, also sync employee_name to that profile's full_name
+  // (keeps the displayed name canonical even if OCR captured something funky)
+  if (body.profile_id) {
+    const { data: linkedProfile } = await adminClient
+      .from('profiles')
+      .select('full_name')
+      .eq('id', body.profile_id)
+      .single();
+    if (linkedProfile?.full_name) {
+      update.employee_name = linkedProfile.full_name;
     }
   }
 

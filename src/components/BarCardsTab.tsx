@@ -166,6 +166,7 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
   const [showUpload, setShowUpload] = useState(false);
   const [viewingCard, setViewingCard] = useState<BarCard | null>(null);
   const [editingCard, setEditingCard] = useState<BarCard | null>(null);
+  const [linkingCard, setLinkingCard] = useState<BarCard | null>(null);
 
   // Fetch locations
   useEffect(() => {
@@ -408,6 +409,7 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
                       onEdit={() => setEditingCard(card)}
                       onDelete={() => handleDelete(card.id)}
                       onArchive={() => handleArchive(card.id, true)}
+                      onLink={() => setLinkingCard(card)}
                     />
                   ))}
                 </div>
@@ -445,6 +447,7 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
                           onEdit={() => setEditingCard(card)}
                           onDelete={() => handleDelete(card.id)}
                           onArchive={() => handleArchive(card.id, false)}
+                          onLink={() => setLinkingCard(card)}
                         />
                       ))}
                     </div>
@@ -486,17 +489,29 @@ export default function BarCardsTab({ restaurantId, role }: Props) {
           onSave={(updates) => handleUpdate(editingCard.id, updates)}
         />
       )}
+
+      {linkingCard && (
+        <LinkPickerModal
+          card={linkingCard}
+          onClose={() => setLinkingCard(null)}
+          onLinked={() => {
+            setLinkingCard(null);
+            fetchCards();
+          }}
+        />
+      )}
     </div>
   );
 }
 
 /* ───────── card row ───────── */
-function CardRow({ card, onView, onEdit, onDelete, onArchive }: {
+function CardRow({ card, onView, onEdit, onDelete, onArchive, onLink }: {
   card: BarCard;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onArchive: () => void;
+  onLink: () => void;
 }) {
   const status = getCardStatus(card.expiration_date);
   const cfg = STATUS_CONFIG[status];
@@ -530,10 +545,29 @@ function CardRow({ card, onView, onEdit, onDelete, onArchive }: {
               }
             </span>
           </div>
+          {/* Link status — show only when card is active and unlinked */}
+          {!card.archived && !card.profile_id && (
+            <button
+              onClick={onLink}
+              className="tap-highlight mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors"
+              title="This card isn't linked to a staff profile yet — tap to link"
+            >
+              <span>⚠️</span>
+              <span>Not linked — tap to link</span>
+            </button>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
+          {!card.archived && !card.profile_id && (
+            <button onClick={onLink} className="tap-highlight p-2 rounded-lg hover:bg-amber-100/60 transition-colors" title="Link to staff member">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </button>
+          )}
           {!card.archived && (
             <button onClick={onEdit} className="tap-highlight p-2 rounded-lg hover:bg-white/60 transition-colors" title="Edit">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1082,6 +1116,149 @@ function EditModal({ card, onClose, onSave }: {
             }`}
           >
             Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ───────── link picker modal ───────── */
+interface EligibleStaff {
+  id: string;
+  full_name: string;
+  role: string;
+  requires_bar_card: boolean;
+}
+
+function LinkPickerModal({ card, onClose, onLinked }: {
+  card: BarCard;
+  onClose: () => void;
+  onLinked: () => void;
+}) {
+  const [staff, setStaff] = useState<EligibleStaff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/bar-cards/eligible-staff?restaurant_id=${card.restaurant_id}`, { cache: 'no-store' });
+        const d = await r.json();
+        if (!cancelled) setStaff(d.staff || []);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [card.restaurant_id]);
+
+  // Best-guess pre-suggestion: case-insensitive substring match on first or last word
+  const ocrFirst = card.employee_name.split(' ')[0]?.toLowerCase() || '';
+  const ocrLast = card.employee_name.split(' ').slice(-1)[0]?.toLowerCase() || '';
+  const filtered = staff
+    .filter((s) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return s.full_name.toLowerCase().includes(q);
+    })
+    .map((s) => {
+      const fn = s.full_name.toLowerCase();
+      const score =
+        (fn.includes(ocrFirst) ? 2 : 0) +
+        (fn.includes(ocrLast) ? 2 : 0) +
+        (s.requires_bar_card ? 1 : 0);
+      return { ...s, score };
+    })
+    .sort((a, b) => b.score - a.score || a.full_name.localeCompare(b.full_name));
+
+  const handleLink = async (profileId: string) => {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/bar-cards/${card.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile_id: profileId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to link');
+        setSaving(false);
+        return;
+      }
+      onLinked();
+    } catch {
+      setError('Connection error.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-6">
+      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col" style={{ maxHeight: '90vh' }}>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-[#1B3A6B]">🔗 Link Bar Card</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Card name on file: <span className="font-semibold text-gray-700">{card.employee_name}</span>
+          </p>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            Pick the staff profile this card belongs to. Once linked, the card&apos;s display name will use their profile name.
+          </p>
+        </div>
+
+        <div className="px-5 py-3 border-b border-gray-100">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search staff..."
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            autoFocus
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-2">
+          {loading ? (
+            <p className="text-center text-gray-400 text-sm py-6">Loading staff...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-6">No staff found.</p>
+          ) : (
+            <div className="space-y-1">
+              {filtered.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => handleLink(s.id)}
+                  disabled={saving}
+                  className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-amber-50 transition-colors flex items-center justify-between gap-2 disabled:opacity-50"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1B3A6B] truncate">{s.full_name}</p>
+                    <p className="text-[11px] text-gray-500 capitalize">{s.role.replace('_', ' ')}</p>
+                  </div>
+                  {s.requires_bar_card && (
+                    <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full whitespace-nowrap">🍷 NEEDS CARD</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="px-5 py-2 border-t border-red-100 bg-red-50 text-red-600 text-sm">{error}</div>
+        )}
+
+        <div className="px-5 py-3 border-t border-gray-100 flex gap-2">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
           </button>
         </div>
       </div>
