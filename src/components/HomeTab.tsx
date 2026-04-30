@@ -394,7 +394,7 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
           </section>
         )}
 
-        {/* ── Upcoming Holidays ── */}
+        {/* ── Upcoming Holidays and Events ── */}
         <HolidaysWidget language={language} />
 
         {/* ── Two-column: Latest Review + Leaderboard ── */}

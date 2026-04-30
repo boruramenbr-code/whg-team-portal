@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 
 interface Holiday {
   id: string;
@@ -8,7 +9,7 @@ interface Holiday {
   date: string;
   name: string;
   name_es: string | null;
-  type: 'closed' | 'all_hands';
+  type: HolidayType;
   notes: string | null;
   notes_es: string | null;
   restaurants: { name: string } | null;
@@ -19,10 +20,13 @@ interface Props {
 }
 
 /**
- * Upcoming Holidays widget — shows the next ~90 days of holidays relevant to
- * the user's restaurant(s). Color-coded:
- *   🟢 closed     — we close, rest with family
- *   🔴 all_hands  — busy day, no PTO requests, plan to work
+ * Upcoming Holidays and Events — shows the next ~90 days of dates relevant to
+ * the user's restaurant(s). Five types, color-coded:
+ *   🌿 closed     — we shut, rest with family (green)
+ *   🌤️ slow       — lighter than usual (sky blue)
+ *   📅 normal     — mark your calendar (gray)
+ *   ⚡ busy       — heads up, busier than usual (amber)
+ *   🔥 all_hands  — all hands on deck (red)
  */
 export default function HolidaysWidget({ language }: Props) {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -75,13 +79,13 @@ export default function HolidaysWidget({ language }: Props) {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
           <span className="text-base">📅</span>
-          {isES ? 'Días Importantes' : 'Upcoming Holidays'}
+          {isES ? 'Días Importantes y Eventos' : 'Upcoming Holidays and Events'}
         </h2>
       </div>
 
       <div className="space-y-2">
         {holidays.map((h) => {
-          const isClosed = h.type === 'closed';
+          const style = getHolidayStyle(h.type);
           const days = daysUntil(h.date);
           const dayLabel =
             days === 0 ? (isES ? 'Hoy' : 'Today!') :
@@ -91,26 +95,20 @@ export default function HolidaysWidget({ language }: Props) {
           return (
             <div
               key={h.id}
-              className={`rounded-2xl px-4 py-3 border-l-4 shadow-sm flex items-start gap-3 ${
-                isClosed
-                  ? 'bg-emerald-50 border-emerald-400'
-                  : 'bg-rose-50 border-rose-400'
-              }`}
+              className={`rounded-2xl px-4 py-3 border-l-4 shadow-sm flex items-start gap-3 ${style.bgClass} ${style.borderClass}`}
             >
-              <span className="text-xl mt-0.5">{isClosed ? '🟢' : '🔴'}</span>
+              <span className="text-xl mt-0.5" aria-hidden>{style.emoji}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
-                  <p className={`font-bold text-sm ${isClosed ? 'text-emerald-900' : 'text-rose-900'}`}>
+                  <p className={`font-bold text-sm ${style.textClass}`}>
                     {getName(h)}
                   </p>
-                  <p className={`text-xs ${isClosed ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  <p className={`text-xs ${style.subTextClass}`}>
                     {formatDate(h.date)} · {dayLabel}
                   </p>
                 </div>
-                <p className={`text-[11px] font-bold uppercase tracking-wide mt-0.5 ${isClosed ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {isClosed
-                    ? (isES ? '🌿 Cerrado — descanso con familia' : '🌿 Closed — rest with family')
-                    : (isES ? '⚡ Día ocupado — todos trabajando' : '⚡ Big day — all hands on deck')}
+                <p className={`text-[11px] font-bold uppercase tracking-wide mt-0.5 ${style.subTextClass}`}>
+                  {style.emoji} {isES ? style.bannerEs : style.bannerEn}
                 </p>
                 {h.restaurants && h.restaurant_id && (
                   <p className="text-[10px] text-gray-500 mt-0.5">

@@ -26,7 +26,7 @@ const PILLS: Pill[] = [
   { key: 'preshift',  label: 'Pre-Shift Notes', emoji: '📋', description: 'Daily specials, 86\'d items, focus' },
   { key: 'owner',     label: "Owner's Message", emoji: '💙', adminOnly: true, description: 'Rotating leadership notes from ownership' },
   { key: 'welcome',   label: 'Welcome Note',    emoji: '📌', description: 'Yellow sticky note shown on every staff member\'s first login' },
-  { key: 'holidays',  label: 'Holidays',        emoji: '📅', description: 'Closures + all-hands days. Shown on the home tab.' },
+  { key: 'holidays',  label: 'Holidays & Events', emoji: '📅', description: 'Closures, busy/slow days, and upcoming events. Shown on the home tab.' },
 ];
 
 /**

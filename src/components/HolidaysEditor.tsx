@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Restaurant } from '@/lib/types';
+import { getHolidayStyle } from '@/lib/holiday-types';
 
 interface Holiday {
   id: string;
@@ -9,7 +10,7 @@ interface Holiday {
   date: string;
   name: string;
   name_es: string | null;
-  type: 'closed' | 'all_hands';
+  type: 'closed' | 'slow' | 'normal' | 'busy' | 'all_hands';
   notes: string | null;
   notes_es: string | null;
   restaurants: { name: string } | null;
@@ -21,7 +22,7 @@ interface FormState {
   date: string;
   name: string;
   name_es: string;
-  type: 'closed' | 'all_hands';
+  type: 'closed' | 'slow' | 'normal' | 'busy' | 'all_hands';
   notes: string;
   notes_es: string;
 }
@@ -169,7 +170,7 @@ export default function HolidaysEditor({ restaurants }: Props) {
         <div className="flex items-center gap-2">
           <span className="text-xl">📅</span>
           <div>
-            <h3 className="font-bold text-gray-900 text-sm">Upcoming Holidays</h3>
+            <h3 className="font-bold text-gray-900 text-sm">Upcoming Holidays and Events</h3>
             <p className="text-[11px] text-gray-500">
               Closures (we shut), all-hands days (busiest days, no PTO).
             </p>
@@ -204,11 +205,14 @@ export default function HolidaysEditor({ restaurants }: Props) {
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Type</label>
               <select
                 value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as 'closed' | 'all_hands' })}
+                onChange={(e) => setForm({ ...form, type: e.target.value as FormState['type'] })}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               >
-                <option value="all_hands">⚡ All hands on deck</option>
-                <option value="closed">🌿 Closed</option>
+                <option value="closed">🌿 Closed — rest with family</option>
+                <option value="slow">🌤️ Slower than usual</option>
+                <option value="normal">📅 Mark your calendar</option>
+                <option value="busy">⚡ Heads up — busier than usual</option>
+                <option value="all_hands">🔥 All hands on deck</option>
               </select>
             </div>
           </div>
@@ -354,20 +358,18 @@ function HolidayRow({
   onDelete: (id: string) => void;
   formatDate: (iso: string) => string;
 }) {
-  const isClosed = h.type === 'closed';
+  const style = getHolidayStyle(h.type);
   return (
-    <div className={`flex items-start gap-3 p-3 border rounded-lg ${
-      isClosed ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'
-    }`}>
-      <span className="text-base">{isClosed ? '🟢' : '🔴'}</span>
+    <div className={`flex items-start gap-3 p-3 border rounded-lg ${style.bgClass} ${style.borderClass.replace('border-', 'border-')}/40`}>
+      <span className="text-base" aria-hidden>{style.emoji}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-gray-800">{h.name}</p>
-        <p className="text-[11px] text-gray-500">
+        <p className={`text-sm font-bold ${style.textClass}`}>{h.name}</p>
+        <p className={`text-[11px] ${style.subTextClass}`}>
           {formatDate(h.date)}
           {' · '}
           {h.restaurants?.name || 'All locations'}
           {' · '}
-          {isClosed ? 'Closed' : 'All hands'}
+          {style.shortEn}
         </p>
         {h.notes && <p className="text-xs text-gray-600 mt-1">{h.notes}</p>}
       </div>

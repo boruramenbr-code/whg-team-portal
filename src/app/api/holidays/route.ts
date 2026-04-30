@@ -111,8 +111,9 @@ export async function POST(req: NextRequest) {
   if (!date || !name?.trim() || !type) {
     return NextResponse.json({ error: 'date, name, and type are required' }, { status: 400 });
   }
-  if (type !== 'closed' && type !== 'all_hands') {
-    return NextResponse.json({ error: 'type must be closed or all_hands' }, { status: 400 });
+  const VALID_TYPES = ['closed', 'slow', 'normal', 'busy', 'all_hands'];
+  if (!VALID_TYPES.includes(type)) {
+    return NextResponse.json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` }, { status: 400 });
   }
 
   const adminClient = getAdminClient();
@@ -167,8 +168,9 @@ export async function PATCH(req: NextRequest) {
   if (body.name !== undefined) updates.name = body.name?.trim() || null;
   if (body.name_es !== undefined) updates.name_es = body.name_es?.trim() || null;
   if (body.type !== undefined) {
-    if (body.type !== 'closed' && body.type !== 'all_hands') {
-      return NextResponse.json({ error: 'type must be closed or all_hands' }, { status: 400 });
+    const VALID_TYPES = ['closed', 'slow', 'normal', 'busy', 'all_hands'];
+    if (!VALID_TYPES.includes(body.type)) {
+      return NextResponse.json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` }, { status: 400 });
     }
     updates.type = body.type;
   }
