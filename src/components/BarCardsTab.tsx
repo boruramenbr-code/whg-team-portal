@@ -545,7 +545,7 @@ function CardRow({ card, onView, onEdit, onDelete, onArchive, onLink }: {
               }
             </span>
           </div>
-          {/* Link status — show only when card is active and unlinked */}
+          {/* Link status chip — different state for unlinked vs linked */}
           {!card.archived && !card.profile_id && (
             <button
               onClick={onLink}
@@ -556,13 +556,29 @@ function CardRow({ card, onView, onEdit, onDelete, onArchive, onLink }: {
               <span>Not linked — tap to link</span>
             </button>
           )}
+          {!card.archived && card.profile_id && (
+            <button
+              onClick={onLink}
+              className="tap-highlight mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 px-1.5 py-0.5 rounded transition-colors"
+              title="Tap to re-link if this card belongs to a different staff member"
+            >
+              <span>✓</span>
+              <span>Linked — tap to change</span>
+            </button>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {!card.archived && !card.profile_id && (
-            <button onClick={onLink} className="tap-highlight p-2 rounded-lg hover:bg-amber-100/60 transition-colors" title="Link to staff member">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {!card.archived && (
+            <button
+              onClick={onLink}
+              className={`tap-highlight p-2 rounded-lg transition-colors ${
+                card.profile_id ? 'hover:bg-gray-100' : 'hover:bg-amber-100/60'
+              }`}
+              title={card.profile_id ? 'Re-link to a different staff member' : 'Link to staff member'}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={card.profile_id ? '#9CA3AF' : '#D97706'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
                 <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
               </svg>
