@@ -6,16 +6,25 @@ import AdminPanel from './AdminPanel';
 import PreshiftAdminContent from './PreshiftAdminContent';
 import BarCardsTab from './BarCardsTab';
 import ComplianceTab from './ComplianceTab';
+import MissionControlDashboard from './MissionControlDashboard';
 
 interface Props {
   profile: Profile;
   restaurants: Restaurant[];
 }
 
-type DashboardTab = 'staff' | 'preshift' | 'compliance' | 'barcards' | 'settings';
+type DashboardTab = 'dashboard' | 'staff' | 'preshift' | 'compliance' | 'barcards' | 'settings';
 
 /* ── SVG icons for admin bottom nav ── */
 const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
+  dashboard: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" fill={a ? '#1B3A6B' : 'none'} />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" fill={a ? '#1B3A6B' : 'none'} />
+    </svg>
+  ),
   staff: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -53,10 +62,11 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
 };
 
 export default function AdminDashboard({ profile, restaurants }: Props) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('staff');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('dashboard');
   const isAdmin = profile.role === 'admin';
 
   const tabs: { key: DashboardTab; label: string; emoji: string; adminOnly?: boolean; disabled?: boolean }[] = [
+    { key: 'dashboard', label: 'Dashboard', emoji: '🎛️' },
     { key: 'staff', label: 'Staff', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
     { key: 'barcards', label: 'Bar Cards', emoji: '🪪' },
@@ -104,6 +114,14 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0">
+        {activeTab === 'dashboard' && (
+          <div className="tab-content-enter">
+            <MissionControlDashboard
+              onNavigate={(t) => setActiveTab(t)}
+            />
+          </div>
+        )}
+
         {activeTab === 'staff' && (
           <div className="tab-content-enter">
             <AdminPanel
