@@ -56,15 +56,17 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('holidays')
-    .select('id, restaurant_id, date, name, name_es, type, notes, notes_es, restaurants(name)')
-    .order('date', { ascending: true });
+    .select('id, restaurant_id, start_date, end_date, name, name_es, type, notes, notes_es, restaurants(name)')
+    .order('start_date', { ascending: true });
 
   if (!showAll) {
+    // Range overlap: include events whose date range intersects [today, today+90].
+    // An event overlaps the window iff its start <= window_end AND its end >= window_start.
     const today = new Date().toISOString().split('T')[0];
     const ninety = new Date();
     ninety.setDate(ninety.getDate() + 90);
     const end = ninety.toISOString().split('T')[0];
-    query = query.gte('date', today).lte('date', end);
+    query = query.lte('start_date', end).gte('end_date', today);
   }
 
   const { data: rows, error } = await query;
@@ -107,9 +109,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Only managers and admins can edit holidays' }, { status: 403 });
   }
 
-  const { restaurant_id, date, name, name_es, type, notes, notes_es } = await req.json();
-  if (!date || !name?.trim() || !type) {
-    return NextResponse.json({ error: 'date, name, and type are required' }, { status: 400 });
+  const body = await req.json();
+  const { restaurant_id, start_date, end_date, name, name_es, type, notes, notes_es } = body;
+  // Backward compat: accept old `date` field for single-day events
+  const startDate = start_date || body.date;
+  const endDate = end_date || body.date || start_date;
+
+  if (!startDate || !name?.trim() || !type) {
+    return NextResponse.json({ error: 'start_date, name, and type are required' }, { status: 400 });
+  }
+  if (endDate < startDate) {
+    return NextResponse.json({ error: 'end_date must be on or after start_date' }, { status: 400 });
   }
   const VALID_TYPES = ['closed', 'slow', 'normal', 'busy', 'all_hands'];
   if (!VALID_TYPES.includes(type)) {
@@ -121,7 +131,8 @@ export async function POST(req: NextRequest) {
     .from('holidays')
     .insert({
       restaurant_id: restaurant_id || null,
-      date,
+      start_date: startDate,
+      end_date: endDate,
       name: name.trim(),
       name_es: name_es?.trim() || null,
       type,
@@ -164,7 +175,11 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const updates: Record<string, unknown> = {};
   if (body.restaurant_id !== undefined) updates.restaurant_id = body.restaurant_id || null;
-  if (body.date !== undefined) updates.date = body.date;
+  if (body.start_date !== undefined) updates.start_date = body.start_date;
+  if (body.end_date !== undefined) updates.end_date = body.end_date;
+  // Backward compat: if caller still sends `date`, treat as both start/end (single-day)
+  if (body.date !== undefined && body.start_date === undefined) updates.start_date = body.date;
+  if (body.date !== undefined && body.end_date === undefined) updates.end_date = body.date;
   if (body.name !== undefined) updates.name = body.name?.trim() || null;
   if (body.name_es !== undefined) updates.name_es = body.name_es?.trim() || null;
   if (body.type !== undefined) {
@@ -177,6 +192,11 @@ export async function PATCH(req: NextRequest) {
   if (body.notes !== undefined) updates.notes = body.notes?.trim() || null;
   if (body.notes_es !== undefined) updates.notes_es = body.notes_es?.trim() || null;
   updates.updated_at = new Date().toISOString();
+  // Validate range if both dates being set or one of them
+  if (typeof updates.start_date === 'string' && typeof updates.end_date === 'string'
+      && updates.end_date < updates.start_date) {
+    return NextResponse.json({ error: 'end_date must be on or after start_date' }, { status: 400 });
+  }
 
   const adminClient = getAdminClient();
   const { data, error } = await adminClient

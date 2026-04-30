@@ -168,15 +168,18 @@ export async function GET() {
   }
   const { count: newHiresCount } = await newHiresQuery;
 
-  // Holidays in next 7 days
+  // Holidays / events overlapping today through +7 days.
+  // Range overlap rule: start <= window_end AND end >= window_start.
+  // This includes events that are CURRENTLY active even if they started earlier.
   const sevenFromNow = new Date(today);
   sevenFromNow.setDate(today.getDate() + 7);
+  const sevenFromNowISO = sevenFromNow.toISOString().split('T')[0];
   const { data: upcomingHolidays } = await adminClient
     .from('holidays')
-    .select('id, date, name, type, restaurant_id')
-    .gte('date', todayISO)
-    .lte('date', sevenFromNow.toISOString().split('T')[0])
-    .order('date', { ascending: true });
+    .select('id, start_date, end_date, name, type, restaurant_id')
+    .lte('start_date', sevenFromNowISO)
+    .gte('end_date', todayISO)
+    .order('start_date', { ascending: true });
 
   const filteredHolidays = (upcomingHolidays || []).filter((h) => {
     if (isAdmin) return true;

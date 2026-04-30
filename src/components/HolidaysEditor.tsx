@@ -7,7 +7,8 @@ import { getHolidayStyle } from '@/lib/holiday-types';
 interface Holiday {
   id: string;
   restaurant_id: string | null;
-  date: string;
+  start_date: string;
+  end_date: string;
   name: string;
   name_es: string | null;
   type: 'closed' | 'slow' | 'normal' | 'busy' | 'all_hands';
@@ -19,7 +20,8 @@ interface Holiday {
 interface FormState {
   id: string | null;
   restaurant_id: string;
-  date: string;
+  start_date: string;
+  end_date: string;
   name: string;
   name_es: string;
   type: 'closed' | 'slow' | 'normal' | 'busy' | 'all_hands';
@@ -31,10 +33,13 @@ interface Props {
   restaurants: Restaurant[];
 }
 
+const TODAY = new Date().toISOString().split('T')[0];
+
 const EMPTY: FormState = {
   id: null,
   restaurant_id: '',
-  date: new Date().toISOString().split('T')[0],
+  start_date: TODAY,
+  end_date: TODAY,
   name: '',
   name_es: '',
   type: 'all_hands',
@@ -75,7 +80,8 @@ export default function HolidaysEditor({ restaurants }: Props) {
     setForm({
       id: h.id,
       restaurant_id: h.restaurant_id || '',
-      date: h.date,
+      start_date: h.start_date,
+      end_date: h.end_date,
       name: h.name,
       name_es: h.name_es || '',
       type: h.type,
@@ -98,8 +104,12 @@ export default function HolidaysEditor({ restaurants }: Props) {
   };
 
   const handleSave = async () => {
-    if (!form.date || !form.name.trim()) {
-      setError('Date and name are required.');
+    if (!form.start_date || !form.name.trim()) {
+      setError('Start date and name are required.');
+      return;
+    }
+    if (form.end_date && form.end_date < form.start_date) {
+      setError('End date must be on or after start date.');
       return;
     }
     setSaving(true);
@@ -108,7 +118,8 @@ export default function HolidaysEditor({ restaurants }: Props) {
 
     const payload = {
       restaurant_id: form.restaurant_id || null,
-      date: form.date,
+      start_date: form.start_date,
+      end_date: form.end_date || form.start_date,
       name: form.name,
       name_es: form.name_es,
       type: form.type,
@@ -161,8 +172,9 @@ export default function HolidaysEditor({ restaurants }: Props) {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const upcoming = holidays.filter((h) => h.date >= today);
-  const past = holidays.filter((h) => h.date < today);
+  // Currently active OR upcoming = end_date >= today
+  const upcoming = holidays.filter((h) => h.end_date >= today);
+  const past = holidays.filter((h) => h.end_date < today);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -193,28 +205,52 @@ export default function HolidaysEditor({ restaurants }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Date</label>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Start Date</label>
               <input
                 type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                value={form.start_date}
+                onChange={(e) => {
+                  const newStart = e.target.value;
+                  // Auto-bump end_date if it's now before start_date
+                  setForm({
+                    ...form,
+                    start_date: newStart,
+                    end_date: form.end_date < newStart ? newStart : form.end_date,
+                  });
+                }}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Type</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as FormState['type'] })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              >
-                <option value="closed">🌿 Closed — rest with family</option>
-                <option value="slow">🌤️ Slower than usual</option>
-                <option value="normal">📅 Mark your calendar</option>
-                <option value="busy">⚡ Heads up — busier than usual</option>
-                <option value="all_hands">🔥 All hands on deck</option>
-              </select>
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">End Date</label>
+              <input
+                type="date"
+                value={form.end_date}
+                min={form.start_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">
+                {form.start_date === form.end_date
+                  ? 'Single day'
+                  : `Multi-day (${Math.round((new Date(form.end_date + 'T00:00:00').getTime() - new Date(form.start_date + 'T00:00:00').getTime()) / 86400000) + 1} days)`}
+              </p>
             </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1 block">Type</label>
+            <select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value as FormState['type'] })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <option value="closed">🌿 Closed — rest with family</option>
+              <option value="slow">🌤️ Slower than usual</option>
+              <option value="normal">📅 Mark your calendar</option>
+              <option value="busy">⚡ Heads up — busier than usual</option>
+              <option value="all_hands">🔥 All hands on deck</option>
+            </select>
           </div>
 
           <div>
@@ -365,7 +401,9 @@ function HolidayRow({
       <div className="flex-1 min-w-0">
         <p className={`text-sm font-bold ${style.textClass}`}>{h.name}</p>
         <p className={`text-[11px] ${style.subTextClass}`}>
-          {formatDate(h.date)}
+          {h.start_date === h.end_date
+            ? formatDate(h.start_date)
+            : `${formatDate(h.start_date)} – ${formatDate(h.end_date)}`}
           {' · '}
           {h.restaurants?.name || 'All locations'}
           {' · '}

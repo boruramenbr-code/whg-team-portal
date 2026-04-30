@@ -20,7 +20,8 @@ interface OwnerMessage {
 
 interface UpcomingHoliday {
   id: string;
-  date: string;
+  start_date: string;
+  end_date: string;
   name: string;
   type: 'closed' | 'slow' | 'normal' | 'busy' | 'all_hands';
 }
@@ -243,8 +244,11 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
           </p>
           <div className="space-y-1.5">
             {holidays_upcoming.map((h) => {
-              const date = new Date(h.date + 'T00:00:00');
-              const dateLabel = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+              const isMultiDay = h.start_date !== h.end_date;
+              const fmt = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+              const dateLabel = isMultiDay
+                ? `${fmt(h.start_date)} – ${fmt(h.end_date)}`
+                : new Date(h.start_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
               const colors: Record<string, string> = {
                 closed: 'text-emerald-700 bg-emerald-50',
                 slow: 'text-sky-700 bg-sky-50',

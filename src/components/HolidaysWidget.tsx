@@ -6,7 +6,8 @@ import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 interface Holiday {
   id: string;
   restaurant_id: string | null;
-  date: string;
+  start_date: string;
+  end_date: string;
   name: string;
   name_es: string | null;
   type: HolidayType;
@@ -55,7 +56,7 @@ export default function HolidaysWidget({ language }: Props) {
 
   if (loading || holidays.length === 0) return null;
 
-  const formatDate = (iso: string) => {
+  const fmtShort = (iso: string) => {
     const d = new Date(iso + 'T00:00:00');
     return d.toLocaleDateString(isES ? 'es-MX' : undefined, {
       month: 'short',
@@ -63,8 +64,15 @@ export default function HolidaysWidget({ language }: Props) {
       weekday: 'short',
     });
   };
+  const fmtDayOnly = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString(isES ? 'es-MX' : undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
 
-  const daysUntil = (iso: string) => {
+  const dayDelta = (iso: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const target = new Date(iso + 'T00:00:00');
@@ -86,11 +94,31 @@ export default function HolidaysWidget({ language }: Props) {
       <div className="space-y-2">
         {holidays.map((h) => {
           const style = getHolidayStyle(h.type);
-          const days = daysUntil(h.date);
-          const dayLabel =
-            days === 0 ? (isES ? 'Hoy' : 'Today!') :
-            days === 1 ? (isES ? 'Mañana' : 'Tomorrow') :
-            (isES ? `en ${days} días` : `in ${days} days`);
+          const isMultiDay = h.start_date !== h.end_date;
+          const startDelta = dayDelta(h.start_date);
+          const endDelta = dayDelta(h.end_date);
+          const isActive = startDelta <= 0 && endDelta >= 0;
+
+          // Date range display
+          const dateLabel = isMultiDay
+            ? `${fmtDayOnly(h.start_date)} – ${fmtDayOnly(h.end_date)}`
+            : fmtShort(h.start_date);
+
+          // Status label — different for active vs upcoming, single vs multi-day
+          let statusLabel: string;
+          if (isActive && isMultiDay) {
+            const totalDays = endDelta - startDelta + 1;
+            const dayN = -startDelta + 1; // which day of the event we're on
+            statusLabel = isES
+              ? `Día ${dayN} de ${totalDays}`
+              : `Day ${dayN} of ${totalDays}`;
+          } else if (isActive) {
+            statusLabel = isES ? 'Hoy' : 'Today!';
+          } else if (startDelta === 1) {
+            statusLabel = isES ? 'Mañana' : 'Tomorrow';
+          } else {
+            statusLabel = isES ? `en ${startDelta} días` : `in ${startDelta} days`;
+          }
 
           return (
             <div
@@ -104,7 +132,7 @@ export default function HolidaysWidget({ language }: Props) {
                     {getName(h)}
                   </p>
                   <p className={`text-xs ${style.subTextClass}`}>
-                    {formatDate(h.date)} · {dayLabel}
+                    {dateLabel} · {statusLabel}
                   </p>
                 </div>
                 <p className={`text-[11px] font-bold uppercase tracking-wide mt-0.5 ${style.subTextClass}`}>
