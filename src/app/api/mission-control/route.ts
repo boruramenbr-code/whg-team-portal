@@ -69,10 +69,10 @@ export async function GET() {
 
   const adminClient = getAdminClient();
 
-  // ── Active staff (with bar card requirement + linked cards) ──────────────
+  // ── Active staff (with bar card requirement + linked cards + dates) ─────
   let staffQuery = adminClient
     .from('profiles')
-    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
+    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, date_of_birth, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', 'active');
 
   if (!isAdmin) {
@@ -300,6 +300,30 @@ export async function GET() {
   }
   anniversaries.sort((a, b) => a.days_until - b.days_until);
 
+  // ── Today's recognition (birthdays + anniversaries TODAY) ────────────────
+  // Surfaced separately so manager gets a celebratory prompt at the top of
+  // the dashboard. Today's anniversaries are removed from the "this week"
+  // card to avoid double-display.
+  const todayMonth = today.getMonth();
+  const todayDay = today.getDate();
+
+  const birthdaysToday = (staff || [])
+    .filter((s) => {
+      const dob = (s as { date_of_birth?: string | null }).date_of_birth;
+      if (!dob) return false;
+      const d = new Date(dob + 'T00:00:00');
+      return d.getMonth() === todayMonth && d.getDate() === todayDay;
+    })
+    .map((s) => ({
+      profile_id: s.id,
+      full_name: s.full_name,
+      restaurant_name: (s.restaurants as { name?: string } | null)?.name || '',
+    }));
+
+  const anniversariesToday = anniversaries.filter((a) => a.days_until === 0);
+  // Filter out today from the weekly card (the new Today's Recognition card surfaces them)
+  const anniversariesUpcoming = anniversaries.filter((a) => a.days_until > 0);
+
   return NextResponse.json(
     {
       bar_cards: {
@@ -317,7 +341,11 @@ export async function GET() {
       holidays_upcoming: filteredHolidays,
       policy_compliance: policyCompliance,
       missing_preshift: missingPreshift,
-      anniversaries,
+      anniversaries: anniversariesUpcoming,
+      recognition_today: {
+        birthdays: birthdaysToday,
+        anniversaries: anniversariesToday,
+      },
       is_admin: isAdmin,
     },
     { headers: { 'Cache-Control': 'no-store' } }

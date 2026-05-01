@@ -47,6 +47,17 @@ interface AnniversaryItem {
   hire_date: string;
 }
 
+interface RecognitionPerson {
+  profile_id: string;
+  full_name: string;
+  restaurant_name: string;
+}
+
+interface RecognitionToday {
+  birthdays: RecognitionPerson[];
+  anniversaries: AnniversaryItem[];
+}
+
 interface MissionControlData {
   bar_cards: {
     expired: BarCardItem[];
@@ -64,6 +75,7 @@ interface MissionControlData {
   policy_compliance: PolicyComplianceItem[];
   missing_preshift: MissingPreshiftItem[];
   anniversaries: AnniversaryItem[];
+  recognition_today: RecognitionToday;
   is_admin: boolean;
 }
 
@@ -117,7 +129,9 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     );
   }
 
-  const { bar_cards, owner_message, stats, holidays_upcoming, policy_compliance, missing_preshift, anniversaries } = data;
+  const { bar_cards, owner_message, stats, holidays_upcoming, policy_compliance, missing_preshift, anniversaries, recognition_today } = data;
+  const hasRecognitionToday =
+    recognition_today.birthdays.length > 0 || recognition_today.anniversaries.length > 0;
   const totalUrgent = bar_cards.expired.length + bar_cards.critical.length + missing_preshift.length;
   const totalWarnings = bar_cards.expiring.length + bar_cards.missing.length + policy_compliance.length;
   const allClear = totalUrgent === 0 && totalWarnings === 0;
@@ -152,6 +166,70 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
             No expired or missing bar cards. Everyone&apos;s in good standing.
           </p>
         </div>
+      )}
+
+      {/* ── TODAY'S RECOGNITION ─────────────────────────────────────────── */}
+      {hasRecognitionToday ? (
+        <section className="bg-gradient-to-br from-amber-50 via-orange-50 to-pink-50 border-2 border-amber-300 rounded-2xl p-5 shadow-md">
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-2xl" aria-hidden>🎉</span>
+            <p className="text-xs font-bold text-amber-900 uppercase tracking-widest">
+              Today&apos;s Recognition
+            </p>
+          </div>
+
+          {recognition_today.birthdays.length > 0 && (
+            <div className="mb-3">
+              <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide mb-1.5">
+                🎂 Birthday{recognition_today.birthdays.length > 1 ? 's' : ''}
+              </p>
+              <div className="space-y-1">
+                {recognition_today.birthdays.map((b) => (
+                  <p key={b.profile_id} className="text-sm">
+                    <span className="font-bold text-amber-900">{b.full_name}</span>
+                    <span className="text-amber-700"> · {b.restaurant_name}</span>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {recognition_today.anniversaries.length > 0 && (
+            <div className="mb-3">
+              <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide mb-1.5">
+                💎 Work Anniversar{recognition_today.anniversaries.length > 1 ? 'ies' : 'y'}
+              </p>
+              <div className="space-y-1">
+                {recognition_today.anniversaries.map((a) => (
+                  <p key={a.profile_id} className="text-sm">
+                    <span className="font-bold text-amber-900">{a.full_name}</span>
+                    <span className="text-amber-700">
+                      {' '}· {a.restaurant_name} · <strong>{a.years}-year{a.years > 1 ? 's' : ''}</strong>
+                    </span>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 pt-3 border-t border-amber-300/60">
+            <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wide mb-1">
+              Make their day — pick one (or all):
+            </p>
+            <ul className="text-xs text-amber-900 space-y-0.5">
+              <li>• Public shoutout at pre-shift line-up</li>
+              <li>• Free meal, dessert, or drink on the house</li>
+              <li>• Have the team sign a card</li>
+              <li>• Personal note or text from you</li>
+            </ul>
+          </div>
+        </section>
+      ) : (
+        <section className="bg-gray-50/70 border border-gray-200 rounded-2xl px-4 py-3 text-center">
+          <p className="text-xs text-gray-500">
+            🎂 No birthdays or anniversaries today. Easy day for recognition — but check upcoming below.
+          </p>
+        </section>
       )}
 
       {/* ── URGENT (red) ────────────────────────────────────────────────── */}
@@ -267,11 +345,11 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
         />
       )}
 
-      {/* ── ANNIVERSARIES THIS WEEK (info — celebration cue) ─────────────── */}
+      {/* ── UPCOMING ANNIVERSARIES (info — heads-up for the week) ────────── */}
       {anniversaries.length > 0 && (
         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 rounded-2xl px-5 py-4 shadow-sm">
           <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest mb-2">
-            🎂 Anniversaries This Week
+            💎 Anniversaries Coming Up (next 6 days)
           </p>
           <div className="space-y-1.5">
             {anniversaries.map((a) => {
