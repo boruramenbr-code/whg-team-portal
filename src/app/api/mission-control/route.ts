@@ -87,6 +87,7 @@ export async function GET() {
   const expired: BarCardAlertItem[] = [];
   const critical: BarCardAlertItem[] = [];
   const expiring: BarCardAlertItem[] = [];
+  const upcoming: BarCardAlertItem[] = [];      // 31–90 days, info-level look-ahead
   const missing: BarCardAlertItem[] = [];
 
   for (const s of staff || []) {
@@ -128,13 +129,15 @@ export async function GET() {
     if (days < 0) expired.push(item);
     else if (days <= 7) critical.push(item);
     else if (days <= 30) expiring.push(item);
-    // valid (>30 days) — not surfaced in alerts
+    else if (days <= 90) upcoming.push(item);
+    // valid (>90 days) — not surfaced in alerts
   }
 
   // Sort: most-expired first, then soonest-expiring, etc.
   expired.sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
   critical.sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
   expiring.sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
+  upcoming.sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
   missing.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   // ── Latest active manager-audience owner message ────────────────────────
@@ -300,6 +303,73 @@ export async function GET() {
   }
   anniversaries.sort((a, b) => a.days_until - b.days_until);
 
+  // ── Welcome spotlight ending soon (welcome_until in next 7 days) ─────────
+  type WelcomeEndingItem = { profile_id: string; full_name: string; restaurant_name: string; days_until: number };
+  const welcomeEndingSoon: WelcomeEndingItem[] = [];
+  for (const s of staff || []) {
+    const wu = (s as { welcome_until?: string | null }).welcome_until;
+    if (!wu) continue;
+    const wuDate = new Date(wu + 'T00:00:00');
+    const days = Math.round((wuDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 0 || days > 7) continue;
+    welcomeEndingSoon.push({
+      profile_id: s.id,
+      full_name: s.full_name,
+      restaurant_name: (s.restaurants as { name?: string } | null)?.name || '',
+      days_until: days,
+    });
+  }
+  welcomeEndingSoon.sort((a, b) => a.days_until - b.days_until);
+
+  // ── Stale 86 items (carried over from prior days, still on today's list) ─
+  type Stale86Item = { restaurant_id: string; restaurant_name: string; items: string[]; count: number };
+  const stale86: Stale86Item[] = [];
+  let preshiftQuery = adminClient
+    .from('preshift_notes')
+    .select('restaurant_id, eighty_sixed, restaurants(name)')
+    .eq('shift_date', todayISO);
+  if (!isAdmin) {
+    preshiftQuery = preshiftQuery.in('restaurant_id', Array.from(allowedRestaurantIds));
+  }
+  const { data: todaysNoteRows } = await preshiftQuery;
+  for (const note of todaysNoteRows || []) {
+    const eightySixed = (note.eighty_sixed as { text: string; at: string }[] | null) || [];
+    const staleItems = eightySixed.filter((it) => {
+      if (!it.at) return false;
+      const itemDate = new Date(it.at);
+      return itemDate < today;
+    });
+    if (staleItems.length > 0) {
+      stale86.push({
+        restaurant_id: note.restaurant_id,
+        restaurant_name: (note.restaurants as { name?: string } | null)?.name || '',
+        items: staleItems.slice(0, 5).map((it) => it.text),
+        count: staleItems.length,
+      });
+    }
+  }
+
+  // ── Recently archived staff (last 30 days) ───────────────────────────────
+  type ArchivedItem = { profile_id: string; full_name: string; restaurant_name: string; archived_at: string };
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  let archivedQuery = adminClient
+    .from('profiles')
+    .select('id, full_name, restaurant_id, updated_at, restaurants(name)')
+    .eq('status', 'archived')
+    .gte('updated_at', thirtyDaysAgo.toISOString())
+    .order('updated_at', { ascending: false });
+  if (!isAdmin) {
+    archivedQuery = archivedQuery.in('restaurant_id', Array.from(allowedRestaurantIds));
+  }
+  const { data: archivedRows } = await archivedQuery;
+  const recentlyArchived: ArchivedItem[] = (archivedRows || []).map((p) => ({
+    profile_id: p.id,
+    full_name: p.full_name,
+    restaurant_name: (p.restaurants as { name?: string } | null)?.name || '',
+    archived_at: p.updated_at,
+  }));
+
   // ── Today's recognition (birthdays + anniversaries TODAY) ────────────────
   // Surfaced separately so manager gets a celebratory prompt at the top of
   // the dashboard. Today's anniversaries are removed from the "this week"
@@ -330,6 +400,7 @@ export async function GET() {
         expired,
         critical,
         expiring,
+        upcoming,
         missing,
       },
       owner_message: ownerMsg || null,
@@ -346,6 +417,9 @@ export async function GET() {
         birthdays: birthdaysToday,
         anniversaries: anniversariesToday,
       },
+      welcome_ending_soon: welcomeEndingSoon,
+      stale_86: stale86,
+      recently_archived: recentlyArchived,
       is_admin: isAdmin,
     },
     { headers: { 'Cache-Control': 'no-store' } }

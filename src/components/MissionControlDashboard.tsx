@@ -58,11 +58,33 @@ interface RecognitionToday {
   anniversaries: AnniversaryItem[];
 }
 
+interface WelcomeEndingItem {
+  profile_id: string;
+  full_name: string;
+  restaurant_name: string;
+  days_until: number;
+}
+
+interface Stale86Item {
+  restaurant_id: string;
+  restaurant_name: string;
+  items: string[];
+  count: number;
+}
+
+interface ArchivedItem {
+  profile_id: string;
+  full_name: string;
+  restaurant_name: string;
+  archived_at: string;
+}
+
 interface MissionControlData {
   bar_cards: {
     expired: BarCardItem[];
     critical: BarCardItem[];
     expiring: BarCardItem[];
+    upcoming: BarCardItem[];
     missing: BarCardItem[];
   };
   owner_message: OwnerMessage | null;
@@ -76,6 +98,9 @@ interface MissionControlData {
   missing_preshift: MissingPreshiftItem[];
   anniversaries: AnniversaryItem[];
   recognition_today: RecognitionToday;
+  welcome_ending_soon: WelcomeEndingItem[];
+  stale_86: Stale86Item[];
+  recently_archived: ArchivedItem[];
   is_admin: boolean;
 }
 
@@ -129,7 +154,19 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     );
   }
 
-  const { bar_cards, owner_message, stats, holidays_upcoming, policy_compliance, missing_preshift, anniversaries, recognition_today } = data;
+  const {
+    bar_cards,
+    owner_message,
+    stats,
+    holidays_upcoming,
+    policy_compliance,
+    missing_preshift,
+    anniversaries,
+    recognition_today,
+    welcome_ending_soon,
+    stale_86,
+    recently_archived,
+  } = data;
   const hasRecognitionToday =
     recognition_today.birthdays.length > 0 || recognition_today.anniversaries.length > 0;
   const totalUrgent = bar_cards.expired.length + bar_cards.critical.length + missing_preshift.length;
@@ -248,6 +285,23 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
         />
       )}
 
+      {stale_86.length > 0 && (
+        <AlertCard
+          variant="warning"
+          emoji="🚫"
+          title={`${stale_86.reduce((sum, s) => sum + s.count, 0)} stale 86'd ${stale_86.reduce((sum, s) => sum + s.count, 0) === 1 ? 'item' : 'items'} carrying over`}
+          description="Items added on a previous day still on today's 86 list. Either back in stock and forgotten, or worth confirming with the kitchen."
+          items={stale_86.flatMap((s) =>
+            s.items.map((item) => ({
+              primary: item,
+              secondary: s.restaurant_name,
+            }))
+          )}
+          ctaLabel="Open Pre-Shift →"
+          onCta={() => onNavigate('preshift')}
+        />
+      )}
+
       {bar_cards.expired.length > 0 && (
         <AlertCard
           variant="urgent"
@@ -309,6 +363,30 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
         />
       )}
 
+      {bar_cards.upcoming.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+            🔮 Bar Cards Renewing in Next 31–90 Days ({bar_cards.upcoming.length})
+          </p>
+          <p className="text-[11px] text-gray-500 mb-2">
+            Look-ahead — start the renewal conversation early so it&apos;s never a panic.
+          </p>
+          <div className="space-y-0.5 text-xs text-gray-700">
+            {bar_cards.upcoming.slice(0, 5).map((c) => (
+              <div key={c.profile_id || c.full_name}>
+                <span className="font-semibold">{c.full_name}</span>
+                <span className="text-gray-500"> · {c.restaurant_name} · {c.days} days</span>
+              </div>
+            ))}
+            {bar_cards.upcoming.length > 5 && (
+              <p className="text-[11px] italic text-gray-400">
+                + {bar_cards.upcoming.length - 5} more
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── LEADERSHIP MEMO (serious — slate) ───────────────────────────── */}
       {owner_message && (
         <div className="bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 shadow-md">
@@ -343,6 +421,60 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
           ctaLabel="Open Compliance →"
           onCta={() => onNavigate('compliance')}
         />
+      )}
+
+      {/* ── WELCOME SPOTLIGHT ENDING SOON (info — recognition reminder) ─── */}
+      {welcome_ending_soon.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1">
+            🎉 New-Hire Spotlight Ending This Week
+          </p>
+          <p className="text-[11px] text-amber-700/80 mb-2">
+            One last proper hello before they roll off the home tab.
+          </p>
+          <div className="space-y-0.5 text-xs text-amber-900">
+            {welcome_ending_soon.map((w) => {
+              const dayLabel = w.days_until === 0 ? 'today' :
+                w.days_until === 1 ? 'tomorrow' :
+                `in ${w.days_until} days`;
+              return (
+                <div key={w.profile_id}>
+                  <span className="font-semibold">{w.full_name}</span>
+                  <span className="text-amber-700/80"> · {w.restaurant_name} · ends {dayLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── RECENTLY ARCHIVED STAFF (info — turnover visibility) ─────────── */}
+      {recently_archived.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 shadow-sm">
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
+            📤 Recently Archived ({recently_archived.length} in last 30 days)
+          </p>
+          <p className="text-[11px] text-gray-500 mb-2">
+            Staff archived recently. Useful turnover signal.
+          </p>
+          <div className="space-y-0.5 text-xs text-gray-700">
+            {recently_archived.slice(0, 5).map((a) => {
+              const archDate = new Date(a.archived_at);
+              const days = Math.round((Date.now() - archDate.getTime()) / (1000 * 60 * 60 * 24));
+              return (
+                <div key={a.profile_id}>
+                  <span className="font-semibold">{a.full_name}</span>
+                  <span className="text-gray-500"> · {a.restaurant_name} · {days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}</span>
+                </div>
+              );
+            })}
+            {recently_archived.length > 5 && (
+              <p className="text-[11px] italic text-gray-400">
+                + {recently_archived.length - 5} more
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── UPCOMING ANNIVERSARIES (info — heads-up for the week) ────────── */}
