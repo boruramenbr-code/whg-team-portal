@@ -62,23 +62,20 @@ export default function ManagerBibleTab({ profile }: Props) {
         </div>
       </div>
 
-      {/* Active view */}
-      <div className="flex-1 overflow-hidden">
+      {/* Active view — must be flex flex-col so children with flex-1 (HandbookReaderTab,
+          ChatInterface) get a proper flex parent and can size + scroll correctly. */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         {view === 'about' && <AboutBibleView />}
         {view === 'read' && (
-          <div className="h-full overflow-hidden">
-            <HandbookReaderTab language={language} audience="manager" />
-          </div>
+          <HandbookReaderTab language={language} audience="manager" />
         )}
         {view === 'ask' && (
-          <div className="h-full overflow-hidden">
-            <ChatInterface
-              profile={profile}
-              language={language}
-              onLanguageChange={setLanguage}
-              forceSource="manager"
-            />
-          </div>
+          <ChatInterface
+            profile={profile}
+            language={language}
+            onLanguageChange={setLanguage}
+            forceSource="manager"
+          />
         )}
       </div>
     </div>

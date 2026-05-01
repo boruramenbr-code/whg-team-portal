@@ -69,20 +69,96 @@ export async function GET() {
 
   const adminClient = getAdminClient();
 
-  // ── Active staff (with bar card requirement + linked cards + dates) ─────
-  let staffQuery = adminClient
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayISO = today.toISOString().split('T')[0];
+  const sevenFromNow = new Date(today);
+  sevenFromNow.setDate(today.getDate() + 7);
+  const sevenFromNowISO = sevenFromNow.toISOString().split('T')[0];
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  // ── Fire all independent queries in parallel ────────────────────────────
+  // Previously these ran serially → 9 round-trips. Now 1 round-trip in wall time.
+  const restaurantIds = Array.from(allowedRestaurantIds);
+
+  let staffQ = adminClient
     .from('profiles')
     .select('id, full_name, restaurant_id, requires_bar_card, hire_date, date_of_birth, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', 'active');
+  if (!isAdmin) staffQ = staffQ.in('restaurant_id', restaurantIds);
 
-  if (!isAdmin) {
-    staffQuery = staffQuery.in('restaurant_id', Array.from(allowedRestaurantIds));
-  }
+  let restaurantsQ = adminClient.from('restaurants').select('id, name').eq('is_active', true);
+  if (!isAdmin) restaurantsQ = restaurantsQ.in('id', restaurantIds);
 
-  const { data: staff } = await staffQuery;
+  let newHiresQ = adminClient
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .gte('created_at', fourteenDaysAgo.toISOString());
+  if (!isAdmin) newHiresQ = newHiresQ.in('restaurant_id', restaurantIds);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  let archivedQ = adminClient
+    .from('profiles')
+    .select('id, full_name, restaurant_id, updated_at, restaurants(name)')
+    .eq('status', 'archived')
+    .gte('updated_at', thirtyDaysAgo.toISOString())
+    .order('updated_at', { ascending: false });
+  if (!isAdmin) archivedQ = archivedQ.in('restaurant_id', restaurantIds);
+
+  let preshiftNotesQ = adminClient
+    .from('preshift_notes')
+    .select('restaurant_id, eighty_sixed, restaurants(name)')
+    .eq('shift_date', todayISO);
+  if (!isAdmin) preshiftNotesQ = preshiftNotesQ.in('restaurant_id', restaurantIds);
+
+  const [
+    staffRes,
+    restaurantsRes,
+    newHiresRes,
+    archivedRes,
+    preshiftRes,
+    ownerMsgRes,
+    upcomingHolidaysRes,
+    activePoliciesRes,
+    signaturesRes,
+  ] = await Promise.all([
+    staffQ,
+    restaurantsQ,
+    newHiresQ,
+    archivedQ,
+    preshiftNotesQ,
+    supabase
+      .from('owner_messages')
+      .select('id, message, start_date, end_date, audience')
+      .eq('is_active', true)
+      .in('audience', ['managers', 'both'])
+      .lte('start_date', todayISO)
+      .gte('end_date', todayISO)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    adminClient
+      .from('holidays')
+      .select('id, start_date, end_date, name, type, restaurant_id')
+      .lte('start_date', sevenFromNowISO)
+      .gte('end_date', todayISO)
+      .order('start_date', { ascending: true }),
+    adminClient.from('policies').select('id, version, role_required').eq('active', true),
+    adminClient.from('policy_signatures').select('user_id, policy_id, policy_version'),
+  ]);
+
+  const staff = staffRes.data;
+  const scopedRestaurants = restaurantsRes.data;
+  const newHiresCount = newHiresRes.count;
+  const archivedRows = archivedRes.data;
+  const todaysNoteRows = preshiftRes.data;
+  const ownerMsg = ownerMsgRes.data;
+  const upcomingHolidays = upcomingHolidaysRes.data;
+  const activePolicies = activePoliciesRes.data;
+  const signatures = signaturesRes.data;
 
   const expired: BarCardAlertItem[] = [];
   const critical: BarCardAlertItem[] = [];
@@ -140,50 +216,10 @@ export async function GET() {
   upcoming.sort((a, b) => (a.days ?? 0) - (b.days ?? 0));
   missing.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
-  // ── Latest active manager-audience owner message ────────────────────────
-  // Mission Control surfaces serious leadership memos — only audience IN
-  // ('managers', 'both'). Staff-audience messages stay on the home tab.
-  const todayISO = today.toISOString().split('T')[0];
-  const { data: ownerMsg } = await supabase
-    .from('owner_messages')
-    .select('id, message, start_date, end_date, audience')
-    .eq('is_active', true)
-    .in('audience', ['managers', 'both'])
-    .lte('start_date', todayISO)
-    .gte('end_date', todayISO)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
   // ── Quick stats ───────────────────────────────────────────────────────────
   const activeStaffCount = (staff || []).length;
 
-  // New hires (profiles created in last 14 days, scoped)
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-  let newHiresQuery = adminClient
-    .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'active')
-    .gte('created_at', fourteenDaysAgo.toISOString());
-  if (!isAdmin) {
-    newHiresQuery = newHiresQuery.in('restaurant_id', Array.from(allowedRestaurantIds));
-  }
-  const { count: newHiresCount } = await newHiresQuery;
-
-  // Holidays / events overlapping today through +7 days.
-  // Range overlap rule: start <= window_end AND end >= window_start.
-  // This includes events that are CURRENTLY active even if they started earlier.
-  const sevenFromNow = new Date(today);
-  sevenFromNow.setDate(today.getDate() + 7);
-  const sevenFromNowISO = sevenFromNow.toISOString().split('T')[0];
-  const { data: upcomingHolidays } = await adminClient
-    .from('holidays')
-    .select('id, start_date, end_date, name, type, restaurant_id')
-    .lte('start_date', sevenFromNowISO)
-    .gte('end_date', todayISO)
-    .order('start_date', { ascending: true });
-
+  // ── Holidays already filtered to scope ──────────────────────────────────
   const filteredHolidays = (upcomingHolidays || []).filter((h) => {
     if (isAdmin) return true;
     if (!h.restaurant_id) return true; // company-wide
@@ -197,14 +233,7 @@ export async function GET() {
   //   'all'      → applies to everyone
   //   'employee' → only employees
   //   'manager'  → manager / asst_manager / admin
-  const { data: activePolicies } = await adminClient
-    .from('policies')
-    .select('id, version, role_required')
-    .eq('active', true);
 
-  const { data: signatures } = await adminClient
-    .from('policy_signatures')
-    .select('user_id, policy_id, policy_version');
 
   // Build signature lookup: user_id -> Set of "policy_id::version"
   const signedByUser = new Map<string, Set<string>>();
@@ -238,20 +267,8 @@ export async function GET() {
 
   // ── Today's pre-shift status (per restaurant in scope) ───────────────────
   // Flag any restaurant where today's preshift_note hasn't been posted.
-  let restaurantsQuery = adminClient
-    .from('restaurants')
-    .select('id, name')
-    .eq('is_active', true);
-  if (!isAdmin) {
-    restaurantsQuery = restaurantsQuery.in('id', Array.from(allowedRestaurantIds));
-  }
-  const { data: scopedRestaurants } = await restaurantsQuery;
-
-  const { data: todaysNotes } = await adminClient
-    .from('preshift_notes')
-    .select('restaurant_id')
-    .eq('shift_date', todayISO);
-  const restaurantsWithNote = new Set((todaysNotes || []).map((n) => n.restaurant_id));
+  // Both queries (scopedRestaurants, todaysNoteRows) ran in the parallel batch.
+  const restaurantsWithNote = new Set((todaysNoteRows || []).map((n) => n.restaurant_id));
 
   const missingPreshift = (scopedRestaurants || [])
     .filter((r) => !restaurantsWithNote.has(r.id))
@@ -322,16 +339,9 @@ export async function GET() {
   welcomeEndingSoon.sort((a, b) => a.days_until - b.days_until);
 
   // ── Stale 86 items (carried over from prior days, still on today's list) ─
+  // Reuses todaysNoteRows already fetched in the parallel batch above.
   type Stale86Item = { restaurant_id: string; restaurant_name: string; items: string[]; count: number };
   const stale86: Stale86Item[] = [];
-  let preshiftQuery = adminClient
-    .from('preshift_notes')
-    .select('restaurant_id, eighty_sixed, restaurants(name)')
-    .eq('shift_date', todayISO);
-  if (!isAdmin) {
-    preshiftQuery = preshiftQuery.in('restaurant_id', Array.from(allowedRestaurantIds));
-  }
-  const { data: todaysNoteRows } = await preshiftQuery;
   for (const note of todaysNoteRows || []) {
     const eightySixed = (note.eighty_sixed as { text: string; at: string }[] | null) || [];
     const staleItems = eightySixed.filter((it) => {
@@ -350,19 +360,8 @@ export async function GET() {
   }
 
   // ── Recently archived staff (last 30 days) ───────────────────────────────
+  // Reuses archivedRows already fetched in the parallel batch above.
   type ArchivedItem = { profile_id: string; full_name: string; restaurant_name: string; archived_at: string };
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  let archivedQuery = adminClient
-    .from('profiles')
-    .select('id, full_name, restaurant_id, updated_at, restaurants(name)')
-    .eq('status', 'archived')
-    .gte('updated_at', thirtyDaysAgo.toISOString())
-    .order('updated_at', { ascending: false });
-  if (!isAdmin) {
-    archivedQuery = archivedQuery.in('restaurant_id', Array.from(allowedRestaurantIds));
-  }
-  const { data: archivedRows } = await archivedQuery;
   const recentlyArchived: ArchivedItem[] = (archivedRows || []).map((p) => ({
     profile_id: p.id,
     full_name: p.full_name,
