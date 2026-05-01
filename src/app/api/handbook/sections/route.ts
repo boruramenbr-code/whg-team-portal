@@ -27,6 +27,25 @@ export async function GET(req: NextRequest) {
   const languageParam = req.nextUrl.searchParams.get('language');
   const language = languageParam === 'es' ? 'es' : 'en';
 
+  // ?audience= filters role_visibility:
+  //   'employee' (default) → returns 'employee' + 'all' (what staff sees)
+  //   'manager'             → returns 'manager' + 'all' (Manager Bible)
+  // Manager-audience requires the user to actually be manager-or-admin.
+  const audienceParam = req.nextUrl.searchParams.get('audience') === 'manager' ? 'manager' : 'employee';
+  let audienceFilter: string[] = ['employee', 'all'];
+  if (audienceParam === 'manager') {
+    const { data: roleProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    const isManagerLike = ['admin', 'manager', 'assistant_manager'].includes(roleProfile?.role || '');
+    if (!isManagerLike) {
+      return NextResponse.json({ error: 'Manager Bible is admin/manager only' }, { status: 403 });
+    }
+    audienceFilter = ['manager', 'all'];
+  }
+
   const selectCols = `
     id, sort_order, title, body, handbook_version, language, role_visibility,
     media:handbook_media(id, sort_order, storage_path, caption, alt_text, active)
@@ -37,6 +56,7 @@ export async function GET(req: NextRequest) {
     .select(selectCols)
     .eq('active', true)
     .eq('language', language)
+    .in('role_visibility', audienceFilter)
     .order('sort_order', { ascending: true });
 
   if (error) {
@@ -75,6 +95,7 @@ export async function GET(req: NextRequest) {
       .select(selectCols)
       .eq('active', true)
       .eq('language', 'en')
+      .in('role_visibility', audienceFilter)
       .order('sort_order', { ascending: true });
     return NextResponse.json({
       sections: decorate(fallback as RawSection[] | null),

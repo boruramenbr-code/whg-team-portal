@@ -23,6 +23,12 @@ interface HandbookSection {
 
 interface Props {
   language: 'en' | 'es';
+  /**
+   * Which handbook to render:
+   *   • 'employee' (default) → staff handbook + 'all'-visibility sections
+   *   • 'manager'            → Manager Bible content (manager + 'all')
+   */
+  audience?: 'employee' | 'manager';
 }
 
 /**
@@ -30,7 +36,7 @@ interface Props {
  * and a collapsible section list on mobile. Includes in-document search
  * that jumps to matching sections.
  */
-export default function HandbookReaderTab({ language }: Props) {
+export default function HandbookReaderTab({ language, audience = 'employee' }: Props) {
   const [sections, setSections] = useState<HandbookSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +63,7 @@ export default function HandbookReaderTab({ language }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/handbook/sections?language=${language}`);
+        const res = await fetch(`/api/handbook/sections?language=${language}&audience=${audience}`);
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           throw new Error(j.error || `Request failed (${res.status})`);
@@ -74,7 +80,7 @@ export default function HandbookReaderTab({ language }: Props) {
       }
     })();
     return () => { cancelled = true; };
-  }, [language]);
+  }, [language, audience]);
 
   // Which sections contain the search term (case-insensitive)
   const matchedIds = useMemo(() => {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Profile, Restaurant } from '@/lib/types';
 import AdminPanel from './AdminPanel';
 import PreshiftAdminContent from './PreshiftAdminContent';
+import ManagerBibleTab from './ManagerBibleTab';
 import BarCardsTab from './BarCardsTab';
 import ComplianceTab from './ComplianceTab';
 import MissionControlDashboard from './MissionControlDashboard';
@@ -13,7 +14,7 @@ interface Props {
   restaurants: Restaurant[];
 }
 
-type DashboardTab = 'dashboard' | 'staff' | 'preshift' | 'compliance' | 'barcards' | 'settings';
+type DashboardTab = 'dashboard' | 'staff' | 'preshift' | 'compliance' | 'barcards' | 'bible' | 'settings';
 
 /* ── SVG icons for admin bottom nav ── */
 const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -53,6 +54,12 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <polyline points="9 12 11 14 15 10" stroke={a ? 'white' : 'currentColor'} />
     </svg>
   ),
+  bible: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" fill={a ? '#1B3A6B' : 'none'} />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  ),
   settings: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" fill={a ? '#1B3A6B' : 'none'} />
@@ -70,6 +77,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
     { key: 'staff', label: 'Staff', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
     { key: 'barcards', label: 'Bar Cards', emoji: '🪪' },
+    { key: 'bible', label: 'Bible', emoji: '📖' },
     { key: 'compliance', label: 'Compliance', emoji: '✅' },
     ...(isAdmin
       ? [{ key: 'settings' as DashboardTab, label: 'Settings', emoji: '⚙️', adminOnly: true, disabled: true }]
@@ -141,6 +149,12 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {activeTab === 'barcards' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 200px)' }}>
             <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
+          </div>
+        )}
+
+        {activeTab === 'bible' && (
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 200px)' }}>
+            <ManagerBibleTab profile={profile} />
           </div>
         )}
 

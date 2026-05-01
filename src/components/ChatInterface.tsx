@@ -38,17 +38,27 @@ interface ChatInterfaceProps {
   onHandbookSourceChange?: (source: 'employee' | 'manager') => void;
   language: 'en' | 'es';
   onLanguageChange: (lang: 'en' | 'es') => void;
+  /**
+   * If provided, locks the handbook source and hides the toggle.
+   *   • 'employee' → staff portal: always queries staff handbook only
+   *   • 'manager'  → Manager Bible tab: always queries manager-only content
+   * If omitted, defaults to 'employee' (no manager toggle).
+   */
+  forceSource?: 'employee' | 'manager';
 }
 
-export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed, onHandbookSourceChange, language, onLanguageChange }: ChatInterfaceProps) {
+export default function ChatInterface({ profile, pendingQuestion, onPendingQuestionConsumed, onHandbookSourceChange, language, onLanguageChange, forceSource }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
+  const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>(forceSource || 'employee');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isManager = ['manager', 'admin', 'assistant_manager'].includes(profile.role);
+  // When forceSource is set, hide the toggle entirely. Used by the staff portal
+  // (locks to 'employee') and the Manager Bible tab (locks to 'manager').
+  const showSourceToggle = isManager && !forceSource;
   const firstName = profile.full_name.split(' ')[0];
   const restaurantName = (profile.restaurants as { name?: string } | null)?.name || null;
   const greeting = restaurantName ? `Hey ${firstName} of ${restaurantName}!` : `Hey ${firstName}!`;
@@ -194,8 +204,8 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
           : 'bg-white border-gray-100'
       }`}>
         <div className="flex items-center justify-between gap-3">
-          {/* Manager handbook toggle (managers only) */}
-          {isManager ? (
+          {/* Manager handbook toggle (managers only, hidden when source is locked) */}
+          {showSourceToggle ? (
             <div className={`flex rounded-lg p-0.5 ${
               handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
             }`}>

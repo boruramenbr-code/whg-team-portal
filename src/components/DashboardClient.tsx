@@ -222,6 +222,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                   onHandbookSourceChange={setHandbookSource}
                   language={language}
                   onLanguageChange={setLanguage}
+                  forceSource="employee"
                 />
               </div>
 
