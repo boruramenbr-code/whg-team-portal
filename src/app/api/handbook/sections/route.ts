@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   // ?audience= filters role_visibility:
   //   'employee' (default) → returns 'employee' + 'all' (what staff sees)
-  //   'manager'             → returns 'manager' + 'all' (Manager Bible)
+  //   'manager'             → returns 'manager' + 'all' (Manager's Handbook Standards)
   // Manager-audience requires the user to actually be manager-or-admin.
   const audienceParam = req.nextUrl.searchParams.get('audience') === 'manager' ? 'manager' : 'employee';
   let audienceFilter: string[] = ['employee', 'all'];
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       .single();
     const isManagerLike = ['admin', 'manager', 'assistant_manager'].includes(roleProfile?.role || '');
     if (!isManagerLike) {
-      return NextResponse.json({ error: 'Manager Bible is admin/manager only' }, { status: 403 });
+      return NextResponse.json({ error: 'Manager Standards is admin/manager only' }, { status: 403 });
     }
     audienceFilter = ['manager', 'all'];
   }

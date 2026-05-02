@@ -26,7 +26,7 @@ interface Props {
   /**
    * Which handbook to render:
    *   • 'employee' (default) → staff handbook + 'all'-visibility sections
-   *   • 'manager'            → Manager Bible content (manager + 'all')
+   *   • 'manager'            → Manager's Handbook Standards content (manager + 'all')
    */
   audience?: 'employee' | 'manager';
 }
