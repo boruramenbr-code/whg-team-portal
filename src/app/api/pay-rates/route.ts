@@ -35,7 +35,7 @@ export async function GET() {
 
   const { data: me } = await supabase
     .from('profiles')
-    .select('role, status')
+    .select('role, status, restaurant_id')
     .eq('id', user.id)
     .single();
 
@@ -43,7 +43,35 @@ export async function GET() {
     return NextResponse.json({ error: 'Manager access required' }, { status: 403 });
   }
 
+  // Scope: admins see all restaurants. Managers/asst managers see only
+  // their primary restaurant + any extra locations granted via user_locations.
+  const isAdmin = me.role === 'admin';
+  const { data: extraLocs } = await supabase
+    .from('user_locations')
+    .select('restaurant_id')
+    .eq('profile_id', user.id);
+  const allowedRestaurantIds = new Set<string>([
+    ...(me.restaurant_id ? [me.restaurant_id] : []),
+    ...((extraLocs || []).map((l) => l.restaurant_id)),
+  ]);
+
   const adminClient = getAdminClient();
+
+  let restaurantsQ = adminClient
+    .from('restaurants')
+    .select('id, name')
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+  if (!isAdmin) {
+    restaurantsQ = restaurantsQ.in('id', Array.from(allowedRestaurantIds));
+  }
+
+  let ratesQ = adminClient
+    .from('position_pay_rates')
+    .select('id, position_id, restaurant_id, pay_rate, notes, effective_date');
+  if (!isAdmin) {
+    ratesQ = ratesQ.in('restaurant_id', Array.from(allowedRestaurantIds));
+  }
 
   const [positionsRes, restaurantsRes, ratesRes] = await Promise.all([
     adminClient
@@ -51,14 +79,8 @@ export async function GET() {
       .select('id, slug, name, emoji, department, sort_order')
       .eq('active', true)
       .order('sort_order', { ascending: true }),
-    adminClient
-      .from('restaurants')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name', { ascending: true }),
-    adminClient
-      .from('position_pay_rates')
-      .select('id, position_id, restaurant_id, pay_rate, notes, effective_date'),
+    restaurantsQ,
+    ratesQ,
   ]);
 
   return NextResponse.json({
