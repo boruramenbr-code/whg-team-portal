@@ -5,7 +5,6 @@ import WelcomeNoteModal from './WelcomeNoteModal';
 import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
-import PositionsSection from './PositionsSection';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -196,9 +195,6 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
           </h1>
           <p className="text-sm text-gray-400 mt-1">{todayLabel}</p>
         </div>
-
-        {/* ── Team Positions button (opens modal — not a daily-focus item) ── */}
-        <PositionsSection language={language} />
 
         {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
         <NewHiresSection language={language} />

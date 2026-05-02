@@ -17,20 +17,19 @@ interface Props {
 }
 
 /**
- * PositionsSection — staff-facing position catalog, accessed via a button.
+ * PositionsSection — full-page tab content showing the position catalog.
  *
- * Renders as a single CTA button that, when tapped, opens an overlay sheet
- * containing the full position grid (grouped by FOH / BOH / Management).
- * Tapping a position inside the grid opens PositionDetailModal on top.
+ * Renders the entire FOH / BOH / Management grid as the active tab.
+ * Tapping a position opens PositionDetailModal with the description.
  *
- * This is intentionally a button rather than an inline section because
- * position browsing is reference content — it shouldn't compete with
- * daily content (pre-shift, new hires, owner messages) on the home feed.
+ * This is the staff-facing "Team Positions" tab in the bottom nav,
+ * placed next to Home. It's intentionally a separate tab so daily
+ * content (pre-shift, owner messages, birthdays) stays uncluttered
+ * on the Home feed while position browsing is one tap away.
  */
 export default function PositionsSection({ language }: Props) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Position | null>(null);
   const isES = language === 'es';
 
@@ -49,63 +48,6 @@ export default function PositionsSection({ language }: Props) {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading || positions.length === 0) return null;
-
-  const buttonLabel = isES ? 'Posiciones del Equipo' : 'Team Positions';
-  const buttonSub = isES ? 'Ver todos los roles y descripciones' : 'View all roles and descriptions';
-
-  return (
-    <>
-      {/* Trigger button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="tap-highlight w-full bg-white hover:bg-gray-50 active:bg-gray-100 rounded-2xl shadow-sm border border-white/80 p-4 flex items-center justify-between gap-3 transition-colors"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="text-2xl flex-shrink-0">🧭</span>
-          <div className="text-left min-w-0">
-            <div className="text-sm font-bold text-[#1B3A6B] truncate">{buttonLabel}</div>
-            <div className="text-[11px] text-gray-500 truncate">{buttonSub}</div>
-          </div>
-        </div>
-        <span className="text-gray-400 text-xl leading-none flex-shrink-0">›</span>
-      </button>
-
-      {/* Grid overlay */}
-      {open && (
-        <PositionsGridModal
-          positions={positions}
-          language={language}
-          onClose={() => setOpen(false)}
-          onPickPosition={setActive}
-        />
-      )}
-
-      {/* Detail modal — stacks on top of grid modal */}
-      {active && (
-        <PositionDetailModal
-          position={active}
-          language={language}
-          onClose={() => setActive(null)}
-        />
-      )}
-    </>
-  );
-}
-
-/* ───────── Grid modal (catalog of all positions) ───────── */
-function PositionsGridModal({
-  positions,
-  language,
-  onClose,
-  onPickPosition,
-}: {
-  positions: Position[];
-  language: 'en' | 'es';
-  onClose: () => void;
-  onPickPosition: (p: Position) => void;
-}) {
-  const isES = language === 'es';
   const byDept = {
     FOH: positions.filter((p) => p.department === 'FOH'),
     BOH: positions.filter((p) => p.department === 'BOH'),
@@ -115,76 +57,72 @@ function PositionsGridModal({
     ? { FOH: 'Frente de Casa', BOH: 'Cocina', Management: 'Gerencia' }
     : { FOH: 'Front of House', BOH: 'Back of House', Management: 'Management' };
 
-  // Close on Escape
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[88vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Drag handle on mobile */}
-        <div className="sm:hidden flex justify-center pt-2 pb-1">
-          <div className="w-10 h-1 rounded-full bg-gray-300" />
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
+      <div className="max-w-3xl mx-auto px-4 py-6 md:py-8 space-y-4">
+
+        {/* ── Header ── */}
+        <div className="bg-white rounded-2xl shadow-sm p-5">
+          <h2 className="text-lg font-bold text-[#1B3A6B] flex items-center gap-2">
+            <span>🧭</span>
+            {isES ? 'Posiciones del Equipo' : 'Team Positions'}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {isES
+              ? 'Toca una posición para ver qué hace.'
+              : 'Tap a position to see what it does.'}
+          </p>
         </div>
 
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-[#1B3A6B] flex items-center gap-2">
-              <span>🧭</span>
-              {isES ? 'Posiciones del Equipo' : 'Team Positions'}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {isES ? 'Toca una posición para ver qué hace.' : 'Tap a position to see what it does.'}
-            </p>
+        {/* ── Loading / empty states ── */}
+        {loading && (
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-gray-500">
+            {isES ? 'Cargando…' : 'Loading…'}
           </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
-            aria-label={isES ? 'Cerrar' : 'Close'}
-          >
-            ✕
-          </button>
-        </div>
+        )}
 
-        {/* Scrollable grid */}
-        <div className="overflow-y-auto p-4 space-y-5">
-          {(['FOH', 'BOH', 'Management'] as const).map((dept) => {
-            const items = byDept[dept];
-            if (items.length === 0) return null;
-            return (
-              <div key={dept}>
-                <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 px-1">
-                  {deptLabels[dept]}
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {items.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => onPickPosition(p)}
-                      className="tap-highlight text-left bg-gray-50 hover:bg-[#EEF3F9] active:bg-[#DCE6F1] border border-gray-200 rounded-xl px-3 py-3 transition-colors flex items-center gap-2.5"
-                    >
-                      <span className="text-2xl flex-shrink-0">{p.emoji}</span>
-                      <span className="text-sm font-semibold text-[#1B3A6B] leading-tight">
-                        {p.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+        {!loading && positions.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-gray-500">
+            {isES ? 'No hay posiciones todavía.' : 'No positions yet.'}
+          </div>
+        )}
+
+        {/* ── Department-grouped grids ── */}
+        {!loading && positions.length > 0 && (['FOH', 'BOH', 'Management'] as const).map((dept) => {
+          const items = byDept[dept];
+          if (items.length === 0) return null;
+          return (
+            <div key={dept} className="bg-white rounded-2xl shadow-sm p-4">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-3 px-1">
+                {deptLabels[dept]}
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {items.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setActive(p)}
+                    className="tap-highlight text-left bg-gray-50 hover:bg-[#EEF3F9] active:bg-[#DCE6F1] border border-gray-200 rounded-xl px-3 py-3 transition-colors flex items-center gap-2.5"
+                  >
+                    <span className="text-2xl flex-shrink-0">{p.emoji}</span>
+                    <span className="text-sm font-semibold text-[#1B3A6B] leading-tight">
+                      {p.name}
+                    </span>
+                  </button>
+                ))}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
+
+      {/* ── Detail modal ── */}
+      {active && (
+        <PositionDetailModal
+          position={active}
+          language={language}
+          onClose={() => setActive(null)}
+        />
+      )}
     </div>
   );
 }

@@ -10,13 +10,14 @@ import PoliciesTab from './PoliciesTab';
 import HandbookReaderTab from './HandbookReaderTab';
 import OurTeamTab from './OurTeamTab';
 import HomeTab from './HomeTab';
+import PositionsSection from './PositionsSection';
 
 interface Props {
   profile: Profile;
   isManager: boolean;
 }
 
-type TopTabKey = 'home' | 'handbook' | 'preshift' | 'ourteam';
+type TopTabKey = 'home' | 'positions' | 'handbook' | 'preshift' | 'ourteam';
 type HandbookSubTab = 'read' | 'policies' | 'ask';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ── */
@@ -25,6 +26,12 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
     <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#1B3A6B' : 'none'} stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  positions: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" fill={a ? '#1B3A6B' : 'none'} />
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" stroke={a ? 'white' : 'currentColor'} fill={a ? 'white' : 'none'} />
     </svg>
   ),
   handbook: (a) => (
@@ -75,6 +82,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
   const topTabs: { key: TopTabKey; label: string; labelEs: string; emoji: string }[] = [
     { key: 'home', label: 'Home', labelEs: 'Inicio', emoji: '🏠' },
+    { key: 'positions', label: 'Positions', labelEs: 'Posiciones', emoji: '🧭' },
     { key: 'handbook', label: 'Handbook & Policies', labelEs: 'Manual y Políticas', emoji: '📘' },
     { key: 'ourteam', label: 'Our Team', labelEs: 'Nuestro Equipo', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', labelEs: 'Pre-Turno', emoji: '📋' },
@@ -83,6 +91,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
   /* Short labels for bottom nav on mobile */
   const mobileLabels: Record<TopTabKey, { en: string; es: string }> = {
     home: { en: 'Home', es: 'Inicio' },
+    positions: { en: 'Positions', es: 'Posiciones' },
     handbook: { en: 'Handbook', es: 'Manual' },
     ourteam: { en: 'Team', es: 'Equipo' },
     preshift: { en: 'Pre-Shift', es: 'Pre-Turno' },
@@ -193,6 +202,13 @@ export default function DashboardClient({ profile, isManager }: Props) {
               language={language}
               onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
             />
+          </div>
+        )}
+
+        {/* TEAM POSITIONS */}
+        {activeTop === 'positions' && (
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
+            <PositionsSection language={language} />
           </div>
         )}
 
