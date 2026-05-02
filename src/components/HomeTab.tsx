@@ -5,6 +5,7 @@ import WelcomeNoteModal from './WelcomeNoteModal';
 import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
+import PositionsSection from './PositionsSection';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -330,6 +331,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
             </div>
           )}
         </section>
+
+        {/* ── Team Positions (catalog of roles + descriptions) ── */}
+        <PositionsSection language={language} />
 
         {/* ── Upcoming Birthdays ── */}
         {birthdays.length > 0 && (

@@ -8,13 +8,14 @@ import ManagerStandardsTab from './ManagerStandardsTab';
 import BarCardsTab from './BarCardsTab';
 import ComplianceTab from './ComplianceTab';
 import MissionControlDashboard from './MissionControlDashboard';
+import PayRatesTab from './PayRatesTab';
 
 interface Props {
   profile: Profile;
   restaurants: Restaurant[];
 }
 
-type DashboardTab = 'dashboard' | 'staff' | 'preshift' | 'compliance' | 'barcards' | 'standards' | 'settings';
+type DashboardTab = 'dashboard' | 'staff' | 'preshift' | 'compliance' | 'barcards' | 'standards' | 'payrates' | 'settings';
 
 /* ── SVG icons for admin bottom nav ── */
 const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -60,6 +61,12 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </svg>
   ),
+  payrates: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" fill={a ? '#1B3A6B' : 'none'} />
+    </svg>
+  ),
   settings: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" fill={a ? '#1B3A6B' : 'none'} />
@@ -78,6 +85,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
     { key: 'barcards', label: 'Bar Cards', emoji: '🪪' },
     { key: 'standards', label: 'Standards', emoji: '📖' },
+    { key: 'payrates', label: 'Pay Rates', emoji: '💰' },
     { key: 'compliance', label: 'Compliance', emoji: '✅' },
     ...(isAdmin
       ? [{ key: 'settings' as DashboardTab, label: 'Settings', emoji: '⚙️', adminOnly: true, disabled: true }]
@@ -155,6 +163,12 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {activeTab === 'standards' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 200px)' }}>
             <ManagerStandardsTab profile={profile} />
+          </div>
+        )}
+
+        {activeTab === 'payrates' && (
+          <div className="tab-content-enter">
+            <PayRatesTab profile={profile} />
           </div>
         )}
 
