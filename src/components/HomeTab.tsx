@@ -197,6 +197,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
           <p className="text-sm text-gray-400 mt-1">{todayLabel}</p>
         </div>
 
+        {/* ── Team Positions button (opens modal — not a daily-focus item) ── */}
+        <PositionsSection language={language} />
+
         {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
         <NewHiresSection language={language} />
 
@@ -331,9 +334,6 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
             </div>
           )}
         </section>
-
-        {/* ── Team Positions (catalog of roles + descriptions) ── */}
-        <PositionsSection language={language} />
 
         {/* ── Upcoming Birthdays ── */}
         {birthdays.length > 0 && (

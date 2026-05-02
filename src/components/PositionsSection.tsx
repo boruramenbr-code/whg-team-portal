@@ -17,16 +17,20 @@ interface Props {
 }
 
 /**
- * PositionsSection — staff-facing position catalog.
+ * PositionsSection — staff-facing position catalog, accessed via a button.
  *
- * 2-column grid of icon buttons grouped by department (FOH / BOH / Management).
- * Tapping a button opens a modal with the position description.
+ * Renders as a single CTA button that, when tapped, opens an overlay sheet
+ * containing the full position grid (grouped by FOH / BOH / Management).
+ * Tapping a position inside the grid opens PositionDetailModal on top.
  *
- * Pay rates are NOT shown here — they live in the manager-only Pay Rates tab.
+ * This is intentionally a button rather than an inline section because
+ * position browsing is reference content — it shouldn't compete with
+ * daily content (pre-shift, new hires, owner messages) on the home feed.
  */
 export default function PositionsSection({ language }: Props) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Position | null>(null);
   const isES = language === 'es';
 
@@ -47,33 +51,113 @@ export default function PositionsSection({ language }: Props) {
 
   if (loading || positions.length === 0) return null;
 
-  // Group by department
+  const buttonLabel = isES ? 'Posiciones del Equipo' : 'Team Positions';
+  const buttonSub = isES ? 'Ver todos los roles y descripciones' : 'View all roles and descriptions';
+
+  return (
+    <>
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen(true)}
+        className="tap-highlight w-full bg-white hover:bg-gray-50 active:bg-gray-100 rounded-2xl shadow-sm border border-white/80 p-4 flex items-center justify-between gap-3 transition-colors"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-2xl flex-shrink-0">🧭</span>
+          <div className="text-left min-w-0">
+            <div className="text-sm font-bold text-[#1B3A6B] truncate">{buttonLabel}</div>
+            <div className="text-[11px] text-gray-500 truncate">{buttonSub}</div>
+          </div>
+        </div>
+        <span className="text-gray-400 text-xl leading-none flex-shrink-0">›</span>
+      </button>
+
+      {/* Grid overlay */}
+      {open && (
+        <PositionsGridModal
+          positions={positions}
+          language={language}
+          onClose={() => setOpen(false)}
+          onPickPosition={setActive}
+        />
+      )}
+
+      {/* Detail modal — stacks on top of grid modal */}
+      {active && (
+        <PositionDetailModal
+          position={active}
+          language={language}
+          onClose={() => setActive(null)}
+        />
+      )}
+    </>
+  );
+}
+
+/* ───────── Grid modal (catalog of all positions) ───────── */
+function PositionsGridModal({
+  positions,
+  language,
+  onClose,
+  onPickPosition,
+}: {
+  positions: Position[];
+  language: 'en' | 'es';
+  onClose: () => void;
+  onPickPosition: (p: Position) => void;
+}) {
+  const isES = language === 'es';
   const byDept = {
     FOH: positions.filter((p) => p.department === 'FOH'),
     BOH: positions.filter((p) => p.department === 'BOH'),
     Management: positions.filter((p) => p.department === 'Management'),
   };
-
   const deptLabels = isES
     ? { FOH: 'Frente de Casa', BOH: 'Cocina', Management: 'Gerencia' }
     : { FOH: 'Front of House', BOH: 'Back of House', Management: 'Management' };
 
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <>
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-[#1B3A6B] to-[#2C4F8A] px-5 py-4">
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <span>🧭</span>
-            {isES ? 'Posiciones del Equipo' : 'Team Positions'}
-          </h2>
-          <p className="text-xs text-white/80 mt-0.5">
-            {isES
-              ? 'Toca una posición para ver qué hace.'
-              : 'Tap a position to see what it does.'}
-          </p>
+    <div
+      className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[88vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Drag handle on mobile */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
 
-        <div className="p-4 space-y-5">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold text-[#1B3A6B] flex items-center gap-2">
+              <span>🧭</span>
+              {isES ? 'Posiciones del Equipo' : 'Team Positions'}
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {isES ? 'Toca una posición para ver qué hace.' : 'Tap a position to see what it does.'}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
+            aria-label={isES ? 'Cerrar' : 'Close'}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable grid */}
+        <div className="overflow-y-auto p-4 space-y-5">
           {(['FOH', 'BOH', 'Management'] as const).map((dept) => {
             const items = byDept[dept];
             if (items.length === 0) return null;
@@ -86,7 +170,7 @@ export default function PositionsSection({ language }: Props) {
                   {items.map((p) => (
                     <button
                       key={p.id}
-                      onClick={() => setActive(p)}
+                      onClick={() => onPickPosition(p)}
                       className="tap-highlight text-left bg-gray-50 hover:bg-[#EEF3F9] active:bg-[#DCE6F1] border border-gray-200 rounded-xl px-3 py-3 transition-colors flex items-center gap-2.5"
                     >
                       <span className="text-2xl flex-shrink-0">{p.emoji}</span>
@@ -101,15 +185,7 @@ export default function PositionsSection({ language }: Props) {
           })}
         </div>
       </div>
-
-      {active && (
-        <PositionDetailModal
-          position={active}
-          language={language}
-          onClose={() => setActive(null)}
-        />
-      )}
-    </>
+    </div>
   );
 }
 
@@ -126,11 +202,8 @@ function PositionDetailModal({
   const isES = language === 'es';
   const hasDescription = !!position.description?.trim();
 
-  // Close on Escape
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -151,12 +224,10 @@ function PositionDetailModal({
         className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[88vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag handle on mobile */}
         <div className="sm:hidden flex justify-center pt-2 pb-1">
           <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
 
-        {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-4xl flex-shrink-0">{position.emoji}</span>
@@ -178,7 +249,6 @@ function PositionDetailModal({
           </button>
         </div>
 
-        {/* Body */}
         <div className="overflow-y-auto px-5 py-5 flex-1">
           {hasDescription ? (
             <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
@@ -188,9 +258,7 @@ function PositionDetailModal({
             <div className="text-center py-8 text-gray-500">
               <div className="text-3xl mb-2">📝</div>
               <p className="text-sm font-medium">
-                {isES
-                  ? 'Descripción próximamente.'
-                  : 'Description coming soon.'}
+                {isES ? 'Descripción próximamente.' : 'Description coming soon.'}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {isES
