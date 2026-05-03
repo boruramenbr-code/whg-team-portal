@@ -72,6 +72,11 @@ export default function PositionsSection({ language }: Props) {
               ? 'Toca una posición para ver qué hace.'
               : 'Tap a position to see what it does.'}
           </p>
+          <p className="text-xs text-[#1B3A6B] font-semibold mt-2 italic leading-relaxed">
+            {isES
+              ? 'Estos son nuestros estándares. Cualquier cosa por debajo será atendida por la gerencia.'
+              : 'These are our standards. Anything below gets addressed by management.'}
+          </p>
         </div>
 
         {/* ── Know Your Pay (collapsible educational card) ── */}
