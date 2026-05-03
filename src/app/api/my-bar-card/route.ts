@@ -31,16 +31,16 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('requires_bar_card, status')
+    .select('requires_bar_card, status, role')
     .eq('id', user.id)
     .single();
 
   if (!profile || profile.status === 'archived') {
-    return NextResponse.json({ requires: false, status: 'not_required', card: null, days_until: null });
+    return NextResponse.json({ requires: false, role: null, status: 'not_required', card: null, days_until: null });
   }
 
   if (!profile.requires_bar_card) {
-    return NextResponse.json({ requires: false, status: 'not_required', card: null, days_until: null });
+    return NextResponse.json({ requires: false, role: profile.role, status: 'not_required', card: null, days_until: null });
   }
 
   // Latest active card for this profile (most recent expiration_date wins —
@@ -77,6 +77,7 @@ export async function GET() {
   return NextResponse.json(
     {
       requires: true,
+      role: profile.role,
       status,
       card: {
         expiration_date: card.expiration_date,

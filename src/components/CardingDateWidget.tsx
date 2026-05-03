@@ -21,7 +21,7 @@ interface Props {
  * rule that keeps the restaurant's liquor license safe.
  */
 export default function CardingDateWidget({ language }: Props) {
-  const [requires, setRequires] = useState<boolean | null>(null);
+  const [show, setShow] = useState<boolean | null>(null);
   const isES = language === 'es';
 
   useEffect(() => {
@@ -29,15 +29,20 @@ export default function CardingDateWidget({ language }: Props) {
     fetch('/api/my-bar-card', { cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled) setRequires(!!data?.requires);
+        if (cancelled) return;
+        // Show to anyone who serves alcohol (requires_bar_card=true) OR
+        // to leadership tier (admin/manager/asst_manager) who oversee the
+        // floor and need to see what staff sees + may card guests themselves.
+        const isLeadership = ['admin', 'manager', 'assistant_manager'].includes(data?.role || '');
+        setShow(!!data?.requires || isLeadership);
       })
       .catch(() => {
-        if (!cancelled) setRequires(false);
+        if (!cancelled) setShow(false);
       });
     return () => { cancelled = true; };
   }, []);
 
-  if (!requires) return null;
+  if (!show) return null;
 
   // Compute cutoff: today's date minus 21 years
   const today = new Date();
@@ -100,6 +105,33 @@ export default function CardingDateWidget({ language }: Props) {
               ? 'Servir a un menor puede costarle al restaurante su licencia de licor, multas grandes, y a usted personalmente. Si tiene duda, pida la ID. Sin excepción.'
               : 'Serving a minor can cost the restaurant its liquor license, large fines, and put you personally on the line. When in doubt, card them. No exceptions.'}
           </p>
+        </div>
+
+        {/* Carding checklist */}
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 mt-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-white/85 mb-2">
+            {isES ? 'Cómo Verificar la ID' : 'How to Card'}
+          </p>
+          <ul className="space-y-1.5 text-xs leading-relaxed">
+            {(isES ? [
+              'Tome la ID en su mano — no deje que se la muestren rápido.',
+              'Calcule la edad por la fecha de nacimiento — no confíe en la fecha de vencimiento.',
+              'Compare la foto con la persona cuidadosamente.',
+              'Las IDs de Louisiana para menores de 21 son verticales — bandera roja inmediata.',
+              'Si tiene duda, rechace cortésmente o llame a un gerente.',
+            ] : [
+              'Take the ID in your hand — don’t let them flash it.',
+              'Calculate age from the date of birth — don’t trust the expiration.',
+              'Compare the photo to the person carefully.',
+              'Louisiana under-21 IDs are vertical — instant red flag.',
+              'When in doubt, refuse politely or get a manager.',
+            ]).map((b, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-white/60 flex-shrink-0 leading-tight">•</span>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
