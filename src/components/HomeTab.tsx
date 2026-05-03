@@ -200,35 +200,7 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
         {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
         <NewHiresSection language={language} />
 
-        {/* ── Personal Bar Card alert (only renders when actionable) ── */}
-        <MyBarCardWidget language={language} />
-
-        {/* ── Age-verification cutoff (only renders for staff who serve alcohol) ── */}
-        <CardingDateWidget language={language} />
-
-        {/* ── Owner's Message (pinned, if any) ── */}
-        {ownerMessages.length > 0 && (
-          <div className="space-y-2">
-            {ownerMessages.map((m) => (
-              <div
-                key={m.id}
-                className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/60 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm"
-              >
-                <span className="text-xl mt-0.5">💙</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
-                    {isES ? 'Mensaje del Dueño' : "Owner's Message"}
-                  </p>
-                  <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
-                    {m.message}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Pre-Shift Notes (live) ── */}
+        {/* ── Pre-Shift Notes (live) — promoted to top of feed ── */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
@@ -334,6 +306,34 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
             </div>
           )}
         </section>
+
+        {/* ── Owner's Message (pinned, if any) ── */}
+        {ownerMessages.length > 0 && (
+          <div className="space-y-2">
+            {ownerMessages.map((m) => (
+              <div
+                key={m.id}
+                className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/60 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm"
+              >
+                <span className="text-xl mt-0.5">💙</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
+                    {isES ? 'Mensaje del Dueño' : "Owner's Message"}
+                  </p>
+                  <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
+                    {m.message}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Age-verification cutoff (only renders for staff who serve alcohol) ── */}
+        <CardingDateWidget language={language} />
+
+        {/* ── Personal Bar Card alert (only renders when actionable) ── */}
+        <MyBarCardWidget language={language} />
 
         {/* ── Upcoming Birthdays ── */}
         {birthdays.length > 0 && (

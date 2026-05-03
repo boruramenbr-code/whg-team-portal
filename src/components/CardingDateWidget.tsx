@@ -65,6 +65,13 @@ export default function CardingDateWidget({ language }: Props) {
 
   return (
     <div className="bg-gradient-to-br from-[#7A1F2A] via-[#8E2330] to-[#9A2935] rounded-2xl shadow-md text-white overflow-hidden">
+      {/* Section banner — frames the card for any staff who see the dashboard */}
+      <div className="bg-black/25 px-5 py-2.5 text-center border-b border-white/10">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-200">
+          {isES ? 'Antes de Servir Alcohol' : 'Before Serving Alcohol'}
+        </h3>
+      </div>
+
       {/* Header */}
       <div className="px-5 py-3 flex items-center justify-between gap-2 border-b border-white/15">
         <div className="flex items-center gap-2">
