@@ -87,15 +87,56 @@ export default function CardingDateWidget({ language }: Props) {
 
       {/* Body */}
       <div className="px-5 py-5">
-        <p className="text-[11px] uppercase tracking-widest text-white/70 mb-2 font-semibold">
-          {isES ? 'Debe haber nacido en o antes de' : 'Must be born on or before'}
-        </p>
-        <div className="text-2xl md:text-3xl font-bold leading-tight">
-          {cutoffStr}
+        <div className="flex items-start justify-between gap-3">
+          {/* Left: cutoff date display */}
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] uppercase tracking-widest text-white/70 mb-2 font-semibold">
+              {isES ? 'Debe haber nacido en o antes de' : 'Must be born on or before'}
+            </p>
+            <div className="text-2xl md:text-3xl font-bold leading-tight">
+              {cutoffStr}
+            </div>
+            <p className="text-[11px] text-white/60 italic mt-1">
+              {isES ? `Hoy: ${todayStr}` : `As of today: ${todayStr}`}
+            </p>
+          </div>
+
+          {/* Right: prohibition / age-restriction sign */}
+          <div className="flex-shrink-0" aria-hidden="true">
+            <svg
+              viewBox="0 0 100 100"
+              className="w-20 h-20 md:w-24 md:h-24 drop-shadow-lg"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* White inner circle */}
+              <circle cx="50" cy="50" r="42" fill="#ffffff" />
+              {/* Red border */}
+              <circle cx="50" cy="50" r="42" fill="none" stroke="#DC2626" strokeWidth="9" />
+              {/* "21" text */}
+              <text
+                x="50"
+                y="64"
+                textAnchor="middle"
+                fontSize="36"
+                fontWeight="900"
+                fill="#1B1B1B"
+                fontFamily="system-ui, -apple-system, sans-serif"
+              >
+                21
+              </text>
+              {/* Diagonal prohibition slash (top-right to bottom-left) */}
+              <line
+                x1="22"
+                y1="78"
+                x2="78"
+                y2="22"
+                stroke="#DC2626"
+                strokeWidth="9"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
         </div>
-        <p className="text-[11px] text-white/60 italic mt-1">
-          {isES ? `Hoy: ${todayStr}` : `As of today: ${todayStr}`}
-        </p>
 
         {/* Guidance */}
         <div className="bg-white/12 backdrop-blur-sm rounded-xl p-3 mt-4">
