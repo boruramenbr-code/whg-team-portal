@@ -124,13 +124,13 @@ export default function CardingDateWidget({ language }: Props) {
               'Tome la ID en su mano — no deje que se la muestren rápido.',
               'Calcule la edad por la fecha de nacimiento — no confíe en la fecha de vencimiento.',
               'Compare la foto con la persona cuidadosamente.',
-              'Las IDs de Louisiana para menores de 21 son verticales — bandera roja inmediata.',
+              'Las IDs de LA para menores de 21 son verticales con texto rojo "Under 21" o "Under 18" junto a la foto.',
               'Si tiene duda, rechace cortésmente o llame a un gerente.',
             ] : [
               'Take the ID in your hand — don’t let them flash it.',
               'Calculate age from the date of birth — don’t trust the expiration.',
               'Compare the photo to the person carefully.',
-              'Louisiana under-21 IDs are vertical — instant red flag.',
+              'LA under-21 IDs are vertical with red "Under 21" or "Under 18" next to the photo.',
               'When in doubt, refuse politely or get a manager.',
             ]).map((b, i) => (
               <li key={i} className="flex items-start gap-2">
@@ -140,7 +140,93 @@ export default function CardingDateWidget({ language }: Props) {
             ))}
           </ul>
         </div>
+
+        {/* Spot a Fake ID — expandable */}
+        <FakeIdSection language={language} />
       </div>
+    </div>
+  );
+}
+
+/* ───────── Spot a Fake ID (collapsible inside CardingDateWidget) ─────────
+ * Quick checks only — keeps it scannable. External links at the bottom
+ * for staff who want to learn more on their own time.
+ */
+function FakeIdSection({ language }: { language: 'en' | 'es' }) {
+  const [open, setOpen] = useState(false);
+  const isES = language === 'es';
+
+  const bullets = isES ? [
+    'Sienta la fecha de nacimiento y la firma — las IDs reales tienen relieve.',
+    'Los bordes deben ser lisos y sellados — si se despegan, es falsa.',
+    'Incline la tarjeta — el sello holográfico debe cambiar de color.',
+    'Busque la estrella dorada REAL ID (requerida desde mayo 2025).',
+    'Cuidado con comportamiento nervioso o múltiples IDs presentadas.',
+    'Si sospecha, rechace cortésmente y llame al gerente. No discuta.',
+  ] : [
+    'Feel the DOB and signature — real IDs have raised, tactile features.',
+    'Edges should be smooth and sealed — peeling = fake.',
+    'Tilt the card — the holographic seal should shift color.',
+    'Look for the gold REAL ID star (required since May 2025).',
+    'Watch for nervous behavior or multiple IDs being shown.',
+    'If you suspect a fake — refuse politely, call a manager. Don’t argue.',
+  ];
+
+  return (
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl mt-3 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="tap-highlight w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-white/5 transition-colors"
+        aria-expanded={open}
+      >
+        <span className="text-[11px] font-bold uppercase tracking-widest text-white/85 flex items-center gap-1.5">
+          <span>🔍</span>
+          {isES ? 'Detectar una ID Falsa' : 'Spot a Fake ID'}
+        </span>
+        <span className={`text-white/60 text-base transition-transform ${open ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 pt-1 space-y-3 border-t border-white/10">
+          <ul className="space-y-1.5 text-xs leading-relaxed pt-2">
+            {bullets.map((b, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-white/60 flex-shrink-0 leading-tight">•</span>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+
+          {/* External links */}
+          <div className="pt-2 border-t border-white/10">
+            <p className="text-[10px] uppercase tracking-widest text-white/60 font-semibold mb-1.5">
+              {isES ? '¿Quiere aprender más?' : 'Want to learn more?'}
+            </p>
+            <div className="space-y-1">
+              <a
+                href="https://atc.louisiana.gov/resources/vertical-driver-s-license-information/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-white/95 hover:text-white underline underline-offset-2 flex items-center gap-1.5"
+              >
+                <span>📘</span>
+                <span>{isES ? 'Guía oficial de LA ATC' : 'Official LA ATC guide'}</span>
+                <span className="text-[10px] text-white/50">↗</span>
+              </a>
+              <a
+                href="https://www.driverslicenseguide.com/states/check-louisiana-id.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-white/95 hover:text-white underline underline-offset-2 flex items-center gap-1.5"
+              >
+                <span>🔎</span>
+                <span>{isES ? 'Cómo detectar una ID falsa de LA' : 'How to spot a fake LA ID'}</span>
+                <span className="text-[10px] text-white/50">↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
