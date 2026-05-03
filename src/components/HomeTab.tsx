@@ -5,6 +5,7 @@ import WelcomeNoteModal from './WelcomeNoteModal';
 import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
+import CardingDateWidget from './CardingDateWidget';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -201,6 +202,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
 
         {/* ── Personal Bar Card alert (only renders when actionable) ── */}
         <MyBarCardWidget language={language} />
+
+        {/* ── Age-verification cutoff (only renders for staff who serve alcohol) ── */}
+        <CardingDateWidget language={language} />
 
         {/* ── Owner's Message (pinned, if any) ── */}
         {ownerMessages.length > 0 && (
