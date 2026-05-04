@@ -12,9 +12,16 @@ interface Position {
   sort_order: number;
 }
 
+interface RestaurantOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   language: 'en' | 'es';
 }
+
+const VIEW_RESTAURANT_KEY = 'whg_view_restaurant_id';
 
 /**
  * PositionsSection — full-page tab content showing the position catalog.
@@ -22,31 +29,59 @@ interface Props {
  * Renders the entire FOH / BOH / Management grid as the active tab.
  * Tapping a position opens PositionDetailModal with the description.
  *
- * This is the staff-facing "Team Positions" tab in the bottom nav,
- * placed next to Home. It's intentionally a separate tab so daily
- * content (pre-shift, owner messages, birthdays) stays uncluttered
- * on the Home feed while position browsing is one tap away.
+ * For admins and multi-location managers, a restaurant switcher renders
+ * at the top so they can preview any restaurant's catalog. Selection
+ * persists in localStorage so the choice sticks across visits.
  */
 export default function PositionsSection({ language }: Props) {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<Position | null>(null);
+  const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  const [availableRestaurants, setAvailableRestaurants] = useState<RestaurantOption[]>([]);
   const isES = language === 'es';
 
+  // Load any saved restaurant preference on first render
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_RESTAURANT_KEY);
+      if (saved) setRestaurantId(saved);
+    } catch {
+      // localStorage unavailable (private mode, etc.) — fine, fall back to profile default
+    }
+  }, []);
+
+  // Fetch positions whenever the selected restaurant changes
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/positions', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setPositions(data.positions || []);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    setLoading(true);
+    const url = restaurantId
+      ? `/api/positions?restaurant_id=${encodeURIComponent(restaurantId)}`
+      : '/api/positions';
+
+    fetch(url, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        setPositions(data.positions || []);
+        if (Array.isArray(data.available_restaurants)) {
+          setAvailableRestaurants(data.available_restaurants);
+        }
+        // If we hadn't picked one yet, sync to whatever the API resolved
+        if (!restaurantId && data.restaurant_id) {
+          setRestaurantId(data.restaurant_id);
+        }
+      })
+      .catch(() => { /* ignore */ })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
     return () => { cancelled = true; };
-  }, []);
+  }, [restaurantId]);
+
+  const onSelectRestaurant = (id: string) => {
+    setRestaurantId(id);
+    try { localStorage.setItem(VIEW_RESTAURANT_KEY, id); } catch { /* ignore */ }
+  };
 
   const byDept = {
     FOH: positions.filter((p) => p.department === 'FOH'),
@@ -78,6 +113,30 @@ export default function PositionsSection({ language }: Props) {
               : 'These are our standards. Anything below gets addressed by management.'}
           </p>
         </div>
+
+        {/* ── Restaurant switcher (admins / multi-location users) ── */}
+        {availableRestaurants.length > 1 && (
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+              {isES ? 'Viendo Como' : 'Viewing As'}
+            </p>
+            <div className="flex gap-1.5 flex-wrap">
+              {availableRestaurants.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => onSelectRestaurant(r.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    restaurantId === r.id
+                      ? 'bg-[#1B3A6B] text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {r.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ── Know Your Pay (collapsible educational card) ── */}
         <KnowYourPayCard language={language} />
