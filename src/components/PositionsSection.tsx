@@ -197,9 +197,7 @@ function PositionDetailModal({
 
         <div className="overflow-y-auto px-5 py-5 flex-1">
           {hasDescription ? (
-            <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {position.description}
-            </div>
+            <PositionDescriptionRenderer text={position.description!} />
           ) : (
             <div className="text-center py-8 text-gray-500">
               <div className="text-3xl mb-2">📝</div>
@@ -215,6 +213,195 @@ function PositionDetailModal({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ───────── Position Description Renderer ─────────
+ * Mini markdown-style parser tuned for Boru job description format.
+ *
+ * Supported syntax:
+ *   [POS_INFO] / [/POS_INFO]       — info block (Reports To, Pay Type, etc.)
+ *   ## SECTION HEADER              — major section
+ *   ### Subsection                 — subsection (numbered responsibilities)
+ *   > callout text                 — amber Standard callout
+ *   - bullet text                  — bullet list
+ *   **bold inline**                — bold inline
+ *   *italic inline*                — italic inline
+ *   blank line                     — paragraph separator
+ *
+ * Plain text otherwise renders as paragraph. Designed to render Word-doc
+ * job descriptions cleanly on phone + desktop.
+ */
+function PositionDescriptionRenderer({ text }: { text: string }) {
+  type Block =
+    | { type: 'info'; rows: { key: string; value: string }[] }
+    | { type: 'h2'; text: string }
+    | { type: 'h3'; text: string }
+    | { type: 'callout'; text: string }
+    | { type: 'bullets'; items: string[] }
+    | { type: 'p'; text: string };
+
+  // ── Parse into structured blocks ────────────────────────────────────
+  const blocks: Block[] = [];
+  const lines = text.split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (!trimmed) { i++; continue; }
+
+    // [POS_INFO] block
+    if (trimmed === '[POS_INFO]') {
+      const rows: { key: string; value: string }[] = [];
+      i++;
+      while (i < lines.length && lines[i].trim() !== '[/POS_INFO]') {
+        const row = lines[i].trim();
+        if (row) {
+          const idx = row.indexOf(':');
+          if (idx > 0) {
+            rows.push({ key: row.slice(0, idx).trim(), value: row.slice(idx + 1).trim() });
+          }
+        }
+        i++;
+      }
+      i++; // skip [/POS_INFO]
+      if (rows.length > 0) blocks.push({ type: 'info', rows });
+      continue;
+    }
+
+    // ## H2
+    if (trimmed.startsWith('## ')) {
+      blocks.push({ type: 'h2', text: trimmed.slice(3).trim() });
+      i++;
+      continue;
+    }
+
+    // ### H3
+    if (trimmed.startsWith('### ')) {
+      blocks.push({ type: 'h3', text: trimmed.slice(4).trim() });
+      i++;
+      continue;
+    }
+
+    // > Callout
+    if (trimmed.startsWith('> ')) {
+      blocks.push({ type: 'callout', text: trimmed.slice(2).trim() });
+      i++;
+      continue;
+    }
+
+    // - Bullet (collect consecutive bullets into one list)
+    if (trimmed.startsWith('- ')) {
+      const items: string[] = [];
+      while (i < lines.length) {
+        const t = lines[i].trim();
+        if (t.startsWith('- ')) {
+          items.push(t.slice(2).trim());
+          i++;
+        } else if (!t) {
+          // peek next non-empty line — if it's a bullet, continue list
+          let j = i + 1;
+          while (j < lines.length && !lines[j].trim()) j++;
+          if (j < lines.length && lines[j].trim().startsWith('- ')) {
+            i = j;
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+      if (items.length > 0) blocks.push({ type: 'bullets', items });
+      continue;
+    }
+
+    // Paragraph
+    blocks.push({ type: 'p', text: trimmed });
+    i++;
+  }
+
+  // ── Inline formatter — handles **bold** and *italic* ────────────────
+  const renderInline = (s: string): React.ReactNode => {
+    const out: React.ReactNode[] = [];
+    // Tokenize: **bold** or *italic* or plain
+    const regex = /(\*\*[^*]+\*\*|\*[^*]+\*)/g;
+    const parts = s.split(regex);
+    parts.forEach((p, idx) => {
+      if (!p) return;
+      if (p.startsWith('**') && p.endsWith('**')) {
+        out.push(<strong key={idx} className="font-bold text-gray-900">{p.slice(2, -2)}</strong>);
+      } else if (p.startsWith('*') && p.endsWith('*')) {
+        out.push(<em key={idx} className="italic">{p.slice(1, -1)}</em>);
+      } else {
+        out.push(p);
+      }
+    });
+    return out;
+  };
+
+  // ── Render blocks ───────────────────────────────────────────────────
+  return (
+    <div className="space-y-3">
+      {blocks.map((b, idx) => {
+        switch (b.type) {
+          case 'info':
+            return (
+              <div key={idx} className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
+                {b.rows.map((r, i2) => (
+                  <div key={i2} className="flex gap-3 items-baseline">
+                    <span className="text-[10px] font-bold text-[#1B3A6B] uppercase tracking-widest w-[88px] flex-shrink-0">
+                      {r.key}
+                    </span>
+                    <span className="text-xs text-gray-700 flex-1">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            );
+          case 'h2':
+            return (
+              <h3 key={idx} className="text-sm font-bold uppercase tracking-widest text-[#1B3A6B] pt-3 pb-1 border-b border-gray-200">
+                {b.text}
+              </h3>
+            );
+          case 'h3':
+            return (
+              <h4 key={idx} className="text-sm font-bold text-[#1B3A6B] pt-2">
+                {b.text}
+              </h4>
+            );
+          case 'callout':
+            return (
+              <div key={idx} className="bg-amber-50 border-l-4 border-amber-400 px-3 py-2 rounded-r-md">
+                <p className="text-xs italic text-amber-900 leading-relaxed">
+                  <strong className="not-italic">Standard:</strong>{' '}
+                  {renderInline(b.text.replace(/^Standard:\s*/i, ''))}
+                </p>
+              </div>
+            );
+          case 'bullets':
+            return (
+              <ul key={idx} className="space-y-1.5 pl-1">
+                {b.items.map((it, i2) => (
+                  <li key={i2} className="flex items-start gap-2 text-sm text-gray-700 leading-relaxed">
+                    <span className="text-[#1B3A6B] flex-shrink-0 mt-0.5">•</span>
+                    <span>{renderInline(it)}</span>
+                  </li>
+                ))}
+              </ul>
+            );
+          case 'p':
+            return (
+              <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+                {renderInline(b.text)}
+              </p>
+            );
+          default:
+            return null;
+        }
+      })}
     </div>
   );
 }
