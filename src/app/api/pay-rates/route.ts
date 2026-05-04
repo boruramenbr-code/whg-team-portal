@@ -73,15 +73,61 @@ export async function GET() {
     ratesQ = ratesQ.in('restaurant_id', Array.from(allowedRestaurantIds));
   }
 
-  const [positionsRes, restaurantsRes, ratesRes] = await Promise.all([
-    adminClient
+  // For non-admins, also pull description rows so we can determine
+  // which positions exist at any of their allowed restaurants. A
+  // position is "present" at a restaurant if it has either a pay rate
+  // or a description there. Admins always see the full catalog.
+  const descriptionsQ = !isAdmin
+    ? adminClient
+        .from('position_descriptions')
+        .select('position_id')
+        .in('restaurant_id', Array.from(allowedRestaurantIds))
+    : null;
+
+  const [restaurantsRes, ratesRes, descriptionsRes] = await Promise.all([
+    restaurantsQ,
+    ratesQ,
+    descriptionsQ,
+  ]);
+
+  // Determine which positions to show.
+  //   • Admin → every active position (global catalog)
+  //   • Non-admin → positions present at any allowed restaurant
+  let positionsRes;
+  if (isAdmin) {
+    positionsRes = await adminClient
       .from('positions')
       .select('id, slug, name, emoji, department, sort_order')
       .eq('active', true)
-      .order('sort_order', { ascending: true }),
-    restaurantsQ,
-    ratesQ,
-  ]);
+      .order('sort_order', { ascending: true });
+  } else {
+    const presentPositionIds = new Set<string>([
+      ...((ratesRes.data || []).map((r) => r.position_id)),
+      ...((descriptionsRes?.data || []).map((d) => d.position_id)),
+    ]);
+
+    if (presentPositionIds.size === 0) {
+      // User has no restaurants assigned, or none of their restaurants
+      // have any pay rates or descriptions yet — return empty catalog.
+      return NextResponse.json({
+        min_wage: {
+          federal: '$7.25',
+          louisiana: '$7.25 (no state minimum — federal applies)',
+          tipped_minimum: '$2.13',
+        },
+        positions: [],
+        restaurants: restaurantsRes.data || [],
+        rates: ratesRes.data || [],
+      });
+    }
+
+    positionsRes = await adminClient
+      .from('positions')
+      .select('id, slug, name, emoji, department, sort_order')
+      .eq('active', true)
+      .in('id', Array.from(presentPositionIds))
+      .order('sort_order', { ascending: true });
+  }
 
   return NextResponse.json({
     min_wage: {
