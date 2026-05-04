@@ -79,7 +79,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   const [activeTab, setActiveTab] = useState<DashboardTab>('dashboard');
   const isAdmin = profile.role === 'admin';
 
-  const tabs: { key: DashboardTab; label: string; emoji: string; adminOnly?: boolean; disabled?: boolean }[] = [
+  const tabs: { key: DashboardTab; label: string; emoji: string; adminOnly?: boolean; comingSoon?: boolean }[] = [
     { key: 'dashboard', label: 'Dashboard', emoji: '🎛️' },
     { key: 'staff', label: 'Staff', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
@@ -88,7 +88,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
     { key: 'payrates', label: 'Pay Rates', emoji: '💰' },
     { key: 'compliance', label: 'Compliance', emoji: '✅' },
     ...(isAdmin
-      ? [{ key: 'settings' as DashboardTab, label: 'Settings', emoji: '⚙️', adminOnly: true, disabled: true }]
+      ? [{ key: 'settings' as DashboardTab, label: 'Settings', emoji: '⚙️', adminOnly: true, comingSoon: true }]
       : []),
   ];
 
@@ -102,20 +102,19 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
             return (
               <button
                 key={t.key}
-                onClick={() => !t.disabled && setActiveTab(t.key)}
-                disabled={t.disabled}
+                onClick={() => setActiveTab(t.key)}
                 className={`relative flex items-center gap-1.5 px-5 py-3 text-sm font-semibold transition-colors ${
-                  t.disabled
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : isActive
+                  isActive
                     ? 'text-[#1B3A6B]'
+                    : t.comingSoon
+                    ? 'text-gray-400 hover:text-gray-500'
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
               >
                 <span>{t.emoji}</span>
                 <span>{t.label}</span>
-                {t.disabled && (
-                  <span className="text-[9px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full font-medium ml-1">
+                {t.comingSoon && !isActive && (
+                  <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium ml-1">
                     Soon
                   </span>
                 )}
@@ -195,27 +194,26 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
             return (
               <button
                 key={t.key}
-                onClick={() => !t.disabled && setActiveTab(t.key)}
-                disabled={t.disabled}
+                onClick={() => setActiveTab(t.key)}
                 className={`tap-highlight flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg min-w-[52px] transition-colors ${
-                  t.disabled
-                    ? 'text-gray-300 opacity-50'
-                    : isActive
+                  isActive
                     ? 'text-[#1B3A6B]'
+                    : t.comingSoon
+                    ? 'text-gray-400'
                     : 'text-gray-400'
                 }`}
               >
                 <div className="relative">
-                  {AdminNavIcons[t.key]?.(isActive && !t.disabled) || <span className="text-lg">{t.emoji}</span>}
-                  {isActive && !t.disabled && (
+                  {AdminNavIcons[t.key]?.(isActive) || <span className="text-lg">{t.emoji}</span>}
+                  {isActive && (
                     <span className="nav-dot-enter absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1B3A6B]" />
                   )}
                 </div>
-                <span className={`text-[10px] font-semibold leading-tight ${isActive && !t.disabled ? 'text-[#1B3A6B]' : ''}`}>
+                <span className={`text-[10px] font-semibold leading-tight ${isActive ? 'text-[#1B3A6B]' : ''}`}>
                   {t.label}
                 </span>
-                {t.disabled && (
-                  <span className="text-[8px] text-gray-300 -mt-0.5">Soon</span>
+                {t.comingSoon && !isActive && (
+                  <span className="text-[8px] text-gray-400 -mt-0.5">Soon</span>
                 )}
               </button>
             );
