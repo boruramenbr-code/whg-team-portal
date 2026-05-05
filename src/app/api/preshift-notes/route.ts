@@ -87,23 +87,46 @@ export async function GET(req: NextRequest) {
   const restaurantIdParam = req.nextUrl.searchParams.get('restaurant_id');
   const targetDate = dateParam || new Date().toISOString().split('T')[0];
 
+  // Build the user's allowed restaurant set (primary + extra locations)
+  const { data: extraLocs } = await supabase
+    .from('user_locations')
+    .select('restaurant_id')
+    .eq('profile_id', user.id);
+  const userRestaurantIds = new Set<string>([
+    ...(profile.restaurant_id ? [profile.restaurant_id] : []),
+    ...((extraLocs || []).map((l) => l.restaurant_id)),
+  ]);
+
+  const isAdmin = profile.role === 'admin';
+
   // Admins can view any restaurant; managers can view their assigned locations
   let targetRestaurantId = profile.restaurant_id;
   if (restaurantIdParam) {
-    if (profile.role === 'admin') {
+    if (isAdmin) {
       targetRestaurantId = restaurantIdParam;
-    } else if (['manager', 'assistant_manager'].includes(profile.role)) {
-      // Check if manager has access to this location
-      const { data: access } = await supabase
-        .from('user_locations')
-        .select('id')
-        .eq('profile_id', user.id)
-        .eq('restaurant_id', restaurantIdParam)
-        .maybeSingle();
-      if (access || restaurantIdParam === profile.restaurant_id) {
-        targetRestaurantId = restaurantIdParam;
-      }
+    } else if (userRestaurantIds.has(restaurantIdParam)) {
+      targetRestaurantId = restaurantIdParam;
     }
+  }
+
+  // Build the picker list returned to the client. Empty for single-location
+  // staff so the UI doesn't render a meaningless one-item dropdown.
+  let availableRestaurants: { id: string; name: string }[] = [];
+  if (isAdmin) {
+    const { data } = await supabase
+      .from('restaurants')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    availableRestaurants = data || [];
+  } else if (userRestaurantIds.size > 1) {
+    const { data } = await supabase
+      .from('restaurants')
+      .select('id, name')
+      .in('id', Array.from(userRestaurantIds))
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    availableRestaurants = data || [];
   }
 
   const { data: noteSimple } = await supabase
@@ -127,6 +150,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(
     {
       note: noteSimple ? { ...noteSimple, creator_name: creatorName } : null,
+      active_restaurant_id: targetRestaurantId,
+      shift_date: targetDate,
+      available_restaurants: availableRestaurants,
     },
     { headers: { 'Cache-Control': 'no-store' } }
   );

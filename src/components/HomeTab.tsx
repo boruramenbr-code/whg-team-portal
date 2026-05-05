@@ -108,6 +108,8 @@ interface ActiveHoliday {
 }
 
 /* ───────── Component ───────── */
+const VIEW_RESTAURANT_KEY = 'whg_view_restaurant_id';
+
 export default function HomeTab({ firstName, restaurantName, language, onNavigate }: Props) {
   const [note, setNote] = useState<PreshiftNote | null>(null);
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
@@ -116,13 +118,36 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
   const [loading, setLoading] = useState(true);
   // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
   const [reopenWelcome, setReopenWelcome] = useState(false);
+
+  // Restaurant switcher state — for admins / multi-location managers viewing
+  // pre-shift notes across the brand. Persisted in localStorage so the choice
+  // sticks across visits (shared key with the Positions tab).
+  const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(null);
+  const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
+  const [activeRestaurantName, setActiveRestaurantName] = useState<string | null>(null);
+  const [availableRestaurants, setAvailableRestaurants] = useState<{ id: string; name: string }[]>([]);
+
   const isES = language === 'es';
+
+  // Load saved restaurant preference on first render
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_RESTAURANT_KEY);
+      if (saved) setViewRestaurantId(saved);
+    } catch {
+      // localStorage unavailable — fall through
+    }
+  }, []);
 
   const loadPreshift = useCallback(async () => {
     setLoading(true);
     try {
+      const preshiftUrl = viewRestaurantId
+        ? `/api/preshift-notes?restaurant_id=${encodeURIComponent(viewRestaurantId)}&t=${Date.now()}`
+        : `/api/preshift-notes?t=${Date.now()}`;
+
       const [noteRes, ownerRes, bdayRes, holidaysRes] = await Promise.all([
-        fetch(`/api/preshift-notes?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(preshiftUrl, { cache: 'no-store' }),
         fetch(`/api/owner-messages?audience=staff&t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/holidays?t=${Date.now()}`, { cache: 'no-store' }),
@@ -130,7 +155,16 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
       const noteData = await noteRes.json();
       const ownerData = await ownerRes.json();
       setNote(noteData.note || null);
+      setActiveRestaurantId(noteData.active_restaurant_id || null);
       setOwnerMessages(ownerData.messages || []);
+      if (Array.isArray(noteData.available_restaurants)) {
+        setAvailableRestaurants(noteData.available_restaurants);
+        // Resolve the human-readable name for the active restaurant
+        const match = noteData.available_restaurants.find(
+          (r: { id: string }) => r.id === noteData.active_restaurant_id
+        );
+        setActiveRestaurantName(match?.name || null);
+      }
 
       if (bdayRes.ok) {
         const bdayData = await bdayRes.json();
@@ -156,11 +190,16 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [viewRestaurantId]);
 
   useEffect(() => {
     loadPreshift();
   }, [loadPreshift]);
+
+  const onSelectRestaurant = (id: string) => {
+    setViewRestaurantId(id);
+    try { localStorage.setItem(VIEW_RESTAURANT_KEY, id); } catch { /* ignore */ }
+  };
 
   const hasSpecials = (note?.specials?.length ?? 0) > 0;
   const has86 = (note?.eighty_sixed?.length ?? 0) > 0;
@@ -230,10 +269,15 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
 
         {/* ── Pre-Shift Notes (live) — promoted to top of feed ── */}
         <section>
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
               <span className="text-base">📋</span>
               {isES ? 'Notas del Turno de Hoy' : "Today's Pre-Shift"}
+              {activeRestaurantName && availableRestaurants.length > 1 && (
+                <span className="text-[10px] font-semibold text-gray-500 normal-case tracking-normal">
+                  · {activeRestaurantName}
+                </span>
+              )}
             </h2>
             <button
               onClick={() => onNavigate('preshift')}
@@ -242,6 +286,35 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
               {isES ? 'Ver todo' : 'View all'}  →
             </button>
           </div>
+
+          {/* Restaurant switcher — admin & multi-location only */}
+          {availableRestaurants.length > 1 && (
+            <div className="bg-white rounded-2xl shadow-sm p-3 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                {isES ? 'Viendo Como' : 'Viewing As'}
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {availableRestaurants.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => onSelectRestaurant(r.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                      activeRestaurantId === r.id
+                        ? 'bg-[#1B3A6B] text-white shadow-sm'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 italic mt-2 leading-relaxed">
+                {isES
+                  ? 'Una nota por restaurante por día. La nota se actualiza al editarla; siempre muestra hoy.'
+                  : 'One note per restaurant per day. Posting updates the day’s note; this view always shows today.'}
+              </p>
+            </div>
+          )}
 
           {/* Today's holiday/event badge — only renders when an event is active */}
           {activeHolidays.length > 0 && (
