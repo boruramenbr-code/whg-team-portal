@@ -104,6 +104,8 @@ interface ActiveHoliday {
   end_date: string;
   name: string;
   name_es: string | null;
+  notes: string | null;
+  notes_es: string | null;
   type: HolidayType;
 }
 
@@ -334,15 +336,23 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
                       day: 'numeric',
                     });
                     const name = isES && h.name_es ? h.name_es : h.name;
+                    const notes = isES && h.notes_es ? h.notes_es : h.notes;
                     return (
                       <div
                         key={h.id}
-                        className={`px-4 py-2 flex items-center gap-2 text-xs ${style.bgClass}`}
+                        className={`px-4 py-2 ${style.bgClass}`}
                       >
-                        <span aria-hidden>{style.emoji}</span>
-                        <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
-                        <span className={style.subTextClass}>·</span>
-                        <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span aria-hidden>{style.emoji}</span>
+                          <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
+                          <span className={style.subTextClass}>·</span>
+                          <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                        </div>
+                        {notes && (
+                          <p className={`text-[11px] ${style.subTextClass} mt-0.5 leading-snug pl-6`}>
+                            {notes}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -438,15 +448,23 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
                       day: 'numeric',
                     });
                     const name = isES && h.name_es ? h.name_es : h.name;
+                    const notes = isES && h.notes_es ? h.notes_es : h.notes;
                     return (
                       <div
                         key={h.id}
-                        className={`px-4 py-2 flex items-center gap-2 text-xs ${style.bgClass}`}
+                        className={`px-4 py-2 ${style.bgClass}`}
                       >
-                        <span aria-hidden>{style.emoji}</span>
-                        <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
-                        <span className={style.subTextClass}>·</span>
-                        <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span aria-hidden>{style.emoji}</span>
+                          <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
+                          <span className={style.subTextClass}>·</span>
+                          <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                        </div>
+                        {notes && (
+                          <p className={`text-[11px] ${style.subTextClass} mt-0.5 leading-snug pl-6`}>
+                            {notes}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
