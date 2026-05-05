@@ -25,6 +25,25 @@ function computeInitials(fullName: string | null | undefined): string {
 }
 
 /**
+ * Returns today's date as YYYY-MM-DD in WHG's operating timezone (Central Time).
+ *
+ * Why not UTC: server's new Date().toISOString() is UTC, which rolls past
+ * midnight ~7 PM Louisiana time. That caused evening posts (saved with the
+ * editor's local date) to vanish from the Home tab, which was reading
+ * against UTC's "tomorrow." Forcing CT here keeps GET and POST consistent
+ * with the operator's actual day.
+ */
+function todayInCentralTime(): string {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return fmt.format(new Date()); // en-CA returns YYYY-MM-DD natively
+}
+
+/**
  * Normalize and tag incoming items.
  * - Existing items (with an id) keep their original `by` tag.
  * - New items (no id) are tagged with the current user's initials.
@@ -85,7 +104,7 @@ export async function GET(req: NextRequest) {
 
   const dateParam = req.nextUrl.searchParams.get('date');
   const restaurantIdParam = req.nextUrl.searchParams.get('restaurant_id');
-  const targetDate = dateParam || new Date().toISOString().split('T')[0];
+  const targetDate = dateParam || todayInCentralTime();
 
   // Build the user's allowed restaurant set (primary + extra locations)
   const { data: extraLocs } = await supabase
@@ -185,7 +204,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { message, specials, eightySixed, focusItems, shiftDate, restaurantId } = body;
 
-  const targetDate = shiftDate || new Date().toISOString().split('T')[0];
+  const targetDate = shiftDate || todayInCentralTime();
   const targetRestaurantId =
     profile.role === 'admin' && restaurantId ? restaurantId : profile.restaurant_id;
 
