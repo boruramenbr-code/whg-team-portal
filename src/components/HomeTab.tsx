@@ -6,6 +6,7 @@ import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
 import CardingDateWidget from './CardingDateWidget';
+import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -96,11 +97,22 @@ interface Birthday {
   restaurant_name: string | null;
 }
 
+/* ───────── Holiday (subset used here) ───────── */
+interface ActiveHoliday {
+  id: string;
+  start_date: string;
+  end_date: string;
+  name: string;
+  name_es: string | null;
+  type: HolidayType;
+}
+
 /* ───────── Component ───────── */
 export default function HomeTab({ firstName, restaurantName, language, onNavigate }: Props) {
   const [note, setNote] = useState<PreshiftNote | null>(null);
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  const [activeHolidays, setActiveHolidays] = useState<ActiveHoliday[]>([]);
   const [loading, setLoading] = useState(true);
   // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
   const [reopenWelcome, setReopenWelcome] = useState(false);
@@ -109,10 +121,11 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
   const loadPreshift = useCallback(async () => {
     setLoading(true);
     try {
-      const [noteRes, ownerRes, bdayRes] = await Promise.all([
+      const [noteRes, ownerRes, bdayRes, holidaysRes] = await Promise.all([
         fetch(`/api/preshift-notes?t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/owner-messages?audience=staff&t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/holidays?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
       const noteData = await noteRes.json();
       const ownerData = await ownerRes.json();
@@ -122,6 +135,21 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
       if (bdayRes.ok) {
         const bdayData = await bdayRes.json();
         setBirthdays(bdayData.birthdays || []);
+      }
+
+      // Filter holidays to those active today (start ≤ today ≤ end).
+      // Used to render the today's-event badge atop the pre-shift card.
+      if (holidaysRes.ok) {
+        const holidaysData = await holidaysRes.json();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayMs = today.getTime();
+        const active = (holidaysData.holidays || []).filter((h: ActiveHoliday) => {
+          const start = new Date(h.start_date + 'T00:00:00').getTime();
+          const end = new Date(h.end_date + 'T00:00:00').getTime();
+          return start <= todayMs && end >= todayMs;
+        });
+        setActiveHolidays(active);
       }
     } catch {
       // ignore
@@ -214,6 +242,33 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
               {isES ? 'Ver todo' : 'View all'}  →
             </button>
           </div>
+
+          {/* Today's holiday/event badge — only renders when an event is active */}
+          {activeHolidays.length > 0 && (
+            <div className="space-y-1.5 mb-2">
+              {activeHolidays.map((h) => {
+                const style = getHolidayStyle(h.type);
+                const today = new Date();
+                const dateLabel = today.toLocaleDateString(isES ? 'es-MX' : undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                });
+                const name = isES && h.name_es ? h.name_es : h.name;
+                return (
+                  <div
+                    key={h.id}
+                    className={`rounded-xl border-l-4 px-3 py-2 flex items-center gap-2 text-sm ${style.bgClass} ${style.borderClass}`}
+                  >
+                    <span aria-hidden>{style.emoji}</span>
+                    <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
+                    <span className={`${style.subTextClass}`}>·</span>
+                    <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {loading ? (
             <div className="bg-white rounded-2xl border border-white/80 p-6 text-center shadow-sm">

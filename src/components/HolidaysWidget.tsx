@@ -120,12 +120,56 @@ export default function HolidaysWidget({ language }: Props) {
             statusLabel = isES ? `en ${startDelta} días` : `in ${startDelta} days`;
           }
 
+          // Calendar-box visuals: highlight today (amber), tomorrow (red),
+          // fade past events. Future events use a neutral gray box.
+          const isTomorrow = startDelta === 1;
+          const isPast = endDelta < 0;
+          const startDate = new Date(h.start_date + 'T00:00:00');
+          const monthNames = isES
+            ? ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+            : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const monthAbbr = monthNames[startDate.getMonth()];
+          const dayNum = startDate.getDate();
+
+          let calBg = 'bg-white border-gray-200';
+          let calMonth = 'text-gray-400';
+          let calDay = 'text-gray-700';
+          if (isActive) {
+            calBg = 'bg-amber-50 border-amber-300';
+            calMonth = 'text-amber-600';
+            calDay = 'text-amber-700';
+          } else if (isTomorrow) {
+            calBg = 'bg-red-50 border-red-400';
+            calMonth = 'text-red-600';
+            calDay = 'text-red-700';
+          } else if (isPast) {
+            calBg = 'bg-gray-50 border-gray-200 opacity-70';
+            calMonth = 'text-gray-400';
+            calDay = 'text-gray-500';
+          }
+
           return (
             <div
               key={h.id}
-              className={`rounded-2xl px-4 py-3 border-l-4 shadow-sm flex items-start gap-3 ${style.bgClass} ${style.borderClass}`}
+              className={`rounded-2xl px-3 py-3 border-l-4 shadow-sm flex items-center gap-3 ${style.bgClass} ${style.borderClass}`}
             >
-              <span className="text-xl mt-0.5" aria-hidden>{style.emoji}</span>
+              {/* Calendar date box */}
+              <div
+                className={`flex-shrink-0 w-11 h-11 rounded-xl border flex flex-col items-center justify-center ${calBg}`}
+                aria-hidden
+              >
+                <span className={`text-[10px] font-bold uppercase leading-none ${calMonth}`}>
+                  {monthAbbr}
+                </span>
+                <span className={`text-base font-bold leading-tight ${calDay}`}>
+                  {dayNum}
+                </span>
+              </div>
+
+              {/* Type emoji */}
+              <span className="text-xl flex-shrink-0" aria-hidden>{style.emoji}</span>
+
+              {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <p className={`font-bold text-sm ${style.textClass}`}>
