@@ -316,39 +316,39 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
             </div>
           )}
 
-          {/* Today's holiday/event badge — only renders when an event is active */}
-          {activeHolidays.length > 0 && (
-            <div className="space-y-1.5 mb-2">
-              {activeHolidays.map((h) => {
-                const style = getHolidayStyle(h.type);
-                const today = new Date();
-                const dateLabel = today.toLocaleDateString(isES ? 'es-MX' : undefined, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                });
-                const name = isES && h.name_es ? h.name_es : h.name;
-                return (
-                  <div
-                    key={h.id}
-                    className={`rounded-xl border-l-4 px-3 py-2 flex items-center gap-2 text-sm ${style.bgClass} ${style.borderClass}`}
-                  >
-                    <span aria-hidden>{style.emoji}</span>
-                    <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
-                    <span className={`${style.subTextClass}`}>·</span>
-                    <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           {loading ? (
             <div className="bg-white rounded-2xl border border-white/80 p-6 text-center shadow-sm">
               <div className="text-gray-400 text-sm animate-pulse">Loading...</div>
             </div>
           ) : hasAnyContent ? (
             <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
+              {/* Today's holiday banner (top of card) */}
+              {activeHolidays.length > 0 && (
+                <div className="border-b border-gray-100">
+                  {activeHolidays.map((h) => {
+                    const style = getHolidayStyle(h.type);
+                    const today = new Date();
+                    const dateLabel = today.toLocaleDateString(isES ? 'es-MX' : undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    });
+                    const name = isES && h.name_es ? h.name_es : h.name;
+                    return (
+                      <div
+                        key={h.id}
+                        className={`px-4 py-2 flex items-center gap-2 text-xs ${style.bgClass}`}
+                      >
+                        <span aria-hidden>{style.emoji}</span>
+                        <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
+                        <span className={style.subTextClass}>·</span>
+                        <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="px-5 py-4 space-y-3">
                 {/* Manager message */}
                 {hasMessage && (
@@ -425,8 +425,34 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-white/80 p-6 text-center shadow-sm">
-              <p className="text-gray-500 text-sm">
+            <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
+              {/* Today's holiday banner — shows even when no notes posted */}
+              {activeHolidays.length > 0 && (
+                <div className="border-b border-gray-100">
+                  {activeHolidays.map((h) => {
+                    const style = getHolidayStyle(h.type);
+                    const today = new Date();
+                    const dateLabel = today.toLocaleDateString(isES ? 'es-MX' : undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                    });
+                    const name = isES && h.name_es ? h.name_es : h.name;
+                    return (
+                      <div
+                        key={h.id}
+                        className={`px-4 py-2 flex items-center gap-2 text-xs ${style.bgClass}`}
+                      >
+                        <span aria-hidden>{style.emoji}</span>
+                        <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
+                        <span className={style.subTextClass}>·</span>
+                        <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-gray-500 text-sm p-6 text-center">
                 {isES
                   ? 'No hay notas pre-turno todavía. Revisa antes de tu turno.'
                   : 'No pre-shift notes yet. Check back before your shift.'}
