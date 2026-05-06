@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { todayInCentralTime, dateInCentralTime } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -62,10 +63,9 @@ export async function GET(req: NextRequest) {
   if (!showAll) {
     // Range overlap: include events whose date range intersects [today, today+90].
     // An event overlaps the window iff its start <= window_end AND its end >= window_start.
-    const today = new Date().toISOString().split('T')[0];
-    const ninety = new Date();
-    ninety.setDate(ninety.getDate() + 90);
-    const end = ninety.toISOString().split('T')[0];
+    // Use Central Time so events ending today don't disappear in evening UTC.
+    const today = todayInCentralTime();
+    const end = dateInCentralTime(90);
     query = query.lte('start_date', end).gte('end_date', today);
   }
 

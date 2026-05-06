@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { todayInCentralTime } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,24 +25,6 @@ function computeInitials(fullName: string | null | undefined): string {
     .slice(0, 3);
 }
 
-/**
- * Returns today's date as YYYY-MM-DD in WHG's operating timezone (Central Time).
- *
- * Why not UTC: server's new Date().toISOString() is UTC, which rolls past
- * midnight ~7 PM Louisiana time. That caused evening posts (saved with the
- * editor's local date) to vanish from the Home tab, which was reading
- * against UTC's "tomorrow." Forcing CT here keeps GET and POST consistent
- * with the operator's actual day.
- */
-function todayInCentralTime(): string {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  return fmt.format(new Date()); // en-CA returns YYYY-MM-DD natively
-}
 
 /**
  * Normalize and tag incoming items.
