@@ -76,11 +76,28 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('restaurant_id, role, status')
-    .eq('id', user.id)
-    .single();
+  // Profile + extra locations + all restaurants — fire in parallel.
+  // We don't yet know if the user is admin, so we speculatively fetch
+  // every active restaurant; non-admins simply filter the list down later.
+  const [profileRes, extraLocsRes, allRestaurantsRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('restaurant_id, role, status')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('user_locations')
+      .select('restaurant_id')
+      .eq('profile_id', user.id),
+    supabase
+      .from('restaurants')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
+  ]);
+
+  const profile = profileRes.data;
+  const extraLocs = extraLocsRes.data;
 
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   if (profile.status === 'archived') return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
@@ -89,11 +106,6 @@ export async function GET(req: NextRequest) {
   const restaurantIdParam = req.nextUrl.searchParams.get('restaurant_id');
   const targetDate = dateParam || todayInCentralTime();
 
-  // Build the user's allowed restaurant set (primary + extra locations)
-  const { data: extraLocs } = await supabase
-    .from('user_locations')
-    .select('restaurant_id')
-    .eq('profile_id', user.id);
   const userRestaurantIds = new Set<string>([
     ...(profile.restaurant_id ? [profile.restaurant_id] : []),
     ...((extraLocs || []).map((l) => l.restaurant_id)),
@@ -111,42 +123,32 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Build the picker list returned to the client. Empty for single-location
-  // staff so the UI doesn't render a meaningless one-item dropdown.
+  // Build the picker list from already-fetched all-restaurants data.
   let availableRestaurants: { id: string; name: string }[] = [];
+  const allRestaurants = allRestaurantsRes.data || [];
   if (isAdmin) {
-    const { data } = await supabase
-      .from('restaurants')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    availableRestaurants = data || [];
+    availableRestaurants = allRestaurants;
   } else if (userRestaurantIds.size > 1) {
-    const { data } = await supabase
-      .from('restaurants')
-      .select('id, name')
-      .in('id', Array.from(userRestaurantIds))
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    availableRestaurants = data || [];
+    availableRestaurants = allRestaurants.filter((r) => userRestaurantIds.has(r.id));
   }
 
-  const { data: noteSimple } = await supabase
+  // Fetch the note + creator name in a single query via FK join.
+  // Saves a separate round-trip to profiles after the note loads.
+  const { data: noteJoined } = await supabase
     .from('preshift_notes')
-    .select('*')
+    .select('*, creator:profiles!created_by(full_name)')
     .eq('restaurant_id', targetRestaurantId)
     .eq('shift_date', targetDate)
     .eq('is_active', true)
     .maybeSingle();
 
   let creatorName: string | null = null;
-  if (noteSimple?.created_by) {
-    const { data: creator } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', noteSimple.created_by)
-      .maybeSingle();
+  let noteSimple: Record<string, unknown> | null = null;
+  if (noteJoined) {
+    type NoteRow = Record<string, unknown> & { creator?: { full_name?: string | null } | null };
+    const { creator, ...rest } = noteJoined as NoteRow;
     creatorName = creator?.full_name || null;
+    noteSimple = rest;
   }
 
   return NextResponse.json(

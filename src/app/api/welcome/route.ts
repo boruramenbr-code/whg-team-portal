@@ -23,20 +23,23 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Single canonical message: most recent active row.
-  const { data: msg } = await supabase
-    .from('welcome_messages')
-    .select('id, content, content_es, updated_at')
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('welcome_dismissed_at, preferred_language')
-    .eq('id', user.id)
-    .single();
+  // Two independent reads — fire in parallel.
+  const [msgRes, profileRes] = await Promise.all([
+    supabase
+      .from('welcome_messages')
+      .select('id, content, content_es, updated_at')
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('profiles')
+      .select('welcome_dismissed_at, preferred_language')
+      .eq('id', user.id)
+      .single(),
+  ]);
+  const msg = msgRes.data;
+  const profile = profileRes.data;
 
   return NextResponse.json(
     {

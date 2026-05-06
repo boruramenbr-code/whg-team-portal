@@ -73,10 +73,9 @@ export async function GET() {
     ratesQ = ratesQ.in('restaurant_id', Array.from(allowedRestaurantIds));
   }
 
-  // For non-admins, also pull description rows so we can determine
-  // which positions exist at any of their allowed restaurants. A
-  // position is "present" at a restaurant if it has either a pay rate
-  // or a description there. Admins always see the full catalog.
+  // For non-admins, pull description rows to determine which positions
+  // exist at allowed restaurants. A position is "present" if it has either
+  // a pay rate or a description there. Admins see the full catalog.
   const descriptionsQ = !isAdmin
     ? adminClient
         .from('position_descriptions')
@@ -84,22 +83,30 @@ export async function GET() {
         .in('restaurant_id', Array.from(allowedRestaurantIds))
     : null;
 
-  const [restaurantsRes, ratesRes, descriptionsRes] = await Promise.all([
+  // For admin, fire the positions catalog query in parallel with the rest.
+  // For non-admin, we need the rates+descriptions to know which positions
+  // exist at their restaurants, so the positions query happens after.
+  const adminPositionsQ = isAdmin
+    ? adminClient
+        .from('positions')
+        .select('id, slug, name, emoji, department, sort_order')
+        .eq('active', true)
+        .order('sort_order', { ascending: true })
+    : null;
+
+  const [restaurantsRes, ratesRes, descriptionsRes, adminPositionsRes] = await Promise.all([
     restaurantsQ,
     ratesQ,
     descriptionsQ,
+    adminPositionsQ,
   ]);
 
-  // Determine which positions to show.
-  //   • Admin → every active position (global catalog)
-  //   • Non-admin → positions present at any allowed restaurant
+  // Determine positions for the response:
+  //   • Admin → reuse the parallel-fetched positions
+  //   • Non-admin → filter positions to those present at allowed restaurants
   let positionsRes;
   if (isAdmin) {
-    positionsRes = await adminClient
-      .from('positions')
-      .select('id, slug, name, emoji, department, sort_order')
-      .eq('active', true)
-      .order('sort_order', { ascending: true });
+    positionsRes = adminPositionsRes;
   } else {
     const presentPositionIds = new Set<string>([
       ...((ratesRes.data || []).map((r) => r.position_id)),
@@ -135,7 +142,7 @@ export async function GET() {
       louisiana: '$7.25 (no state minimum — federal applies)',
       tipped_minimum: '$2.13',
     },
-    positions: positionsRes.data || [],
+    positions: positionsRes?.data || [],
     restaurants: restaurantsRes.data || [],
     rates: ratesRes.data || [],
   });

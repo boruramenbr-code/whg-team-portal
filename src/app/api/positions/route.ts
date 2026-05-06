@@ -43,12 +43,30 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const queryRestaurant = url.searchParams.get('restaurant_id');
 
-  // Resolve user's role + primary restaurant + extra locations
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id, status')
-    .eq('id', user.id)
-    .single();
+  // Parallelize: profile + extra locations + (admin) all-restaurants list.
+  // We don't yet know if the user is admin so we speculatively fetch all
+  // active restaurants — if they turn out not to be admin, we just discard
+  // (or re-filter) the result. One extra query but always a single round-trip.
+  const adminClient = getAdminClient();
+  const [meRes, extraLocsRes, allRestaurantsRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('role, restaurant_id, status')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('user_locations')
+      .select('restaurant_id')
+      .eq('profile_id', user.id),
+    adminClient
+      .from('restaurants')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true }),
+  ]);
+
+  const me = meRes.data;
+  const extraLocs = extraLocsRes.data;
 
   if (!me || me.status === 'archived') {
     return NextResponse.json({ positions: [], restaurant_id: null });
@@ -56,37 +74,21 @@ export async function GET(req: Request) {
 
   const isAdmin = me.role === 'admin';
 
-  const { data: extraLocs } = await supabase
-    .from('user_locations')
-    .select('restaurant_id')
-    .eq('profile_id', user.id);
-
   const userRestaurantIds = new Set<string>([
     ...(me.restaurant_id ? [me.restaurant_id] : []),
     ...((extraLocs || []).map((l) => l.restaurant_id)),
   ]);
 
-  // Build the list of restaurants this user can switch to.
+  // Build the picker list from the already-fetched all-restaurants response.
   //   • Admin → all active restaurants
-  //   • Multi-location user → their primary + extras
+  //   • Multi-location user → their primary + extras (filtered)
   //   • Single-location user → empty (no picker shown)
-  const adminClient = getAdminClient();
   let availableRestaurants: { id: string; name: string }[] = [];
+  const allRestaurants = allRestaurantsRes.data || [];
   if (isAdmin) {
-    const { data } = await adminClient
-      .from('restaurants')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    availableRestaurants = data || [];
+    availableRestaurants = allRestaurants;
   } else if (userRestaurantIds.size > 1) {
-    const { data } = await adminClient
-      .from('restaurants')
-      .select('id, name')
-      .in('id', Array.from(userRestaurantIds))
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    availableRestaurants = data || [];
+    availableRestaurants = allRestaurants.filter((r) => userRestaurantIds.has(r.id));
   }
 
   // Resolve effective restaurant_id (with access validation)
