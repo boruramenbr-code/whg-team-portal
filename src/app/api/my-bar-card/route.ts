@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { todayMidnightUTC } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -63,9 +64,11 @@ export async function GET() {
     });
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const exp = new Date(card.expiration_date + 'T00:00:00');
+  // CT-anchored today: avoids the UTC-rollover bug where evening Louisiana
+  // time would push days_until forward by 1 (showing cards as expired or
+  // closer-to-expiration than they actually are).
+  const today = todayMidnightUTC();
+  const exp = new Date(card.expiration_date + 'T00:00:00Z');
   const days_until = Math.round((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   let status: 'expired' | 'critical' | 'expiring' | 'valid';

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Restaurant } from '@/lib/types';
 import { getHolidayStyle } from '@/lib/holiday-types';
+import { todayInCentralTime } from '@/lib/dates';
 
 interface Holiday {
   id: string;
@@ -33,7 +34,10 @@ interface Props {
   restaurants: Restaurant[];
 }
 
-const TODAY = new Date().toISOString().split('T')[0];
+// Evaluated once at module load — "today" in Central Time. Re-renders
+// while the editor is mounted always use this same string for the
+// initial start_date, which is the right behavior for a single session.
+const TODAY = todayInCentralTime();
 
 const EMPTY: FormState = {
   id: null,
@@ -171,7 +175,7 @@ export default function HolidaysEditor({ restaurants }: Props) {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInCentralTime();
   // Currently active OR upcoming = end_date >= today
   const upcoming = holidays.filter((h) => h.end_date >= today);
   const past = holidays.filter((h) => h.end_date < today);

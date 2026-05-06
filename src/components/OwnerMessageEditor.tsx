@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { todayInCentralTime } from '@/lib/dates';
 
 type Audience = 'staff' | 'managers' | 'both';
 
@@ -15,7 +16,7 @@ interface OwnerMessage {
 }
 
 export default function OwnerMessageEditor() {
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInCentralTime();
   const [messages, setMessages] = useState<OwnerMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);

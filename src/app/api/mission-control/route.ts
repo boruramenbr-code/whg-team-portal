@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { todayInCentralTime, dateInCentralTime, todayMidnightUTC } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -69,16 +70,15 @@ export async function GET() {
 
   const adminClient = getAdminClient();
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayISO = today.toISOString().split('T')[0];
-  const sevenFromNow = new Date(today);
-  sevenFromNow.setDate(today.getDate() + 7);
-  const sevenFromNowISO = sevenFromNow.toISOString().split('T')[0];
-  const fourteenDaysAgo = new Date();
-  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  // All dates anchored to Central Time. `today` is a Date instance at
+  // CT-midnight (UTC ms) — use UTC getters/setters when doing component math.
+  const today = todayMidnightUTC();
+  const todayISO = todayInCentralTime();
+  const sevenFromNowISO = dateInCentralTime(7);
+  const fourteenDaysAgoISO = dateInCentralTime(-14);
+  const thirtyDaysAgoISO = dateInCentralTime(-30);
+  const fourteenDaysAgo = new Date(fourteenDaysAgoISO + 'T00:00:00Z');
+  const thirtyDaysAgo = new Date(thirtyDaysAgoISO + 'T00:00:00Z');
 
   // ── Fire all independent queries in parallel ────────────────────────────
   // Previously these ran serially → 9 round-trips. Now 1 round-trip in wall time.
@@ -190,7 +190,7 @@ export async function GET() {
       continue;
     }
 
-    const exp = new Date(latest.expiration_date + 'T00:00:00');
+    const exp = new Date(latest.expiration_date + 'T00:00:00Z');
     const days = Math.round((exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     const item: BarCardAlertItem = {
@@ -278,8 +278,9 @@ export async function GET() {
   // Staff whose hire_date anniversary falls in the next 7 days. Excludes
   // anyone with a NULL hire_date (bulk-imported staff who haven't been
   // backfilled). Excludes <1-year tenures.
+  // Use UTC getters/setters: today is anchored to CT-midnight stored as UTC ms.
   const sevenDaysOut = new Date(today);
-  sevenDaysOut.setDate(today.getDate() + 7);
+  sevenDaysOut.setUTCDate(today.getUTCDate() + 7);
 
   type AnniversaryItem = {
     profile_id: string;
@@ -294,19 +295,20 @@ export async function GET() {
   for (const s of staff || []) {
     const hireDateStr = (s as { hire_date?: string | null }).hire_date;
     if (!hireDateStr) continue;
-    const hired = new Date(hireDateStr + 'T00:00:00');
+    // Parse hire_date as UTC midnight to align with `today` (also UTC-anchored)
+    const hired = new Date(hireDateStr + 'T00:00:00Z');
     if (isNaN(hired.getTime())) continue;
-    const hiredMonth = hired.getMonth();
-    const hiredDay = hired.getDate();
+    const hiredMonth = hired.getUTCMonth();
+    const hiredDay = hired.getUTCDate();
 
-    // Find next anniversary occurrence
-    let nextAnniv = new Date(today.getFullYear(), hiredMonth, hiredDay);
+    // Find next anniversary occurrence (constructed at UTC midnight)
+    let nextAnniv = new Date(Date.UTC(today.getUTCFullYear(), hiredMonth, hiredDay));
     if (nextAnniv < today) {
-      nextAnniv = new Date(today.getFullYear() + 1, hiredMonth, hiredDay);
+      nextAnniv = new Date(Date.UTC(today.getUTCFullYear() + 1, hiredMonth, hiredDay));
     }
     const days = Math.round((nextAnniv.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (days > 6) continue;
-    const years = nextAnniv.getFullYear() - hired.getFullYear();
+    const years = nextAnniv.getUTCFullYear() - hired.getUTCFullYear();
     if (years < 1) continue; // not yet 1 year
 
     anniversaries.push({
@@ -326,7 +328,7 @@ export async function GET() {
   for (const s of staff || []) {
     const wu = (s as { welcome_until?: string | null }).welcome_until;
     if (!wu) continue;
-    const wuDate = new Date(wu + 'T00:00:00');
+    const wuDate = new Date(wu + 'T00:00:00Z');
     const days = Math.round((wuDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (days < 0 || days > 7) continue;
     welcomeEndingSoon.push({
@@ -373,15 +375,15 @@ export async function GET() {
   // Surfaced separately so manager gets a celebratory prompt at the top of
   // the dashboard. Today's anniversaries are removed from the "this week"
   // card to avoid double-display.
-  const todayMonth = today.getMonth();
-  const todayDay = today.getDate();
+  const todayMonth = today.getUTCMonth();
+  const todayDay = today.getUTCDate();
 
   const birthdaysToday = (staff || [])
     .filter((s) => {
       const dob = (s as { date_of_birth?: string | null }).date_of_birth;
       if (!dob) return false;
-      const d = new Date(dob + 'T00:00:00');
-      return d.getMonth() === todayMonth && d.getDate() === todayDay;
+      const d = new Date(dob + 'T00:00:00Z');
+      return d.getUTCMonth() === todayMonth && d.getUTCDate() === todayDay;
     })
     .map((s) => ({
       profile_id: s.id,

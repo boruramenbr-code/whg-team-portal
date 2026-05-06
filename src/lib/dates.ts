@@ -43,3 +43,26 @@ export function dateInCentralTime(daysFromNow: number): string {
   const dd = String(dt.getUTCDate()).padStart(2, '0');
   return `${yy}-${mm}-${dd}`;
 }
+
+/**
+ * Returns a Date object representing midnight on today's Central Time date,
+ * stored as UTC milliseconds. Use UTC getters (getUTCMonth/getUTCDate/
+ * getUTCFullYear) and UTC math (setUTCDate) to keep results CT-anchored.
+ *
+ * Use this when you need a Date instance for math (today + N days, day of
+ * year comparisons, etc.) and the caller currently uses
+ * `today.setHours(0,0,0,0)` followed by `.getDate()` / `.getMonth()`.
+ */
+export function todayMidnightUTC(): Date {
+  const isoDate = todayInCentralTime();
+  return new Date(isoDate + 'T00:00:00Z');
+}
+
+/**
+ * Splits a YYYY-MM-DD string into { year, monthIndex (0-11), day }.
+ * Useful when you need raw date components without instantiating a Date.
+ */
+export function parseIsoDate(isoDate: string): { year: number; monthIndex: number; day: number } {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return { year: y, monthIndex: m - 1, day: d };
+}

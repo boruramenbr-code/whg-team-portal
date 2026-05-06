@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { todayMidnightUTC } from '@/lib/dates';
 
 /**
  * GET /api/birthdays
@@ -21,8 +22,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1; // 1-12
+  // CT-anchored: all date math uses UTC getters/setters on a today-midnight
+  // Date constructed via lib/dates.ts. Avoids the UTC-rollover bug where
+  // evening Louisiana time shifts our "today" to the next day.
+  const today = todayMidnightUTC();
+  const currentMonth = today.getUTCMonth() + 1; // 1-12
   const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
 
   // Fetch all active profiles with non-null birthdays.
@@ -50,27 +54,27 @@ export async function GET() {
   //   positive = future ("in 5 days")
   //   0        = today
   //   negative = past   ("yesterday" / "3 days ago")
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const windowStart = new Date(today);
-  windowStart.setDate(today.getDate() - 7); // 7 days ago
-  // new Date(year, monthIndex + 2, 0) → last day of next month. Year rollover handled.
-  const windowEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-  windowEnd.setHours(23, 59, 59, 999);
+  windowStart.setUTCDate(today.getUTCDate() - 7); // 7 days ago
+  // Date.UTC(year, monthIndex + 2, 0) → last day of next month. Year rollover handled.
+  const windowEnd = new Date(Date.UTC(
+    today.getUTCFullYear(), today.getUTCMonth() + 2, 0, 23, 59, 59, 999
+  ));
 
   const birthdays = (profiles || [])
     .map((p) => {
       if (!p.date_of_birth) return null;
-      const dob = new Date(p.date_of_birth + 'T00:00:00');
-      const birthMonth = dob.getMonth();
-      const birthDay = dob.getDate();
+      const dob = new Date(p.date_of_birth + 'T00:00:00Z');
+      const birthMonth = dob.getUTCMonth();
+      const birthDay = dob.getUTCDate();
 
       // The closest occurrence of this birthday — could be earlier this year
       // (recently passed) or later this year (upcoming) or next year (year rollover).
       // We pick whichever falls inside the [windowStart, windowEnd] window.
       const candidates = [
-        new Date(today.getFullYear() - 1, birthMonth, birthDay),
-        new Date(today.getFullYear(), birthMonth, birthDay),
-        new Date(today.getFullYear() + 1, birthMonth, birthDay),
+        new Date(Date.UTC(today.getUTCFullYear() - 1, birthMonth, birthDay)),
+        new Date(Date.UTC(today.getUTCFullYear(), birthMonth, birthDay)),
+        new Date(Date.UTC(today.getUTCFullYear() + 1, birthMonth, birthDay)),
       ];
 
       const occurrence = candidates.find(

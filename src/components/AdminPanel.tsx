@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Profile, Restaurant, UserRole } from '@/lib/types';
 import BulkImportModal from './BulkImportModal';
+import { todayInCentralTime, dateInCentralTime } from '@/lib/dates';
 
 interface BarCardSummary {
   id: string;
@@ -95,13 +96,10 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
   const [userLocations, setUserLocations] = useState<UserLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
 
-  // Helper: today + 30 days as YYYY-MM-DD
-  const defaultWelcomeUntil = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
-  })();
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Today / today+30 days in Central Time. UTC defaults caused new-hire
+  // welcome dates to be off by a day in Louisiana evenings.
+  const defaultWelcomeUntil = dateInCentralTime(30);
+  const todayStr = todayInCentralTime();
 
   // Add member modal
   const [showForm, setShowForm] = useState(false);

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
+import { todayInCentralTime } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -28,7 +29,7 @@ export async function GET() {
 
   if (!me) return NextResponse.json({ new_hires: [] });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInCentralTime();
 
   let query = supabase
     .from('profiles')

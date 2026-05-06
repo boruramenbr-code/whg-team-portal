@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { todayInCentralTime } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInCentralTime();
   const audienceParam = req.nextUrl.searchParams.get('audience') === 'managers' ? 'managers' : 'staff';
   const audienceFilter = audienceParam === 'managers' ? ['managers', 'both'] : ['staff', 'both'];
 
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Message is required' }, { status: 400 });
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInCentralTime();
   const start = startDate || today;
   const end = endDate || start;
 
