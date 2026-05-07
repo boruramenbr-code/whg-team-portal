@@ -709,8 +709,31 @@ function AdoptionCard({ adoption }: { adoption: AdoptionData }) {
   const [showNever, setShowNever] = useState(false);
   const [showStale, setShowStale] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [restaurantFilter, setRestaurantFilter] = useState<string>('all');
 
-  const { total_staff, active_in_7d, never_seen, never_seen_staff, stale_staff, all_staff } = adoption;
+  // Build the list of restaurants present in the data. For non-admin managers
+  // this will always be a single restaurant (their own), so the chip row hides.
+  const restaurants = Array.from(
+    new Set(
+      adoption.all_staff
+        .map((s) => s.restaurant_name)
+        .filter((n): n is string => !!n)
+    )
+  ).sort();
+
+  // Apply the restaurant filter client-side so all stats and lists below
+  // reflect the current view. "all" = no filter (multi-restaurant total).
+  const filteredAll = restaurantFilter === 'all'
+    ? adoption.all_staff
+    : adoption.all_staff.filter((s) => s.restaurant_name === restaurantFilter);
+
+  const total_staff = filteredAll.length;
+  const active_in_7d = filteredAll.filter((s) => s.days_since !== null && s.days_since <= 7).length;
+  const never_seen = filteredAll.filter((s) => s.days_since === null).length;
+  const never_seen_staff = filteredAll.filter((s) => s.days_since === null);
+  const stale_staff = filteredAll.filter((s) => s.days_since !== null && s.days_since > 30);
+  const all_staff = filteredAll;
+
   const pct = total_staff > 0 ? Math.round((active_in_7d / total_staff) * 100) : 0;
 
   // Color the headline by adoption health
@@ -731,11 +754,40 @@ function AdoptionCard({ adoption }: { adoption: AdoptionData }) {
 
   return (
     <section className={`${tone.bg} border ${tone.border} rounded-2xl p-4 shadow-sm`}>
+      {/* Restaurant filter chips — only shown when data spans multiple restaurants */}
+      {restaurants.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap mb-3">
+          <button
+            onClick={() => setRestaurantFilter('all')}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              restaurantFilter === 'all'
+                ? 'bg-[#1B3A6B] text-white'
+                : 'bg-white/70 text-gray-600 hover:bg-white'
+            }`}
+          >
+            All WHG
+          </button>
+          {restaurants.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRestaurantFilter(r)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                restaurantFilter === r
+                  ? 'bg-[#1B3A6B] text-white'
+                  : 'bg-white/70 text-gray-600 hover:bg-white'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Headline */}
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-600">
-            📊 Adoption (last 7 days)
+            📊 Adoption {restaurantFilter !== 'all' ? `· ${restaurantFilter}` : '(last 7 days)'}
           </p>
           <p className={`text-2xl font-bold ${tone.text} mt-0.5`}>
             {active_in_7d} <span className="text-base font-medium">/ {total_staff}</span>
