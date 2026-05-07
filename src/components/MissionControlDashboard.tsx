@@ -101,7 +101,26 @@ interface MissionControlData {
   welcome_ending_soon: WelcomeEndingItem[];
   stale_86: Stale86Item[];
   recently_archived: ArchivedItem[];
+  adoption?: AdoptionData;
   is_admin: boolean;
+}
+
+interface AdoptionStaff {
+  profile_id: string;
+  full_name: string;
+  restaurant_name: string;
+  last_seen_at: string | null;
+  days_since: number | null;
+}
+
+interface AdoptionData {
+  total_staff: number;
+  active_in_7d: number;
+  active_in_30d: number;
+  never_seen: number;
+  never_seen_staff: AdoptionStaff[];
+  stale_staff: AdoptionStaff[];
+  all_staff: AdoptionStaff[];
 }
 
 interface Props {
@@ -166,6 +185,7 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     welcome_ending_soon,
     stale_86,
     recently_archived,
+    adoption,
   } = data;
   const hasRecognitionToday =
     recognition_today.birthdays.length > 0 || recognition_today.anniversaries.length > 0;
@@ -542,6 +562,11 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
         </div>
       )}
 
+      {/* ── ADOPTION TRACKER ────────────────────────────────────────────── */}
+      {adoption && adoption.total_staff > 0 && (
+        <AdoptionCard adoption={adoption} />
+      )}
+
       {/* ── QUICK STATS ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-2">
         <StatTile emoji="👥" label="Active staff" value={stats.active_staff} />
@@ -670,5 +695,144 @@ function StatTile({ emoji, label, value }: { emoji: string; label: string; value
       <div className="text-xl font-bold text-[#1B3A6B] mt-0.5">{value}</div>
       <div className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5">{label}</div>
     </div>
+  );
+}
+
+/* ───────── Adoption Tracker Card ─────────
+ * Visibility into who's logging into the portal (rollout health).
+ * Headline = "X of Y active this week". Two collapsible sections:
+ *   • Never logged in — staff who haven't touched the app yet
+ *   • Stale (30+ days) — staff who logged in once and disappeared
+ * Tap "Show all activity" for the full sortable list (longest-since-seen first).
+ */
+function AdoptionCard({ adoption }: { adoption: AdoptionData }) {
+  const [showNever, setShowNever] = useState(false);
+  const [showStale, setShowStale] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  const { total_staff, active_in_7d, never_seen, never_seen_staff, stale_staff, all_staff } = adoption;
+  const pct = total_staff > 0 ? Math.round((active_in_7d / total_staff) * 100) : 0;
+
+  // Color the headline by adoption health
+  const tone =
+    pct >= 90 ? { bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-900', sub: 'text-emerald-700', accent: 'bg-emerald-500' }
+    : pct >= 70 ? { bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-900', sub: 'text-amber-700', accent: 'bg-amber-500' }
+    : { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-900', sub: 'text-red-700', accent: 'bg-red-500' };
+
+  const fmtLastSeen = (s: AdoptionStaff) => {
+    if (s.days_since === null) return 'Never';
+    if (s.days_since === 0) return 'Today';
+    if (s.days_since === 1) return 'Yesterday';
+    if (s.days_since < 7) return `${s.days_since} days ago`;
+    if (s.days_since < 14) return '1 week ago';
+    if (s.days_since < 30) return `${Math.floor(s.days_since / 7)} weeks ago`;
+    return `${Math.floor(s.days_since / 30)}+ months ago`;
+  };
+
+  return (
+    <section className={`${tone.bg} border ${tone.border} rounded-2xl p-4 shadow-sm`}>
+      {/* Headline */}
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-600">
+            📊 Adoption (last 7 days)
+          </p>
+          <p className={`text-2xl font-bold ${tone.text} mt-0.5`}>
+            {active_in_7d} <span className="text-base font-medium">/ {total_staff}</span>
+          </p>
+          <p className={`text-xs ${tone.sub} font-semibold`}>{pct}% active this week</p>
+        </div>
+        <div className={`text-3xl ${tone.text}`}>
+          {pct >= 90 ? '✅' : pct >= 70 ? '🟡' : '🔴'}
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden mb-3">
+        <div
+          className={`h-full ${tone.accent} transition-all`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      {/* Never-logged-in expander */}
+      {never_seen > 0 && (
+        <div className="mb-2">
+          <button
+            onClick={() => setShowNever((v) => !v)}
+            className="w-full flex items-center justify-between text-left bg-white/60 hover:bg-white rounded-lg px-3 py-2 transition-colors"
+          >
+            <span className="text-xs font-semibold text-gray-800">
+              ⚠️ {never_seen} {never_seen === 1 ? 'staff has' : 'staff have'} never logged in
+            </span>
+            <span className={`text-gray-400 transition-transform ${showNever ? 'rotate-180' : ''}`}>⌄</span>
+          </button>
+          {showNever && (
+            <ul className="mt-1.5 px-3 space-y-1">
+              {never_seen_staff.map((s) => (
+                <li key={s.profile_id} className="text-xs text-gray-700 flex items-center justify-between gap-2 py-1 border-b border-gray-200/60 last:border-0">
+                  <span className="font-semibold">{s.full_name}</span>
+                  <span className="text-[10px] text-gray-500">{s.restaurant_name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Stale (30+ days) expander */}
+      {stale_staff.length > 0 && (
+        <div className="mb-2">
+          <button
+            onClick={() => setShowStale((v) => !v)}
+            className="w-full flex items-center justify-between text-left bg-white/60 hover:bg-white rounded-lg px-3 py-2 transition-colors"
+          >
+            <span className="text-xs font-semibold text-gray-800">
+              💤 {stale_staff.length} stopped checking the app (30+ days)
+            </span>
+            <span className={`text-gray-400 transition-transform ${showStale ? 'rotate-180' : ''}`}>⌄</span>
+          </button>
+          {showStale && (
+            <ul className="mt-1.5 px-3 space-y-1">
+              {stale_staff.map((s) => (
+                <li key={s.profile_id} className="text-xs text-gray-700 flex items-center justify-between gap-2 py-1 border-b border-gray-200/60 last:border-0">
+                  <span className="font-semibold">{s.full_name}</span>
+                  <span className="text-[10px] text-gray-500">{fmtLastSeen(s)} · {s.restaurant_name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Full list expander */}
+      <button
+        onClick={() => setShowAll((v) => !v)}
+        className="w-full text-center text-[11px] font-semibold text-gray-600 hover:text-gray-800 mt-1"
+      >
+        {showAll ? 'Hide' : 'Show'} all staff activity →
+      </button>
+      {showAll && (
+        <ul className="mt-2 px-1 space-y-0.5 max-h-72 overflow-y-auto">
+          {all_staff.map((s) => (
+            <li key={s.profile_id} className="text-xs text-gray-700 flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-white/60">
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold truncate">{s.full_name}</span>
+                {s.restaurant_name && <span className="text-[10px] text-gray-500 ml-1.5">{s.restaurant_name}</span>}
+              </div>
+              <span className={`text-[10px] flex-shrink-0 ${
+                s.days_since === null ? 'text-red-600 font-semibold'
+                : s.days_since === 0 ? 'text-emerald-700 font-semibold'
+                : s.days_since <= 7 ? 'text-gray-600'
+                : s.days_since <= 30 ? 'text-amber-700'
+                : 'text-red-600'
+              }`}>
+                {fmtLastSeen(s)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

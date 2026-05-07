@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { todayInCentralTime, dateInCentralTime, todayMidnightUTC } from '@/lib/dates';
+import { pingLastSeen } from '@/lib/last-seen';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -46,6 +47,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Adoption tracker: stamp last_seen_at on every Mission Control load
+  // so manager activity is captured (managers don't sign staff policies).
+  pingLastSeen(user.id);
+
   const { data: me } = await supabase
     .from('profiles')
     .select('role, restaurant_id, status')
@@ -86,7 +91,7 @@ export async function GET() {
 
   let staffQ = adminClient
     .from('profiles')
-    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, date_of_birth, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
+    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, date_of_birth, last_seen_at, welcome_dismissed_at, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', 'active');
   if (!isAdmin) staffQ = staffQ.in('restaurant_id', restaurantIds);
 
@@ -395,6 +400,67 @@ export async function GET() {
   // Filter out today from the weekly card (the new Today's Recognition card surfaces them)
   const anniversariesUpcoming = anniversaries.filter((a) => a.days_until > 0);
 
+  // ── Adoption tracker ─────────────────────────────────────────────────
+  // For each active staff: most recent of last_seen_at OR welcome_dismissed_at.
+  // (policy_signatures.created_at is folded into last_seen_at via the
+  // backfill in migration 043 — once a signature exists, last_seen_at is set
+  // to at least that timestamp.)
+  type AdoptionStaff = {
+    profile_id: string;
+    full_name: string;
+    restaurant_name: string;
+    last_seen_at: string | null;
+    days_since: number | null; // null = never seen
+  };
+  const sevenDaysAgoMs = today.getTime() - 7 * 24 * 60 * 60 * 1000;
+  const thirtyDaysAgoMs = today.getTime() - 30 * 24 * 60 * 60 * 1000;
+  let activeIn7d = 0;
+  let activeIn30d = 0;
+  let neverSeen = 0;
+  const staleStaff: AdoptionStaff[] = [];     // 30+ days since last seen
+  const neverSeenStaff: AdoptionStaff[] = []; // never logged in
+  const allStaffActivity: AdoptionStaff[] = [];
+
+  for (const s of staff || []) {
+    const lastSeen = (s as { last_seen_at?: string | null }).last_seen_at;
+    const welcomeDismissed = (s as { welcome_dismissed_at?: string | null }).welcome_dismissed_at;
+    // Most recent signal = effective last_seen
+    const effectiveTs = (() => {
+      const a = lastSeen ? new Date(lastSeen).getTime() : 0;
+      const b = welcomeDismissed ? new Date(welcomeDismissed).getTime() : 0;
+      return Math.max(a, b) || null;
+    })();
+
+    const item: AdoptionStaff = {
+      profile_id: s.id,
+      full_name: s.full_name,
+      restaurant_name: (s.restaurants as { name?: string } | null)?.name || '',
+      last_seen_at: effectiveTs ? new Date(effectiveTs).toISOString() : null,
+      days_since: effectiveTs
+        ? Math.round((today.getTime() - effectiveTs) / (1000 * 60 * 60 * 24))
+        : null,
+    };
+    allStaffActivity.push(item);
+
+    if (effectiveTs === null) {
+      neverSeen++;
+      neverSeenStaff.push(item);
+    } else {
+      if (effectiveTs >= sevenDaysAgoMs) activeIn7d++;
+      if (effectiveTs >= thirtyDaysAgoMs) activeIn30d++;
+      if (effectiveTs < thirtyDaysAgoMs) staleStaff.push(item);
+    }
+  }
+  allStaffActivity.sort((a, b) => {
+    // Never-seen first, then stalest → freshest
+    if (a.days_since === null && b.days_since === null) return a.full_name.localeCompare(b.full_name);
+    if (a.days_since === null) return -1;
+    if (b.days_since === null) return 1;
+    return b.days_since - a.days_since;
+  });
+  neverSeenStaff.sort((a, b) => a.full_name.localeCompare(b.full_name));
+  staleStaff.sort((a, b) => (b.days_since ?? 0) - (a.days_since ?? 0));
+
   return NextResponse.json(
     {
       bar_cards: {
@@ -421,6 +487,15 @@ export async function GET() {
       welcome_ending_soon: welcomeEndingSoon,
       stale_86: stale86,
       recently_archived: recentlyArchived,
+      adoption: {
+        total_staff: activeStaffCount,
+        active_in_7d: activeIn7d,
+        active_in_30d: activeIn30d,
+        never_seen: neverSeen,
+        never_seen_staff: neverSeenStaff,
+        stale_staff: staleStaff,
+        all_staff: allStaffActivity,
+      },
       is_admin: isAdmin,
     },
     { headers: { 'Cache-Control': 'no-store' } }

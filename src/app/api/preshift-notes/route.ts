@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { todayInCentralTime } from '@/lib/dates';
+import { pingLastSeen } from '@/lib/last-seen';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -75,6 +76,9 @@ export async function GET(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // Adoption tracker: stamp last_seen_at on every authenticated read.
+  pingLastSeen(user.id);
 
   // Profile + extra locations + all restaurants — fire in parallel.
   // We don't yet know if the user is admin, so we speculatively fetch
