@@ -1,8 +1,20 @@
 import { createClient } from '@/lib/supabase-server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { todayInCentralTime } from '@/lib/dates';
 import { pingLastSeen } from '@/lib/last-seen';
+
+// Service-role client used for reads where we've already authenticated and
+// authorized the user via our own checks (profile + role + allowed restaurants).
+// Bypasses RLS so admins can view any restaurant they've been granted access to.
+function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -137,8 +149,11 @@ export async function GET(req: NextRequest) {
   }
 
   // Fetch the note + creator name in a single query via FK join.
-  // Saves a separate round-trip to profiles after the note loads.
-  const { data: noteJoined } = await supabase
+  // Use admin client because RLS on preshift_notes blocks admins from reading
+  // notes for restaurants other than their own profile.restaurant_id —
+  // we've already validated access above (admin or matches user's allowed set).
+  const adminClient = getAdminClient();
+  const { data: noteJoined } = await adminClient
     .from('preshift_notes')
     .select('*, creator:profiles!created_by(full_name)')
     .eq('restaurant_id', targetRestaurantId)
