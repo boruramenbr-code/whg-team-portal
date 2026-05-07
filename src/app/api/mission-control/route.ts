@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { todayInCentralTime, dateInCentralTime, todayMidnightUTC } from '@/lib/dates';
 import { pingLastSeen } from '@/lib/last-seen';
 
@@ -42,7 +42,7 @@ interface BarCardAlertItem {
  *   owner_message       — current active message
  *   stats               — counts useful at-a-glance
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -75,6 +75,44 @@ export async function GET() {
 
   const adminClient = getAdminClient();
 
+  // ── Restaurant scoping (admin-only override) ─────────────────────────
+  // Admins can pass ?restaurant_id=<uuid> to view Mission Control as if
+  // they were a manager at that single restaurant. Non-admins always see
+  // their assigned set; the param is ignored for them.
+  //
+  // shouldScope determines whether queries filter by restaurant:
+  //   • non-admin → always (their assigned set)
+  //   • admin without override → never (full WHG view)
+  //   • admin with override → yes (single chosen restaurant)
+  const restaurantOverride = req.nextUrl.searchParams.get('restaurant_id');
+  const validOverride = restaurantOverride && isAdmin ? restaurantOverride : null;
+  const effectiveRestaurantIds = validOverride
+    ? new Set<string>([validOverride])
+    : allowedRestaurantIds;
+  const shouldScope = !isAdmin || !!validOverride;
+  const activeRestaurantId = validOverride || null;
+
+  // List of restaurants the user can switch between (for the picker UI).
+  // Admin → all active restaurants. Non-admin multi-loc → their assigned set.
+  // Single-restaurant non-admin → empty (no picker shown).
+  let availableRestaurants: { id: string; name: string }[] = [];
+  if (isAdmin) {
+    const { data } = await adminClient
+      .from('restaurants')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    availableRestaurants = data || [];
+  } else if (allowedRestaurantIds.size > 1) {
+    const { data } = await adminClient
+      .from('restaurants')
+      .select('id, name')
+      .in('id', Array.from(allowedRestaurantIds))
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    availableRestaurants = data || [];
+  }
+
   // All dates anchored to Central Time. `today` is a Date instance at
   // CT-midnight (UTC ms) — use UTC getters/setters when doing component math.
   const today = todayMidnightUTC();
@@ -87,23 +125,24 @@ export async function GET() {
 
   // ── Fire all independent queries in parallel ────────────────────────────
   // Previously these ran serially → 9 round-trips. Now 1 round-trip in wall time.
-  const restaurantIds = Array.from(allowedRestaurantIds);
+  // shouldScope controls restaurant filtering: see top of function.
+  const scopedIds = Array.from(effectiveRestaurantIds);
 
   let staffQ = adminClient
     .from('profiles')
     .select('id, full_name, restaurant_id, requires_bar_card, hire_date, date_of_birth, last_seen_at, welcome_dismissed_at, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', 'active');
-  if (!isAdmin) staffQ = staffQ.in('restaurant_id', restaurantIds);
+  if (shouldScope) staffQ = staffQ.in('restaurant_id', scopedIds);
 
   let restaurantsQ = adminClient.from('restaurants').select('id, name').eq('is_active', true);
-  if (!isAdmin) restaurantsQ = restaurantsQ.in('id', restaurantIds);
+  if (shouldScope) restaurantsQ = restaurantsQ.in('id', scopedIds);
 
   let newHiresQ = adminClient
     .from('profiles')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'active')
     .gte('created_at', fourteenDaysAgo.toISOString());
-  if (!isAdmin) newHiresQ = newHiresQ.in('restaurant_id', restaurantIds);
+  if (shouldScope) newHiresQ = newHiresQ.in('restaurant_id', scopedIds);
 
   let archivedQ = adminClient
     .from('profiles')
@@ -111,13 +150,13 @@ export async function GET() {
     .eq('status', 'archived')
     .gte('updated_at', thirtyDaysAgo.toISOString())
     .order('updated_at', { ascending: false });
-  if (!isAdmin) archivedQ = archivedQ.in('restaurant_id', restaurantIds);
+  if (shouldScope) archivedQ = archivedQ.in('restaurant_id', scopedIds);
 
   let preshiftNotesQ = adminClient
     .from('preshift_notes')
     .select('restaurant_id, eighty_sixed, restaurants(name)')
     .eq('shift_date', todayISO);
-  if (!isAdmin) preshiftNotesQ = preshiftNotesQ.in('restaurant_id', restaurantIds);
+  if (shouldScope) preshiftNotesQ = preshiftNotesQ.in('restaurant_id', scopedIds);
 
   const [
     staffRes,
@@ -224,11 +263,13 @@ export async function GET() {
   // ── Quick stats ───────────────────────────────────────────────────────────
   const activeStaffCount = (staff || []).length;
 
-  // ── Holidays already filtered to scope ──────────────────────────────────
+  // ── Holidays filtered to scope ──────────────────────────────────────────
+  // Company-wide holidays (restaurant_id IS NULL) always show. Restaurant-
+  // specific holidays only show if they belong to the effective scope.
   const filteredHolidays = (upcomingHolidays || []).filter((h) => {
-    if (isAdmin) return true;
     if (!h.restaurant_id) return true; // company-wide
-    return allowedRestaurantIds.has(h.restaurant_id);
+    if (shouldScope) return effectiveRestaurantIds.has(h.restaurant_id);
+    return true; // admin in unscoped mode sees all
   });
 
   // ── Policy signature compliance ──────────────────────────────────────────
@@ -497,6 +538,8 @@ export async function GET() {
         all_staff: allStaffActivity,
       },
       is_admin: isAdmin,
+      active_restaurant_id: activeRestaurantId,
+      available_restaurants: availableRestaurants,
     },
     { headers: { 'Cache-Control': 'no-store' } }
   );

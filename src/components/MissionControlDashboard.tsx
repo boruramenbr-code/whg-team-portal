@@ -103,6 +103,8 @@ interface MissionControlData {
   recently_archived: ArchivedItem[];
   adoption?: AdoptionData;
   is_admin: boolean;
+  active_restaurant_id?: string | null;
+  available_restaurants?: RestaurantOption[];
 }
 
 interface AdoptionStaff {
@@ -123,6 +125,11 @@ interface AdoptionData {
   all_staff: AdoptionStaff[];
 }
 
+interface RestaurantOption {
+  id: string;
+  name: string;
+}
+
 interface Props {
   /** Jump to another admin tab when an alert card's CTA is clicked */
   onNavigate: (tab: 'staff' | 'preshift' | 'compliance' | 'barcards') => void;
@@ -135,13 +142,32 @@ interface Props {
  * Architecture: composable alert cards. To add a new module's alerts later,
  * extend the API response and add a new <Section>/<AlertCard> render here.
  */
+const VIEW_RESTAURANT_KEY = 'whg_view_restaurant_id';
+
 export default function MissionControlDashboard({ onNavigate }: Props) {
   const [data, setData] = useState<MissionControlData | null>(null);
   const [loading, setLoading] = useState(true);
+  // Master restaurant filter — admin/multi-loc users only.
+  // null = "All WHG" (no scoping). Persisted via localStorage so the choice
+  // sticks across visits, shared with Positions tab + HomeTab pre-shift.
+  const [restaurantFilter, setRestaurantFilter] = useState<string | null>(null);
+
+  // Load saved restaurant preference on first render
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_RESTAURANT_KEY);
+      if (saved) setRestaurantFilter(saved);
+    } catch {
+      // localStorage unavailable
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/mission-control', { cache: 'no-store' });
+      const url = restaurantFilter
+        ? `/api/mission-control?restaurant_id=${encodeURIComponent(restaurantFilter)}`
+        : '/api/mission-control';
+      const r = await fetch(url, { cache: 'no-store' });
       if (!r.ok) {
         setLoading(false);
         return;
@@ -151,11 +177,21 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [restaurantFilter]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const onSelectRestaurant = (id: string | null) => {
+    setRestaurantFilter(id);
+    try {
+      if (id) localStorage.setItem(VIEW_RESTAURANT_KEY, id);
+      else localStorage.removeItem(VIEW_RESTAURANT_KEY);
+    } catch {
+      // ignore
+    }
+  };
 
   if (loading) {
     return (
@@ -186,6 +222,8 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     stale_86,
     recently_archived,
     adoption,
+    available_restaurants,
+    active_restaurant_id,
   } = data;
   const hasRecognitionToday =
     recognition_today.birthdays.length > 0 || recognition_today.anniversaries.length > 0;
@@ -213,6 +251,48 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
           ↻ Refresh
         </button>
       </div>
+
+      {/* ── MASTER RESTAURANT TOGGLE (admin/multi-loc only) ───────────────
+          Filters every card on this dashboard. "All WHG" = brand-wide view.
+          Picking a specific restaurant simulates exactly what a manager
+          at that location sees — useful for owner walk-throughs and demos. */}
+      {available_restaurants && available_restaurants.length > 1 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+            Viewing
+          </p>
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              onClick={() => onSelectRestaurant(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                !active_restaurant_id
+                  ? 'bg-[#1B3A6B] text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              All WHG
+            </button>
+            {available_restaurants.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => onSelectRestaurant(r.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  active_restaurant_id === r.id
+                    ? 'bg-[#1B3A6B] text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {r.name}
+              </button>
+            ))}
+          </div>
+          {active_restaurant_id && (
+            <p className="text-[10px] text-gray-400 italic mt-2 leading-relaxed">
+              Showing what a manager at this restaurant sees on their dashboard.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* All clear state */}
       {allClear && (
@@ -709,31 +789,11 @@ function AdoptionCard({ adoption }: { adoption: AdoptionData }) {
   const [showNever, setShowNever] = useState(false);
   const [showStale, setShowStale] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [restaurantFilter, setRestaurantFilter] = useState<string>('all');
 
-  // Build the list of restaurants present in the data. For non-admin managers
-  // this will always be a single restaurant (their own), so the chip row hides.
-  const restaurants = Array.from(
-    new Set(
-      adoption.all_staff
-        .map((s) => s.restaurant_name)
-        .filter((n): n is string => !!n)
-    )
-  ).sort();
-
-  // Apply the restaurant filter client-side so all stats and lists below
-  // reflect the current view. "all" = no filter (multi-restaurant total).
-  const filteredAll = restaurantFilter === 'all'
-    ? adoption.all_staff
-    : adoption.all_staff.filter((s) => s.restaurant_name === restaurantFilter);
-
-  const total_staff = filteredAll.length;
-  const active_in_7d = filteredAll.filter((s) => s.days_since !== null && s.days_since <= 7).length;
-  const never_seen = filteredAll.filter((s) => s.days_since === null).length;
-  const never_seen_staff = filteredAll.filter((s) => s.days_since === null);
-  const stale_staff = filteredAll.filter((s) => s.days_since !== null && s.days_since > 30);
-  const all_staff = filteredAll;
-
+  // Filtering is handled by the global Mission Control restaurant toggle —
+  // adoption data arrives pre-scoped from the API based on whatever the
+  // master switch is set to.
+  const { total_staff, active_in_7d, never_seen, never_seen_staff, stale_staff, all_staff } = adoption;
   const pct = total_staff > 0 ? Math.round((active_in_7d / total_staff) * 100) : 0;
 
   // Color the headline by adoption health
@@ -754,40 +814,11 @@ function AdoptionCard({ adoption }: { adoption: AdoptionData }) {
 
   return (
     <section className={`${tone.bg} border ${tone.border} rounded-2xl p-4 shadow-sm`}>
-      {/* Restaurant filter chips — only shown when data spans multiple restaurants */}
-      {restaurants.length > 1 && (
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          <button
-            onClick={() => setRestaurantFilter('all')}
-            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              restaurantFilter === 'all'
-                ? 'bg-[#1B3A6B] text-white'
-                : 'bg-white/70 text-gray-600 hover:bg-white'
-            }`}
-          >
-            All WHG
-          </button>
-          {restaurants.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRestaurantFilter(r)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                restaurantFilter === r
-                  ? 'bg-[#1B3A6B] text-white'
-                  : 'bg-white/70 text-gray-600 hover:bg-white'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Headline */}
       <div className="flex items-baseline justify-between gap-3 mb-2">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-600">
-            📊 Adoption {restaurantFilter !== 'all' ? `· ${restaurantFilter}` : '(last 7 days)'}
+            📊 Adoption (last 7 days)
           </p>
           <p className={`text-2xl font-bold ${tone.text} mt-0.5`}>
             {active_in_7d} <span className="text-base font-medium">/ {total_staff}</span>
