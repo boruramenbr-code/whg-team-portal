@@ -59,10 +59,35 @@ function emptyItem(): TaggedItem {
 
 type ShiftDay = 'today' | 'tomorrow';
 
+// Shared localStorage key used by HomeTab pre-shift, Mission Control master
+// toggle, and Positions tab restaurant switcher. Keeping this consistent
+// means whichever view the user picks anywhere, everywhere else follows —
+// including this editor. No more "where did my post go" mismatches.
+const VIEW_RESTAURANT_KEY = 'whg_view_restaurant_id';
+
 export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>(
-    restaurants && restaurants.length > 0 ? restaurants[0].id : ''
-  );
+  // Initial selection: try localStorage first (so editor matches whatever
+  // restaurant the user has been viewing). Fall back to first restaurant.
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>(() => {
+    if (!restaurants || restaurants.length === 0) return '';
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem(VIEW_RESTAURANT_KEY);
+        if (saved && restaurants.some((r) => r.id === saved)) return saved;
+      } catch {
+        // localStorage unavailable — fall through
+      }
+    }
+    return restaurants[0].id;
+  });
+
+  // Wrap setter so every change also persists to localStorage. That way
+  // posting at Boru auto-points HomeTab + Mission Control at Boru on next load.
+  const onChangeRestaurant = (id: string) => {
+    setSelectedRestaurantId(id);
+    try { window.localStorage.setItem(VIEW_RESTAURANT_KEY, id); } catch { /* ignore */ }
+  };
+
   const [shiftDay, setShiftDay] = useState<ShiftDay>('today');
   const [fohMessage, setFohMessage] = useState('');
   const [bohMessage, setBohMessage] = useState('');
@@ -319,7 +344,7 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
             </label>
             <select
               value={selectedRestaurantId}
-              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              onChange={(e) => onChangeRestaurant(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
             >
               {restaurants.map((r) => (
