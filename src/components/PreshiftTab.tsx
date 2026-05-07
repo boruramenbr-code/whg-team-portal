@@ -11,7 +11,8 @@ interface TaggedItem {
 
 interface PreshiftNote {
   id: string;
-  message: string | null;
+  foh_message: string | null;
+  boh_message: string | null;
   specials: TaggedItem[];
   eighty_sixed: TaggedItem[];
   focus_items: TaggedItem[];
@@ -67,8 +68,9 @@ export default function PreshiftTab({ language, restaurantName, restaurantId }: 
   const hasSpecials = (note?.specials?.length ?? 0) > 0;
   const has86 = (note?.eighty_sixed?.length ?? 0) > 0;
   const hasFocus = (note?.focus_items?.length ?? 0) > 0;
-  const hasMessage = !!note?.message?.trim();
-  const hasAnyContent = hasSpecials || has86 || hasFocus || hasMessage;
+  const hasFohMessage = !!note?.foh_message?.trim();
+  const hasBohMessage = !!note?.boh_message?.trim();
+  const hasAnyContent = hasSpecials || has86 || hasFocus || hasFohMessage || hasBohMessage;
 
   const updatedTime = note
     ? new Date(note.updated_at || note.created_at).toLocaleTimeString([], {
@@ -121,10 +123,28 @@ export default function PreshiftTab({ language, restaurantName, restaurantId }: 
                 </div>
 
                 <div className="px-5 py-4 space-y-4">
-                  {hasMessage && (
-                    <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
-                      {note!.message}
-                    </p>
+                  {hasFohMessage && (
+                    <div>
+                      <p className="text-[10px] font-bold text-sky-700 uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <span>🍽️</span>
+                        {isES ? 'Mensaje FOH' : 'FOH Message'}
+                      </p>
+                      <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                        {note!.foh_message}
+                      </p>
+                    </div>
+                  )}
+
+                  {hasBohMessage && (
+                    <div>
+                      <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wide mb-1 flex items-center gap-1">
+                        <span>🔥</span>
+                        {isES ? 'Mensaje BOH' : 'BOH Message'}
+                      </p>
+                      <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+                        {note!.boh_message}
+                      </p>
+                    </div>
                   )}
 
                   {hasSpecials && (

@@ -191,7 +191,17 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { message, specials, eightySixed, focusItems, shiftDate, restaurantId } = body;
+  const {
+    fohMessage,
+    bohMessage,
+    // Back-compat: old clients still send `message` — treat as fohMessage.
+    message: legacyMessage,
+    specials,
+    eightySixed,
+    focusItems,
+    shiftDate,
+    restaurantId,
+  } = body;
 
   const targetDate = shiftDate || todayInCentralTime();
   const targetRestaurantId =
@@ -206,8 +216,12 @@ export async function POST(req: NextRequest) {
   const cleanEightySixed = normalizeItems(eightySixed, initials);
   const cleanFocusItems = normalizeItems(focusItems, initials);
 
+  const fohText = (typeof fohMessage === 'string' ? fohMessage : legacyMessage)?.trim() || null;
+  const bohText = typeof bohMessage === 'string' ? bohMessage.trim() || null : null;
+
   const hasContent =
-    message?.trim() ||
+    fohText ||
+    bohText ||
     cleanSpecials.length > 0 ||
     cleanEightySixed.length > 0 ||
     cleanFocusItems.length > 0;
@@ -220,7 +234,8 @@ export async function POST(req: NextRequest) {
     restaurant_id: targetRestaurantId,
     created_by: user.id,
     shift_date: targetDate,
-    message: message?.trim() || null,
+    foh_message: fohText,
+    boh_message: bohText,
     specials: cleanSpecials,
     eighty_sixed: cleanEightySixed,
     focus_items: cleanFocusItems,

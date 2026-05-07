@@ -11,7 +11,8 @@ interface TaggedItem {
 
 interface PreshiftNote {
   id: string;
-  message: string | null;
+  foh_message: string | null;
+  boh_message: string | null;
   specials: TaggedItem[];
   eighty_sixed: TaggedItem[];
   focus_items: TaggedItem[];
@@ -63,7 +64,8 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
     restaurants && restaurants.length > 0 ? restaurants[0].id : ''
   );
   const [shiftDay, setShiftDay] = useState<ShiftDay>('today');
-  const [message, setMessage] = useState('');
+  const [fohMessage, setFohMessage] = useState('');
+  const [bohMessage, setBohMessage] = useState('');
   const [specials, setSpecials] = useState<TaggedItem[]>([emptyItem()]);
   const [eightySixed, setEightySixed] = useState<TaggedItem[]>([emptyItem()]);
   const [focusItems, setFocusItems] = useState<TaggedItem[]>([emptyItem()]);
@@ -88,13 +90,15 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
       const d = await r.json();
       if (d.note) {
         setExistingNote(d.note);
-        setMessage(d.note.message || '');
+        setFohMessage(d.note.foh_message || '');
+        setBohMessage(d.note.boh_message || '');
         setSpecials(d.note.specials?.length > 0 ? d.note.specials : [emptyItem()]);
         setEightySixed(d.note.eighty_sixed?.length > 0 ? d.note.eighty_sixed : [emptyItem()]);
         setFocusItems(d.note.focus_items?.length > 0 ? d.note.focus_items : [emptyItem()]);
       } else {
         setExistingNote(null);
-        setMessage('');
+        setFohMessage('');
+        setBohMessage('');
         setSpecials([emptyItem()]);
         setEightySixed([emptyItem()]);
         setFocusItems([emptyItem()]);
@@ -145,7 +149,8 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
           }));
 
       const body: Record<string, unknown> = {
-        message,
+        fohMessage,
+        bohMessage,
         specials: cleanList(specials),
         eightySixed: cleanList(eightySixed),
         focusItems: cleanList(focusItems),
@@ -329,18 +334,38 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
           </div>
         )}
 
-        {/* Manager message */}
+        {/* FOH message — for the front of house team */}
         <div>
-          <label className="flex items-center gap-1.5 text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
-            <span>💬</span> Shift Message
+          <label className="flex items-center gap-1.5 text-xs font-bold text-sky-700 uppercase tracking-wide mb-2">
+            <span>🍽️</span> FOH Message
           </label>
           <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Hey team — busy night ahead. We have a private party of 20 coming in at 7. Let's nail it."
+            value={fohMessage}
+            onChange={(e) => setFohMessage(e.target.value)}
+            placeholder="Hey team — busy night ahead. Private party of 20 at 7. Let's nail it."
             rows={3}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 resize-none"
           />
+          <p className="text-[10px] text-gray-400 mt-1">
+            Front of house — servers, hosts, bartenders, expo.
+          </p>
+        </div>
+
+        {/* BOH message — so kitchen never feels skipped */}
+        <div>
+          <label className="flex items-center gap-1.5 text-xs font-bold text-orange-700 uppercase tracking-wide mb-2">
+            <span>🔥</span> BOH Message
+          </label>
+          <textarea
+            value={bohMessage}
+            onChange={(e) => setBohMessage(e.target.value)}
+            placeholder="Kitchen — keep an eye on plate temps tonight. Watch the fryer, change oil if it goes cloudy."
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 resize-none"
+          />
+          <p className="text-[10px] text-gray-400 mt-1">
+            Back of house — cooks, prep, dish, kitchen leadership. Visible to everyone but speaks to BOH.
+          </p>
         </div>
 
         {renderArrayFields(
