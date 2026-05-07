@@ -148,26 +148,26 @@ export async function GET(req: NextRequest) {
     availableRestaurants = allRestaurants.filter((r) => userRestaurantIds.has(r.id));
   }
 
-  // Fetch the note + creator name in a single query via FK join.
-  // Use admin client because RLS on preshift_notes blocks admins from reading
-  // notes for restaurants other than their own profile.restaurant_id —
-  // we've already validated access above (admin or matches user's allowed set).
+  // Use admin client to bypass RLS — we already validated access above.
+  // Fetch note and creator separately (no FK join) to avoid Supabase
+  // embed-syntax edge cases that were silently filtering rows out.
   const adminClient = getAdminClient();
-  const { data: noteJoined } = await adminClient
+  const { data: noteSimple } = await adminClient
     .from('preshift_notes')
-    .select('*, creator:profiles!created_by(full_name)')
+    .select('*')
     .eq('restaurant_id', targetRestaurantId)
     .eq('shift_date', targetDate)
     .eq('is_active', true)
     .maybeSingle();
 
   let creatorName: string | null = null;
-  let noteSimple: Record<string, unknown> | null = null;
-  if (noteJoined) {
-    type NoteRow = Record<string, unknown> & { creator?: { full_name?: string | null } | null };
-    const { creator, ...rest } = noteJoined as NoteRow;
+  if (noteSimple?.created_by) {
+    const { data: creator } = await adminClient
+      .from('profiles')
+      .select('full_name')
+      .eq('id', noteSimple.created_by)
+      .maybeSingle();
     creatorName = creator?.full_name || null;
-    noteSimple = rest;
   }
 
   return NextResponse.json(
