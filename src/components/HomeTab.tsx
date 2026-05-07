@@ -142,38 +142,59 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
     }
   }, []);
 
+  // Two-loader pattern for the Home tab:
+  //
+  //   loadPreshift     — restaurant-scoped, refetches when viewRestaurantId
+  //                      changes. Doesn't toggle the global `loading` flag,
+  //                      so chip swaps don't flicker the whole card —
+  //                      we keep the prior note visible until the new one
+  //                      arrives, then swap in place.
+  //
+  //   loadGeneral      — owner messages, birthdays, holidays. None of these
+  //                      change with chip selection, so we run this ONCE on
+  //                      mount and never refetch when the user clicks a chip.
+  //
+  // Before this split, every chip click fired 4 parallel API calls (3 of
+  // them returning the same data as last time) and showed a "Loading…"
+  // state on the whole card. Now chip clicks fire 1 call and never flicker.
   const loadPreshift = useCallback(async () => {
-    setLoading(true);
     try {
       const preshiftUrl = viewRestaurantId
         ? `/api/preshift-notes?restaurant_id=${encodeURIComponent(viewRestaurantId)}&t=${Date.now()}`
         : `/api/preshift-notes?t=${Date.now()}`;
-
-      const [noteRes, ownerRes, bdayRes, holidaysRes] = await Promise.all([
-        fetch(preshiftUrl, { cache: 'no-store' }),
-        fetch(`/api/owner-messages?audience=staff&t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/holidays?t=${Date.now()}`, { cache: 'no-store' }),
-      ]);
+      const noteRes = await fetch(preshiftUrl, { cache: 'no-store' });
+      if (!noteRes.ok) return;
       const noteData = await noteRes.json();
-      const ownerData = await ownerRes.json();
       setNote(noteData.note || null);
       setActiveRestaurantId(noteData.active_restaurant_id || null);
-      setOwnerMessages(ownerData.messages || []);
       if (Array.isArray(noteData.available_restaurants)) {
         setAvailableRestaurants(noteData.available_restaurants);
-        // Resolve the human-readable name for the active restaurant
         const match = noteData.available_restaurants.find(
           (r: { id: string }) => r.id === noteData.active_restaurant_id
         );
         setActiveRestaurantName(match?.name || null);
       }
+    } catch {
+      // ignore — keep prior content rendered rather than flickering an error
+    }
+  }, [viewRestaurantId]);
 
+  const loadGeneral = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ownerRes, bdayRes, holidaysRes] = await Promise.all([
+        fetch(`/api/owner-messages?audience=staff&t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/holidays?t=${Date.now()}`, { cache: 'no-store' }),
+      ]);
+      if (ownerRes.ok) {
+        const ownerData = await ownerRes.json();
+        setOwnerMessages(ownerData.messages || []);
+      }
       if (bdayRes.ok) {
         const bdayData = await bdayRes.json();
         setBirthdays(bdayData.birthdays || []);
       }
-
       // Filter holidays to those active today (start ≤ today ≤ end).
       // Used to render the today's-event badge atop the pre-shift card.
       if (holidaysRes.ok) {
@@ -193,8 +214,15 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
     } finally {
       setLoading(false);
     }
-  }, [viewRestaurantId]);
+  }, []);
 
+  // Load owner messages / birthdays / holidays ONCE on mount —
+  // none of those depend on the restaurant chip selection.
+  useEffect(() => {
+    loadGeneral();
+  }, [loadGeneral]);
+
+  // Load pre-shift note whenever the restaurant chip changes.
   useEffect(() => {
     loadPreshift();
   }, [loadPreshift]);
