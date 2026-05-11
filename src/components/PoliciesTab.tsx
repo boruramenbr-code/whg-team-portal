@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import SignaturePadModal from './SignaturePadModal';
 import type { PolicyWithStatus, UserRole } from '@/lib/types';
 
 interface Props {
@@ -20,6 +21,7 @@ export default function PoliciesTab({ language }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>('employee');
+  const [fullName, setFullName] = useState<string>('');
   const [grouped, setGrouped] = useState<Grouped>({ employee: [], manager: [], handbook: null });
   const [progress, setProgress] = useState<Progress>({ total: 0, signed: 0, remaining: 0 });
   const [selected, setSelected] = useState<PolicyWithStatus | null>(null);
@@ -37,6 +39,7 @@ export default function PoliciesTab({ language }: Props) {
       setGrouped(j.grouped);
       setProgress(j.progress);
       setRole(j.role);
+      setFullName(j.full_name ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -63,6 +66,7 @@ export default function PoliciesTab({ language }: Props) {
       <PolicyDetail
         policy={selected}
         language={language}
+        fullName={fullName}
         onBack={() => setSelected(null)}
         onSigned={handleSigned}
       />
@@ -209,23 +213,26 @@ function PolicyCard({
 function PolicyDetail({
   policy,
   language,
+  fullName,
   onBack,
   onSigned,
 }: {
   policy: PolicyWithStatus;
   language: 'en' | 'es';
+  fullName: string;
   onBack: () => void;
   onSigned: () => void;
 }) {
   const isES = language === 'es';
-  const [typedName, setTypedName] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [showPad, setShowPad] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const needsSign = !policy.signed || policy.needs_resign;
 
-  async function handleSign() {
+  async function handleSigned(signatureDataUrl: string) {
+    setShowPad(false);
     setSubmitting(true);
     setError(null);
     try {
@@ -234,8 +241,8 @@ function PolicyDetail({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           policy_id: policy.id,
-          typed_name: typedName,
           confirm: confirmed,
+          signature_image: signatureDataUrl,
         }),
       });
       const j = await res.json();
@@ -326,19 +333,6 @@ function PolicyDetail({
                     : `You signed version ${policy.signed_version}. The current version is ${policy.version}. Please re-sign.`}
                 </div>
               )}
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">
-                  {isES ? 'Nombre Legal Completo' : 'Full Legal Name'}
-                </span>
-                <input
-                  type="text"
-                  value={typedName}
-                  onChange={(e) => setTypedName(e.target.value)}
-                  placeholder={isES ? 'Escriba su nombre completo' : 'Type your full name'}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B] focus:border-transparent"
-                  disabled={submitting}
-                />
-              </label>
 
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
@@ -355,6 +349,16 @@ function PolicyDetail({
                 </span>
               </label>
 
+              <p className="text-xs text-gray-500">
+                {isES
+                  ? `Firmará como `
+                  : `Signing as `}
+                <span className="font-semibold text-[#1B3A6B]">{fullName || (isES ? 'su nombre legal' : 'your legal name')}</span>
+                {isES
+                  ? `. Su firma se registrará con fecha y hora.`
+                  : `. Your signature will be timestamped on submission.`}
+              </p>
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-2 rounded">
                   {error}
@@ -362,18 +366,32 @@ function PolicyDetail({
               )}
 
               <button
-                onClick={handleSign}
-                disabled={submitting || !typedName.trim() || !confirmed}
-                className="w-full bg-[#1B3A6B] text-white font-semibold py-2.5 rounded-md hover:bg-[#142c50] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setShowPad(true)}
+                disabled={submitting || !confirmed}
+                className="w-full bg-[#1B3A6B] text-white font-semibold py-3 rounded-md hover:bg-[#142c50] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
-                {submitting
-                  ? (isES ? 'Firmando...' : 'Signing...')
-                  : (isES ? 'Firmar y Enviar' : 'Sign & Submit')}
+                {submitting ? (
+                  <span>{isES ? 'Enviando...' : 'Submitting...'}</span>
+                ) : (
+                  <>
+                    <span>✍️</span>
+                    <span>{isES ? 'Firmar con el dedo' : 'Sign with your finger'}</span>
+                  </>
+                )}
               </button>
             </div>
           )}
         </section>
       </div>
+
+      {showPad && (
+        <SignaturePadModal
+          title={policy.title}
+          employeeName={fullName || (isES ? 'Su firma' : 'Your signature')}
+          onSigned={handleSigned}
+          onCancel={() => setShowPad(false)}
+        />
+      )}
     </div>
   );
 }

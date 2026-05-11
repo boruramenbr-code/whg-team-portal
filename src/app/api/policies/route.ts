@@ -18,7 +18,7 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, restaurant_id, status')
+    .select('id, role, restaurant_id, status, full_name')
     .eq('id', user.id)
     .single();
 
@@ -58,5 +58,6 @@ export async function GET() {
       remaining: total - signed,
     },
     role: profile.role,
+    full_name: profile.full_name,
   });
 }
