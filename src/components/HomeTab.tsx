@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import WelcomeNoteModal from './WelcomeNoteModal';
+import OurStoryModal from './OurStoryModal';
 import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
@@ -121,6 +122,11 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
   const [loading, setLoading] = useState(true);
   // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
   const [reopenWelcome, setReopenWelcome] = useState(false);
+  // Story modal gates the welcome modal — first-time users see the brand
+  // story before any operational content. Default true (assume not-yet-ack'd);
+  // the modal itself fetches /api/our-story and hides immediately if the
+  // user already acknowledged, so no flicker for returning users.
+  const [showStoryModal, setShowStoryModal] = useState(true);
 
   // Restaurant switcher state — for admins / multi-location managers viewing
   // pre-shift notes across the brand. Persisted in localStorage so the choice
@@ -256,11 +262,20 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
 
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
-      {/* Welcome note modal — shows on first login OR when user taps ℹ️ */}
-      <WelcomeNoteModal
-        forceOpen={reopenWelcome}
-        onClose={() => setReopenWelcome(false)}
-      />
+      {/* Our Story onboarding modal — one-time read. Renders first; gates the
+          Welcome modal so cultural content lands before operational content. */}
+      {showStoryModal && (
+        <OurStoryModal onAcknowledged={() => setShowStoryModal(false)} />
+      )}
+
+      {/* Welcome note modal — only shows once the Story modal has been
+          acknowledged (or skipped because the user already acknowledged). */}
+      {!showStoryModal && (
+        <WelcomeNoteModal
+          forceOpen={reopenWelcome}
+          onClose={() => setReopenWelcome(false)}
+        />
+      )}
 
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8 space-y-6">
 
