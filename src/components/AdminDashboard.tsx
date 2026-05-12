@@ -16,9 +16,22 @@ interface Props {
   restaurants: Restaurant[];
 }
 
-type DashboardTab = 'dashboard' | 'staff' | 'onboarding' | 'preshift' | 'compliance' | 'barcards' | 'standards' | 'payrates' | 'settings';
+/**
+ * Admin navigation:
+ *   • 5 top tabs (4 for non-admins — no Settings)
+ *   • Two grouped tabs use a horizontally scrollable pill sub-bar:
+ *       — People     → Staff | Onboarding | Bar Cards | Pay Rates
+ *       — Standards  → Manager Bible | Compliance
+ *   • Mission Control's onNavigate accepts legacy keys (staff, barcards,
+ *     compliance, etc.) and the navigate() helper below maps them to the
+ *     new top+sub combination so deep-links still work without refactoring
+ *     every alert card.
+ */
+type TopTab = 'dashboard' | 'people' | 'preshift' | 'standards' | 'settings';
+type PeopleSubTab = 'staff' | 'onboarding' | 'barcards' | 'payrates';
+type StandardsSubTab = 'bible' | 'compliance';
 
-/* ── SVG icons for admin bottom nav ── */
+/* ── SVG icons for top-level nav ── */
 const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
   dashboard: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,18 +41,12 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <rect x="14" y="14" width="7" height="7" rx="1" fill={a ? '#1B3A6B' : 'none'} />
     </svg>
   ),
-  staff: (a) => (
+  people: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" fill={a ? '#1B3A6B' : 'none'} />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  ),
-  onboarding: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 11l3 3L22 4" />
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
     </svg>
   ),
   preshift: (a) => (
@@ -50,28 +57,10 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <line x1="16" y1="17" x2="8" y2="17" stroke={a ? 'white' : 'currentColor'} />
     </svg>
   ),
-  barcards: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="16" rx="2" fill={a ? '#1B3A6B' : 'none'} />
-      <line x1="3" y1="10" x2="21" y2="10" stroke={a ? 'white' : 'currentColor'} />
-    </svg>
-  ),
-  compliance: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill={a ? '#1B3A6B' : 'none'} />
-      <polyline points="9 12 11 14 15 10" stroke={a ? 'white' : 'currentColor'} />
-    </svg>
-  ),
   standards: (a) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" fill={a ? '#1B3A6B' : 'none'} />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-    </svg>
-  ),
-  payrates: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="1" x2="12" y2="23" />
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" fill={a ? '#1B3A6B' : 'none'} />
     </svg>
   ),
   settings: (a) => (
@@ -83,34 +72,74 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
 };
 
 export default function AdminDashboard({ profile, restaurants }: Props) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('dashboard');
+  const [activeTop, setActiveTop] = useState<TopTab>('dashboard');
+  const [peopleSub, setPeopleSub] = useState<PeopleSubTab>('staff');
+  const [standardsSub, setStandardsSub] = useState<StandardsSubTab>('bible');
   const isAdmin = profile.role === 'admin';
 
-  const tabs: { key: DashboardTab; label: string; emoji: string; adminOnly?: boolean; comingSoon?: boolean }[] = [
+  /**
+   * Central navigate helper. Accepts legacy destination keys from Mission
+   * Control alert cards and routes them to the right top+sub combination.
+   */
+  function navigate(target: string) {
+    switch (target) {
+      case 'staff':
+      case 'onboarding':
+      case 'barcards':
+      case 'payrates':
+        setActiveTop('people');
+        setPeopleSub(target);
+        break;
+      case 'bible':
+      case 'standards':
+        setActiveTop('standards');
+        setStandardsSub('bible');
+        break;
+      case 'compliance':
+        setActiveTop('standards');
+        setStandardsSub('compliance');
+        break;
+      case 'dashboard':
+      case 'preshift':
+      case 'settings':
+        setActiveTop(target as TopTab);
+        break;
+    }
+  }
+
+  const topTabs: { key: TopTab; label: string; emoji: string; adminOnly?: boolean; comingSoon?: boolean }[] = [
     { key: 'dashboard', label: 'Dashboard', emoji: '🎛️' },
+    { key: 'people', label: 'People', emoji: '👥' },
+    { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
+    { key: 'standards', label: 'Standards', emoji: '📖' },
+    ...(isAdmin
+      ? [{ key: 'settings' as TopTab, label: 'Settings', emoji: '⚙️', adminOnly: true, comingSoon: true }]
+      : []),
+  ];
+
+  const peopleSubTabs: { key: PeopleSubTab; label: string; emoji: string }[] = [
     { key: 'staff', label: 'Staff', emoji: '👥' },
     { key: 'onboarding', label: 'Onboarding', emoji: '🚀' },
-    { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
     { key: 'barcards', label: 'Bar Cards', emoji: '🪪' },
-    { key: 'standards', label: 'Standards', emoji: '📖' },
     { key: 'payrates', label: 'Pay Rates', emoji: '💰' },
+  ];
+
+  const standardsSubTabs: { key: StandardsSubTab; label: string; emoji: string }[] = [
+    { key: 'bible', label: 'Manager Bible', emoji: '📖' },
     { key: 'compliance', label: 'Compliance', emoji: '✅' },
-    ...(isAdmin
-      ? [{ key: 'settings' as DashboardTab, label: 'Settings', emoji: '⚙️', adminOnly: true, comingSoon: true }]
-      : []),
   ];
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      {/* ── DESKTOP tab bar (hidden on mobile) ── */}
+      {/* ── DESKTOP top tab bar (hidden on mobile) ── */}
       <div className="hidden md:block border-b border-[#B8C5D4] bg-[#D0DAE5] px-6 flex-shrink-0">
         <div className="max-w-4xl mx-auto flex gap-1">
-          {tabs.map((t) => {
-            const isActive = activeTab === t.key;
+          {topTabs.map((t) => {
+            const isActive = activeTop === t.key;
             return (
               <button
                 key={t.key}
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => setActiveTop(t.key)}
                 className={`relative flex items-center gap-1.5 px-5 py-3 text-sm font-semibold transition-colors ${
                   isActive
                     ? 'text-[#1B3A6B]'
@@ -135,63 +164,91 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         </div>
       </div>
 
+      {/* ── Sub-tab pill bar (People + Standards only) ── */}
+      {(activeTop === 'people' || activeTop === 'standards') && (
+        <div className="border-b border-[#D6DEE8]/60 bg-[#C8D4E1] pl-1 pr-1.5 md:px-6 flex-shrink-0">
+          <div
+            className="max-w-4xl mx-auto flex overflow-x-auto [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {(activeTop === 'people' ? peopleSubTabs : standardsSubTabs).map((s) => {
+              const isActive = activeTop === 'people'
+                ? peopleSub === (s.key as PeopleSubTab)
+                : standardsSub === (s.key as StandardsSubTab);
+              return (
+                <button
+                  key={s.key}
+                  onClick={() => {
+                    if (activeTop === 'people') setPeopleSub(s.key as PeopleSubTab);
+                    else setStandardsSub(s.key as StandardsSubTab);
+                  }}
+                  className={`tap-highlight relative flex items-center gap-1.5 px-2.5 md:px-4 py-3 md:py-2 text-[13px] md:text-xs font-semibold whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'text-[#2E86C1]'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <span className="hidden md:inline text-sm">{s.emoji}</span>
+                  <span>{s.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2E86C1] rounded-t-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0">
-        {activeTab === 'dashboard' && (
+        {activeTop === 'dashboard' && (
           <div className="tab-content-enter">
-            <MissionControlDashboard
-              onNavigate={(t) => setActiveTab(t)}
-            />
+            <MissionControlDashboard onNavigate={navigate} />
           </div>
         )}
 
-        {activeTab === 'staff' && (
+        {/* ── PEOPLE ── */}
+        {activeTop === 'people' && peopleSub === 'staff' && (
           <div className="tab-content-enter">
-            <AdminPanel
-              currentUser={profile}
-              restaurants={restaurants}
-            />
+            <AdminPanel currentUser={profile} restaurants={restaurants} />
           </div>
         )}
-
-        {activeTab === 'onboarding' && (
+        {activeTop === 'people' && peopleSub === 'onboarding' && (
           <div className="tab-content-enter">
             <OnboardingAdminTab />
           </div>
         )}
-
-        {activeTab === 'preshift' && (
-          <PreshiftAdminContent
-            isAdmin={isAdmin}
-            restaurants={restaurants}
-          />
-        )}
-
-        {activeTab === 'barcards' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 200px)' }}>
+        {activeTop === 'people' && peopleSub === 'barcards' && (
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 240px)' }}>
             <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
           </div>
         )}
-
-        {activeTab === 'standards' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 200px)' }}>
-            <ManagerStandardsTab profile={profile} />
-          </div>
-        )}
-
-        {activeTab === 'payrates' && (
+        {activeTop === 'people' && peopleSub === 'payrates' && (
           <div className="tab-content-enter">
             <PayRatesTab profile={profile} />
           </div>
         )}
 
-        {activeTab === 'compliance' && (
+        {/* ── PRE-SHIFT ── */}
+        {activeTop === 'preshift' && (
+          <PreshiftAdminContent isAdmin={isAdmin} restaurants={restaurants} />
+        )}
+
+        {/* ── STANDARDS ── */}
+        {activeTop === 'standards' && standardsSub === 'bible' && (
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 240px)' }}>
+            <ManagerStandardsTab profile={profile} />
+          </div>
+        )}
+        {activeTop === 'standards' && standardsSub === 'compliance' && (
           <div className="tab-content-enter">
             <ComplianceTab />
           </div>
         )}
 
-        {activeTab === 'settings' && isAdmin && (
+        {/* ── SETTINGS ── */}
+        {activeTop === 'settings' && isAdmin && (
           <div className="max-w-3xl mx-auto px-4 md:px-6 py-12 text-center tab-content-enter">
             <div className="text-4xl mb-3">⚙️</div>
             <h3 className="text-lg font-bold text-gray-400">Settings</h3>
@@ -203,12 +260,12 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
       {/* ── MOBILE bottom navigation bar (hidden on desktop) ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
         <div className="flex items-center justify-around px-2 pt-1.5 pb-safe">
-          {tabs.map((t) => {
-            const isActive = activeTab === t.key;
+          {topTabs.map((t) => {
+            const isActive = activeTop === t.key;
             return (
               <button
                 key={t.key}
-                onClick={() => setActiveTab(t.key)}
+                onClick={() => setActiveTop(t.key)}
                 className={`tap-highlight flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg min-w-[52px] transition-colors ${
                   isActive
                     ? 'text-[#1B3A6B]'

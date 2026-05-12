@@ -131,8 +131,10 @@ interface RestaurantOption {
 }
 
 interface Props {
-  /** Jump to another admin tab when an alert card's CTA is clicked */
-  onNavigate: (tab: 'staff' | 'preshift' | 'compliance' | 'barcards') => void;
+  /** Jump to another admin tab when an alert card's CTA is clicked.
+   *  AdminDashboard's navigate() maps any string key (including the legacy
+   *  ones used below) to the correct top + sub combination. */
+  onNavigate: (tab: string) => void;
 }
 
 /**
