@@ -7,6 +7,7 @@ import HolidaysWidget from './HolidaysWidget';
 import NewHiresSection from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
 import CardingDateWidget from './CardingDateWidget';
+import OnboardingChecklist from './OnboardingChecklist';
 import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
@@ -313,6 +314,9 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
 
         {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
         <NewHiresSection language={language} />
+
+        {/* ── Your Onboarding Checklist (widget self-hides when 100% complete) ── */}
+        <OnboardingChecklist endpoint="/api/onboarding/me" compact showHeading />
 
         {/* ── Pre-Shift Notes (live) — promoted to top of feed ── */}
         <section>

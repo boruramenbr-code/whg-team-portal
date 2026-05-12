@@ -9,13 +9,14 @@ import BarCardsTab from './BarCardsTab';
 import ComplianceTab from './ComplianceTab';
 import MissionControlDashboard from './MissionControlDashboard';
 import PayRatesTab from './PayRatesTab';
+import OnboardingAdminTab from './OnboardingAdminTab';
 
 interface Props {
   profile: Profile;
   restaurants: Restaurant[];
 }
 
-type DashboardTab = 'dashboard' | 'staff' | 'preshift' | 'compliance' | 'barcards' | 'standards' | 'payrates' | 'settings';
+type DashboardTab = 'dashboard' | 'staff' | 'onboarding' | 'preshift' | 'compliance' | 'barcards' | 'standards' | 'payrates' | 'settings';
 
 /* ── SVG icons for admin bottom nav ── */
 const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -33,6 +34,12 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <circle cx="9" cy="7" r="4" fill={a ? '#1B3A6B' : 'none'} />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  onboarding: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
     </svg>
   ),
   preshift: (a) => (
@@ -82,6 +89,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   const tabs: { key: DashboardTab; label: string; emoji: string; adminOnly?: boolean; comingSoon?: boolean }[] = [
     { key: 'dashboard', label: 'Dashboard', emoji: '🎛️' },
     { key: 'staff', label: 'Staff', emoji: '👥' },
+    { key: 'onboarding', label: 'Onboarding', emoji: '🚀' },
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
     { key: 'barcards', label: 'Bar Cards', emoji: '🪪' },
     { key: 'standards', label: 'Standards', emoji: '📖' },
@@ -143,6 +151,12 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
               currentUser={profile}
               restaurants={restaurants}
             />
+          </div>
+        )}
+
+        {activeTab === 'onboarding' && (
+          <div className="tab-content-enter">
+            <OnboardingAdminTab />
           </div>
         )}
 
