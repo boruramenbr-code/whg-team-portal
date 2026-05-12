@@ -92,7 +92,7 @@ export async function getOnboardingForUser(
   supabase: SupabaseClient,
   userId: string
 ): Promise<OnboardingForUser | null> {
-  // 1) Profile (needed to scope items)
+  // 1) Profile (needed to scope items). Single round trip.
   const { data: profileRaw } = await supabase
     .from('profiles')
     .select(
@@ -121,30 +121,51 @@ export async function getOnboardingForUser(
     restaurants: Array.isArray(profileAny.restaurants) ? (profileAny.restaurants[0] ?? null) : profileAny.restaurants,
   };
 
-  // 2) Items applicable to this user
-  //    - restaurant_id null OR matches user's restaurant
-  //    - applies_to 'all' OR matches user's onboarding_category
-  //      (if category is null, only 'all' items are shown)
+  // 2) Fan out all independent queries in parallel. These don't depend on each
+  //    other — only on the profile we just loaded. Previously these ran serial,
+  //    costing ~5 round trips of latency. Now they collapse to 1.
+  //
+  //    auto-track queries (policy_signatures, active policies, bar_cards) are
+  //    always fired here rather than gated on `sources.has(...)` — the items
+  //    fetch and these can't be sequenced without losing the parallelism, and
+  //    the auto-track queries are tiny.
   const allowedApplies: AppliesTo[] = profile.onboarding_category
     ? ['all', profile.onboarding_category]
     : ['all'];
 
   let itemQuery = supabase
     .from('onboarding_checklist_items')
-    .select('*')
+    .select('id, section, sort_order, restaurant_id, applies_to, title, description, auto_track_source, requires_employee_check, requires_manager_check')
     .eq('active', true)
     .in('applies_to', allowedApplies)
     .order('section', { ascending: true })
     .order('sort_order', { ascending: true });
-
   if (profile.restaurant_id) {
     itemQuery = itemQuery.or(`restaurant_id.is.null,restaurant_id.eq.${profile.restaurant_id}`);
   } else {
     itemQuery = itemQuery.is('restaurant_id', null);
   }
 
-  const { data: itemsRaw } = await itemQuery;
-  const items = (itemsRaw ?? []) as Array<{
+  const [itemsRes, sigsRes, policiesRes, barCardsRes] = await Promise.all([
+    itemQuery,
+    supabase
+      .from('policy_signatures')
+      .select('policy_id, signed_at, policies(kind)')
+      .eq('user_id', userId),
+    supabase
+      .from('policies')
+      .select('id, restaurant_id')
+      .eq('active', true)
+      .eq('kind', 'policy'),
+    supabase
+      .from('bar_cards')
+      .select('created_at')
+      .eq('profile_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(1),
+  ]);
+
+  const items = (itemsRes.data ?? []) as Array<{
     id: string;
     section: OnboardingSection;
     sort_order: number;
@@ -159,15 +180,27 @@ export async function getOnboardingForUser(
 
   const itemIds = items.map((i) => i.id);
 
-  // 3) Links for those items
-  const { data: linksRaw } = itemIds.length
-    ? await supabase
-        .from('onboarding_checklist_links')
-        .select('*')
-        .in('item_id', itemIds)
-        .order('sort_order', { ascending: true })
-    : { data: [] as Array<{ id: string; item_id: string; label: string; url: string; link_type: LinkType; sort_order: number }> };
-  const links = (linksRaw ?? []) as Array<{
+  // 3) Items-dependent queries (links, progress). Both can be fetched in
+  //    parallel against the just-loaded item IDs.
+  const [linksRes, progressRes] = itemIds.length
+    ? await Promise.all([
+        supabase
+          .from('onboarding_checklist_links')
+          .select('*')
+          .in('item_id', itemIds)
+          .order('sort_order', { ascending: true }),
+        supabase
+          .from('employee_onboarding_progress')
+          .select('item_id, employee_checked_at, manager_checked_at, manager_id')
+          .eq('user_id', userId)
+          .in('item_id', itemIds),
+      ])
+    : [
+        { data: [] as Array<{ id: string; item_id: string; label: string; url: string; link_type: LinkType; sort_order: number }> },
+        { data: [] as Array<{ item_id: string; employee_checked_at: string | null; manager_checked_at: string | null; manager_id: string | null }> },
+      ];
+
+  const links = (linksRes.data ?? []) as Array<{
     id: string;
     item_id: string;
     label: string;
@@ -182,15 +215,7 @@ export async function getOnboardingForUser(
     linksByItem.set(l.item_id, arr);
   }
 
-  // 4) Progress rows for this user
-  const { data: progressRaw } = itemIds.length
-    ? await supabase
-        .from('employee_onboarding_progress')
-        .select('item_id, employee_checked_at, manager_checked_at, manager_id')
-        .eq('user_id', userId)
-        .in('item_id', itemIds)
-    : { data: [] as Array<{ item_id: string; employee_checked_at: string | null; manager_checked_at: string | null; manager_id: string | null }> };
-  const progress = (progressRaw ?? []) as Array<{
+  const progress = (progressRes.data ?? []) as Array<{
     item_id: string;
     employee_checked_at: string | null;
     manager_checked_at: string | null;
@@ -199,20 +224,18 @@ export async function getOnboardingForUser(
   const progressByItem = new Map<string, typeof progress[number]>();
   for (const p of progress) progressByItem.set(p.item_id, p);
 
-  // 5) Auto-track evidence (only computed if at least one item references each source)
+  // 4) Compute auto-track evidence from the queries already done.
   const sources = new Set(items.map((i) => i.auto_track_source).filter(Boolean) as AutoTrackSource[]);
 
   let handbookSignedAt: string | null = null;
   let policiesAllSignedAt: string | null = null;
   let policiesAnySignedAt: string | null = null;
+  let barCardUploadedAt: string | null = null;
+
   if (sources.has('handbook_signed') || sources.has('policy_signatures_all') || sources.has('policy_signatures_any')) {
-    const { data: sigs } = await supabase
-      .from('policy_signatures')
-      .select('policy_id, signed_at, policies(kind)')
-      .eq('user_id', userId);
     // Supabase typegen returns the joined "policies" as an array even though
-    // it's a single FK — normalize to either object or null.
-    const sigRows = ((sigs ?? []) as unknown as Array<{
+    // it's a single FK — normalize.
+    const sigRows = ((sigsRes.data ?? []) as unknown as Array<{
       policy_id: string;
       signed_at: string;
       policies: { kind: 'handbook' | 'policy' } | { kind: 'handbook' | 'policy' }[] | null;
@@ -224,28 +247,17 @@ export async function getOnboardingForUser(
 
     const handbookSig = sigRows.find((s) => s.policies?.kind === 'handbook');
     handbookSignedAt = handbookSig?.signed_at ?? null;
-
     const anyPolicy = sigRows.find((s) => s.policies?.kind === 'policy');
     policiesAnySignedAt = anyPolicy?.signed_at ?? null;
 
     if (sources.has('policy_signatures_all')) {
-      // Compare count of applicable active policies vs how many this user has signed.
-      // "Applicable" mirrors the policies-tab filter: matches user role/restaurant.
-      // For v1 we'll keep it simple: count active policies (kind='policy') where
-      // restaurant_id is null or matches the user's. Sufficient for the dashboard.
-      const { data: activePoliciesRaw } = await supabase
-        .from('policies')
-        .select('id, restaurant_id')
-        .eq('active', true)
-        .eq('kind', 'policy');
-      const applicablePolicies = (activePoliciesRaw ?? []).filter((p) => {
+      const applicablePolicies = (policiesRes.data ?? []).filter((p) => {
         const r = (p as { restaurant_id: string | null }).restaurant_id;
         return r === null || r === profile.restaurant_id;
       });
       const signedPolicyIds = new Set(sigRows.filter((s) => s.policies?.kind === 'policy').map((s) => s.policy_id));
       const allSigned = applicablePolicies.length > 0 && applicablePolicies.every((p) => signedPolicyIds.has((p as { id: string }).id));
       if (allSigned) {
-        // Use the most recent signed_at across the policy sigs as the completion timestamp.
         const policyTimestamps = sigRows
           .filter((s) => s.policies?.kind === 'policy')
           .map((s) => s.signed_at)
@@ -255,15 +267,8 @@ export async function getOnboardingForUser(
     }
   }
 
-  let barCardUploadedAt: string | null = null;
   if (sources.has('bar_card_uploaded')) {
-    const { data: barCards } = await supabase
-      .from('bar_cards')
-      .select('created_at')
-      .eq('profile_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(1);
-    barCardUploadedAt = (barCards?.[0] as { created_at?: string } | undefined)?.created_at ?? null;
+    barCardUploadedAt = (barCardsRes.data?.[0] as { created_at?: string } | undefined)?.created_at ?? null;
   }
 
   // welcome_dismissed_at and story_acknowledged_at come from the profile directly.

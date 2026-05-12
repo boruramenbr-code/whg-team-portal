@@ -51,39 +51,35 @@ export async function GET(req: NextRequest) {
   // so manager activity is captured (managers don't sign staff policies).
   pingLastSeen(user.id);
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id, status')
-    .eq('id', user.id)
-    .single();
+  const adminClient = getAdminClient();
 
+  // ── Parallel auth-context fetch ────────────────────────────────────────
+  // profile, user_locations, and the full restaurants list are all
+  // independent of each other. Previously these ran serially (~3 round trips
+  // of wall time before any real work). Now collapsed into one.
+  // We fetch ALL active restaurants here so admins (who don't have a
+  // user_locations row) can populate the picker without a follow-up query.
+  const [meRes, extraLocsRes, allRestaurantsRes] = await Promise.all([
+    supabase.from('profiles').select('role, restaurant_id, status').eq('id', user.id).single(),
+    supabase.from('user_locations').select('restaurant_id').eq('profile_id', user.id),
+    adminClient.from('restaurants').select('id, name').eq('is_active', true).order('name', { ascending: true }),
+  ]);
+
+  const me = meRes.data;
   if (!me || me.status === 'archived' || !MANAGER_ROLES.includes(me.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Build the set of restaurants this user can see
-  const { data: extraLocs } = await supabase
-    .from('user_locations')
-    .select('restaurant_id')
-    .eq('profile_id', user.id);
-
   const isAdmin = me.role === 'admin';
   const allowedRestaurantIds = new Set<string>([
     ...(me.restaurant_id ? [me.restaurant_id] : []),
-    ...((extraLocs || []).map((l) => l.restaurant_id)),
+    ...((extraLocsRes.data || []).map((l) => l.restaurant_id)),
   ]);
-
-  const adminClient = getAdminClient();
 
   // ── Restaurant scoping (admin-only override) ─────────────────────────
   // Admins can pass ?restaurant_id=<uuid> to view Mission Control as if
   // they were a manager at that single restaurant. Non-admins always see
   // their assigned set; the param is ignored for them.
-  //
-  // shouldScope determines whether queries filter by restaurant:
-  //   • non-admin → always (their assigned set)
-  //   • admin without override → never (full WHG view)
-  //   • admin with override → yes (single chosen restaurant)
   const restaurantOverride = req.nextUrl.searchParams.get('restaurant_id');
   const validOverride = restaurantOverride && isAdmin ? restaurantOverride : null;
   const effectiveRestaurantIds = validOverride
@@ -92,25 +88,13 @@ export async function GET(req: NextRequest) {
   const shouldScope = !isAdmin || !!validOverride;
   const activeRestaurantId = validOverride || null;
 
-  // List of restaurants the user can switch between (for the picker UI).
-  // Admin → all active restaurants. Non-admin multi-loc → their assigned set.
-  // Single-restaurant non-admin → empty (no picker shown).
+  // Filter the in-memory restaurants list rather than re-querying.
+  const allRestaurants = allRestaurantsRes.data || [];
   let availableRestaurants: { id: string; name: string }[] = [];
   if (isAdmin) {
-    const { data } = await adminClient
-      .from('restaurants')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    availableRestaurants = data || [];
+    availableRestaurants = allRestaurants;
   } else if (allowedRestaurantIds.size > 1) {
-    const { data } = await adminClient
-      .from('restaurants')
-      .select('id, name')
-      .in('id', Array.from(allowedRestaurantIds))
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    availableRestaurants = data || [];
+    availableRestaurants = allRestaurants.filter((r) => allowedRestaurantIds.has(r.id));
   }
 
   // All dates anchored to Central Time. `today` is a Date instance at

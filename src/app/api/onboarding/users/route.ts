@@ -31,35 +31,34 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Authorize: manager/admin only.
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, restaurant_id')
-    .eq('id', user.id)
-    .single();
-  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-  if (!['manager', 'assistant_manager', 'admin'].includes(profile.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
   const url = new URL(req.url);
   const restaurantId = url.searchParams.get('restaurantId');
   const statusFilter = url.searchParams.get('status') ?? 'in_progress';
 
   const admin = getAdminClient();
 
+  // Parallelize auth checks: profile + user_locations + all-restaurants list (admin path).
+  // All three are independent of each other.
+  const [profileRes, extraLocsRes, allRestaurantsRes] = await Promise.all([
+    supabase.from('profiles').select('id, role, restaurant_id').eq('id', user.id).single(),
+    // user_locations is keyed by profile_id (not user_id — see migration 012/013).
+    admin.from('user_locations').select('restaurant_id').eq('profile_id', user.id),
+    admin.from('restaurants').select('id'),
+  ]);
+
+  const profile = profileRes.data;
+  if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+  if (!['manager', 'assistant_manager', 'admin'].includes(profile.role)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   // Find restaurants the manager has access to.
   const allowedRestaurantIds: string[] = [];
   if (profile.role === 'admin') {
-    const { data: rs } = await admin.from('restaurants').select('id');
-    allowedRestaurantIds.push(...(rs ?? []).map((r) => (r as { id: string }).id));
+    allowedRestaurantIds.push(...(allRestaurantsRes.data ?? []).map((r) => (r as { id: string }).id));
   } else {
     if (profile.restaurant_id) allowedRestaurantIds.push(profile.restaurant_id);
-    const { data: extra } = await admin
-      .from('user_locations')
-      .select('restaurant_id')
-      .eq('user_id', user.id);
-    for (const row of extra ?? []) {
+    for (const row of extraLocsRes.data ?? []) {
       const rid = (row as { restaurant_id: string }).restaurant_id;
       if (rid && !allowedRestaurantIds.includes(rid)) allowedRestaurantIds.push(rid);
     }
@@ -85,7 +84,17 @@ export async function GET(req: NextRequest) {
   }
 
   q = q.order('hire_date', { ascending: false, nullsFirst: false });
-  const { data: hires } = await q;
+
+  // Fetch hires and the restaurants list for the filter chips in parallel.
+  const [hiresRes, restaurantsRes] = await Promise.all([
+    q,
+    admin
+      .from('restaurants')
+      .select('id, name')
+      .in('id', allowedRestaurantIds.length ? allowedRestaurantIds : ['00000000-0000-0000-0000-000000000000'])
+      .order('name'),
+  ]);
+  const { data: hires } = hiresRes;
   // Supabase typegen returns embedded "restaurants" join as an array — normalize.
   const hireRows = ((hires ?? []) as unknown as Array<{
     id: string;
@@ -124,15 +133,8 @@ export async function GET(req: NextRequest) {
     cleaned = cleaned.filter((r) => r.progress.pct_complete < 100);
   }
 
-  // Available restaurants for the filter chips
-  const { data: restaurants } = await admin
-    .from('restaurants')
-    .select('id, name')
-    .in('id', allowedRestaurantIds.length ? allowedRestaurantIds : ['00000000-0000-0000-0000-000000000000'])
-    .order('name');
-
   return NextResponse.json({
     hires: cleaned,
-    available_restaurants: restaurants ?? [],
+    available_restaurants: restaurantsRes.data ?? [],
   });
 }
