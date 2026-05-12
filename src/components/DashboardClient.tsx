@@ -11,6 +11,7 @@ import HandbookReaderTab from './HandbookReaderTab';
 import OurTeamTab from './OurTeamTab';
 import HomeTab from './HomeTab';
 import PositionsSection from './PositionsSection';
+import OnboardingChecklist from './OnboardingChecklist';
 
 interface Props {
   profile: Profile;
@@ -18,7 +19,8 @@ interface Props {
 }
 
 type TopTabKey = 'home' | 'positions' | 'handbook' | 'preshift' | 'ourteam';
-type HandbookSubTab = 'read' | 'policies' | 'ask';
+// "handbook" key kept for stability — labeled "Onboarding" in the UI.
+type HandbookSubTab = 'checklist' | 'read' | 'policies' | 'ask';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ── */
 const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -59,8 +61,17 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
 };
 
 export default function DashboardClient({ profile, isManager }: Props) {
+  // Smart default for the Onboarding sub-tab:
+  //   • New hires (welcome_until still in the future, or hired in the last 90 days) → land on Checklist
+  //   • Everyone else → land on Handbook (the old default)
+  const todayMs = Date.now();
+  const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+  const isWelcomeActive = profile.welcome_until && new Date(profile.welcome_until).getTime() >= todayMs;
+  const isRecentHire = profile.hire_date && (todayMs - new Date(profile.hire_date).getTime()) <= ninetyDaysMs;
+  const defaultHandbookSub: HandbookSubTab = (isWelcomeActive || isRecentHire) ? 'checklist' : 'read';
+
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');
-  const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>('read');
+  const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>(defaultHandbookSub);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
@@ -83,7 +94,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const topTabs: { key: TopTabKey; label: string; labelEs: string; emoji: string }[] = [
     { key: 'home', label: 'Home', labelEs: 'Inicio', emoji: '🏠' },
     { key: 'positions', label: 'Positions', labelEs: 'Posiciones', emoji: '🧭' },
-    { key: 'handbook', label: 'Handbook & Policies', labelEs: 'Manual y Políticas', emoji: '📘' },
+    { key: 'handbook', label: 'Onboarding', labelEs: 'Onboarding', emoji: '📘' },
     { key: 'ourteam', label: 'Our Team', labelEs: 'Nuestro Equipo', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', labelEs: 'Pre-Turno', emoji: '📋' },
   ];
@@ -92,13 +103,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const mobileLabels: Record<TopTabKey, { en: string; es: string }> = {
     home: { en: 'Home', es: 'Inicio' },
     positions: { en: 'Positions', es: 'Posiciones' },
-    handbook: { en: 'Handbook', es: 'Manual' },
+    handbook: { en: 'Onboarding', es: 'Onboarding' },
     ourteam: { en: 'Team', es: 'Equipo' },
     preshift: { en: 'Pre-Shift', es: 'Pre-Turno' },
   };
 
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
-    { key: 'read', label: 'Read', labelEs: 'Leer', emoji: '📖' },
+    { key: 'checklist', label: 'Checklist', labelEs: 'Lista', emoji: '✅' },
+    { key: 'read', label: 'Handbook', labelEs: 'Manual', emoji: '📖' },
     { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
     { key: 'ask', label: 'Ask', labelEs: 'Chat', emoji: '💬' },
   ];
@@ -212,7 +224,24 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </div>
         )}
 
-        {/* HANDBOOK & POLICIES → Read */}
+        {/* ONBOARDING → Checklist */}
+        {activeTop === 'handbook' && activeHandbookSub === 'checklist' && (
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] tab-content-enter">
+            <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
+              <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] mb-1">
+                {isES ? 'Tu Lista de Bienvenida' : 'Your Onboarding'}
+              </h1>
+              <p className="text-sm text-gray-600 mb-5">
+                {isES
+                  ? 'Trabaja en cada elemento. Tu manager confirmará los completados.'
+                  : 'Work through each item — your manager will confirm completed ones.'}
+              </p>
+              <OnboardingChecklist endpoint="/api/onboarding/me" />
+            </div>
+          </div>
+        )}
+
+        {/* ONBOARDING → Handbook */}
         {activeTop === 'handbook' && activeHandbookSub === 'read' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <HandbookReaderTab language={language} />
