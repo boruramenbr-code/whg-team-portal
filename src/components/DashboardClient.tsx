@@ -12,6 +12,7 @@ import OurTeamTab from './OurTeamTab';
 import HomeTab from './HomeTab';
 import PositionsSection from './PositionsSection';
 import OnboardingChecklist from './OnboardingChecklist';
+import WelcomeWizard from './WelcomeWizard';
 
 interface Props {
   profile: Profile;
@@ -78,6 +79,12 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
 
+  // Welcome Wizard — fires on first login (after migration 052 backfilled
+  // existing staff). Closing via "Skip for now" suppresses it for this
+  // session only; completing it via the final step calls /api/wizard/complete
+  // which stamps wizard_completed_at so it never fires again.
+  const [showWizard, setShowWizard] = useState<boolean>(!profile.wizard_completed_at);
+
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
   const handleSelect = (q: string) => {
@@ -117,6 +124,21 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden relative">
+      {/* Welcome Wizard — first-login onboarding flow (steps: install,
+          welcome, our story, checklist intro). Sits above everything else,
+          including the splash. */}
+      {showWizard && !showSplash && (
+        <WelcomeWizard
+          firstName={firstName}
+          restaurantName={restaurantName}
+          onComplete={() => setShowWizard(false)}
+          onGoToChecklist={() => {
+            setActiveTop('handbook');
+            setActiveHandbookSub('checklist');
+          }}
+        />
+      )}
+
       {/* Welcome splash on login */}
       {showSplash && (
         <WelcomeSplash
