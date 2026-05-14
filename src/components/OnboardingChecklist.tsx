@@ -358,13 +358,15 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
 }
 
 /** Maps an item's auto_track_source to a primary action button.
- *  Returns null for items that don't need a user-triggered action. */
+ *  Returns null for items that don't need a user-triggered action.
+ *  bar_card_uploaded is deliberately omitted — bar cards are uploaded by a
+ *  manager via the admin Bar Cards tab (compliance requires a manager to
+ *  physically verify the original card), not by the employee themselves. */
 function actionForSource(source: string | null): { key: string; label: string } | null {
   switch (source) {
     case 'handbook_signed': return { key: 'sign_handbook', label: '✍️ Sign Handbook' };
     case 'policy_signatures_all':
     case 'policy_signatures_any': return { key: 'sign_policies', label: '✍️ Sign Policies' };
-    case 'bar_card_uploaded': return { key: 'upload_bar_card', label: '📷 Upload Bar Card' };
     case 'our_story_ack': return { key: 'acknowledge_story', label: '📖 Read & Acknowledge' };
     default: return null;
   }

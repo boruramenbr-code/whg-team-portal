@@ -300,11 +300,20 @@ export async function getOnboardingForUser(
   }
 
   // 6) Merge — build the final item list with status
+  // Some auto-track sources represent MANAGER actions (e.g. a manager
+  // uploading a bar card). Those should auto-check both columns because
+  // the upload IS the verification. Sources that represent EMPLOYEE
+  // actions (signing policies, acknowledging Our Story) only fill the
+  // employee column — the manager still confirms separately.
+  const managerSideSources = new Set<AutoTrackSource>(['bar_card_uploaded']);
+
   const merged: OnboardingItemWithStatus[] = items.map((item) => {
     const prog = progressByItem.get(item.id);
     const autoTime = autoCheckTime(item.auto_track_source);
+    const autoIsManagerSide = item.auto_track_source && managerSideSources.has(item.auto_track_source);
     const employee_checked_at = prog?.employee_checked_at ?? autoTime ?? null;
-    const manager_checked_at = prog?.manager_checked_at ?? null;
+    const manager_checked_at = prog?.manager_checked_at
+      ?? (autoIsManagerSide ? autoTime : null);
     const is_complete =
       (!item.requires_employee_check || !!employee_checked_at) &&
       (!item.requires_manager_check || !!manager_checked_at);

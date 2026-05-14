@@ -122,10 +122,6 @@ export default function DashboardClient({ profile, isManager }: Props) {
         setWizardReplay(true);
         setShowWizard(true);
         break;
-      case 'upload_bar_card':
-        // Bar card upload lives on Home (MyBarCardWidget). Send them there.
-        setActiveTop('home');
-        break;
     }
   }, [goSignHandbook]);
 
