@@ -64,6 +64,14 @@ interface Props {
   compact?: boolean;
   /** Self-render the "Your Onboarding" heading. Compact + non-manager use only. */
   showHeading?: boolean;
+  /**
+   * Called when the user taps an action button on an auto-tracked item
+   * (Sign Handbook, Upload Bar Card, etc.). The parent should navigate
+   * the user to the right surface. Receives:
+   *   • action: 'sign_handbook' | 'sign_policies' | 'upload_bar_card' | 'acknowledge_story'
+   *   • detail (optional) — e.g. the handbook policy id for deep-linking
+   */
+  onAction?: (action: string, detail?: string) => void;
 }
 
 const SECTION_LABEL: Record<OnboardingSection, { en: string; emoji: string }> = {
@@ -92,7 +100,7 @@ const LINK_TYPE_BG: Record<LinkType, string> = {
 };
 
 /* ───────── Main widget ───────── */
-export default function OnboardingChecklist({ endpoint, managerMode = false, targetUserId, compact = false, showHeading = false }: Props) {
+export default function OnboardingChecklist({ endpoint, managerMode = false, targetUserId, compact = false, showHeading = false, onAction }: Props) {
   const [data, setData] = useState<OnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -336,6 +344,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
                     key={item.id}
                     item={item}
                     onToggle={toggleCheck}
+                    onAction={onAction}
                     managerMode={managerMode}
                   />
                 ))}
@@ -348,23 +357,40 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
   );
 }
 
+/** Maps an item's auto_track_source to a primary action button.
+ *  Returns null for items that don't need a user-triggered action. */
+function actionForSource(source: string | null): { key: string; label: string } | null {
+  switch (source) {
+    case 'handbook_signed': return { key: 'sign_handbook', label: '✍️ Sign Handbook' };
+    case 'policy_signatures_all':
+    case 'policy_signatures_any': return { key: 'sign_policies', label: '✍️ Sign Policies' };
+    case 'bar_card_uploaded': return { key: 'upload_bar_card', label: '📷 Upload Bar Card' };
+    case 'our_story_ack': return { key: 'acknowledge_story', label: '📖 Read & Acknowledge' };
+    default: return null;
+  }
+}
+
 /* ───────── Item row ───────── */
 function ItemRow({
   item,
   onToggle,
+  onAction,
   managerMode,
 }: {
   item: OnboardingItem;
   onToggle: (itemId: string, column: 'employee' | 'manager', currentlyChecked: boolean) => void;
+  onAction?: (action: string, detail?: string) => void;
   managerMode: boolean;
 }) {
-  // Employee can toggle their own employee column.
-  // Manager can toggle the manager column AND the employee column (failsafe).
-  const canToggleEmployee = !managerMode || managerMode; // both modes can
   const canToggleManager = managerMode;
 
   const employeeChecked = !!item.employee_checked_at;
   const managerChecked = !!item.manager_checked_at;
+
+  // For auto-tracked items that aren't yet auto-checked, replace the
+  // employee check pill with a primary action button that takes the user
+  // to the right surface (signature pad, bar card upload, etc.).
+  const action = !employeeChecked && onAction ? actionForSource(item.auto_track_source) : null;
 
   return (
     <div className={`px-4 py-3 ${item.is_complete ? 'bg-green-50/40' : ''}`}>
@@ -399,14 +425,24 @@ function ItemRow({
       {/* Dual-check row */}
       <div className="flex items-center gap-2 mt-3">
         {item.requires_employee_check && (
-          <CheckPill
-            label={managerMode ? 'Employee' : 'You'}
-            checked={employeeChecked}
-            disabled={!canToggleEmployee}
-            timestamp={item.employee_checked_at}
-            autoChecked={item.auto_checked}
-            onClick={() => canToggleEmployee && onToggle(item.id, 'employee', employeeChecked)}
-          />
+          action ? (
+            <button
+              onClick={() => onAction?.(action.key)}
+              className="flex-1 px-3 py-2.5 rounded-lg text-[12px] font-bold transition-colors bg-[#1B3A6B] text-white hover:bg-[#2C4F8A] shadow-sm flex items-center justify-center gap-1.5"
+            >
+              <span>{action.label}</span>
+              <span>→</span>
+            </button>
+          ) : (
+            <CheckPill
+              label={managerMode ? 'Employee' : 'You'}
+              checked={employeeChecked}
+              disabled={false}
+              timestamp={item.employee_checked_at}
+              autoChecked={item.auto_checked}
+              onClick={() => onToggle(item.id, 'employee', employeeChecked)}
+            />
+          )
         )}
         {item.requires_manager_check && (
           <CheckPill

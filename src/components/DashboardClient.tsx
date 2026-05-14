@@ -89,6 +89,46 @@ export default function DashboardClient({ profile, isManager }: Props) {
   // status so they get the full refresher.
   const [wizardReplay, setWizardReplay] = useState(false);
 
+  // Deep-link target for the Policies sub-tab. When the user taps "Sign
+  // Handbook" on the checklist, we set this to the handbook policy id so
+  // PoliciesTab auto-opens its detail view. PoliciesTab clears it after.
+  const [policiesInitialId, setPoliciesInitialId] = useState<string | null>(null);
+
+  /** Resolve the active handbook policy id and stash it for PoliciesTab. */
+  const goSignHandbook = useCallback(async () => {
+    try {
+      const res = await fetch('/api/policies', { cache: 'no-store' });
+      if (!res.ok) return;
+      const j = await res.json();
+      const handbook = j?.grouped?.handbook;
+      if (handbook?.id) setPoliciesInitialId(handbook.id);
+    } catch { /* silent — they can still tap the handbook card manually */ }
+    setActiveTop('handbook');
+    setActiveHandbookSub('policies');
+  }, []);
+
+  /** Maps a checklist action to a navigation. */
+  const handleChecklistAction = useCallback((action: string) => {
+    switch (action) {
+      case 'sign_handbook':
+        goSignHandbook();
+        break;
+      case 'sign_policies':
+        setActiveTop('handbook');
+        setActiveHandbookSub('policies');
+        break;
+      case 'acknowledge_story':
+        // Replay the wizard — its Step 3 is Our Story.
+        setWizardReplay(true);
+        setShowWizard(true);
+        break;
+      case 'upload_bar_card':
+        // Bar card upload lives on Home (MyBarCardWidget). Send them there.
+        setActiveTop('home');
+        break;
+    }
+  }, [goSignHandbook]);
+
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
   const handleSelect = (q: string) => {
@@ -276,7 +316,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                   ? 'Trabaja en cada elemento. Tu manager confirmará los completados.'
                   : 'Work through each item — your manager will confirm completed ones.'}
               </p>
-              <OnboardingChecklist endpoint="/api/onboarding/me" />
+              <OnboardingChecklist endpoint="/api/onboarding/me" onAction={handleChecklistAction} />
             </div>
           </div>
         )}
@@ -291,7 +331,11 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {/* HANDBOOK & POLICIES → Policies */}
         {activeTop === 'handbook' && activeHandbookSub === 'policies' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <PoliciesTab language={language} />
+            <PoliciesTab
+              language={language}
+              initialPolicyId={policiesInitialId}
+              onInitialPolicyOpened={() => setPoliciesInitialId(null)}
+            />
           </div>
         )}
 

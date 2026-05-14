@@ -6,6 +6,12 @@ import type { PolicyWithStatus, UserRole } from '@/lib/types';
 
 interface Props {
   language: 'en' | 'es';
+  /** When set, auto-opens the policy with this id (deep-link from the
+   *  onboarding checklist). The parent is responsible for clearing it. */
+  initialPolicyId?: string | null;
+  /** Called after the deep-linked policy is opened so the parent can
+   *  reset the initialPolicyId state. */
+  onInitialPolicyOpened?: () => void;
 }
 
 type Grouped = {
@@ -16,7 +22,7 @@ type Grouped = {
 
 type Progress = { total: number; signed: number; remaining: number };
 
-export default function PoliciesTab({ language }: Props) {
+export default function PoliciesTab({ language, initialPolicyId, onInitialPolicyOpened }: Props) {
   const isES = language === 'es';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +54,22 @@ export default function PoliciesTab({ language }: Props) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Deep-link: when initialPolicyId arrives, auto-open it once data has loaded.
+  // Handles both the handbook acknowledgment and any other policy id passed in.
+  useEffect(() => {
+    if (!initialPolicyId || loading) return;
+    const all: PolicyWithStatus[] = [
+      ...(grouped.handbook ? [grouped.handbook] : []),
+      ...grouped.employee,
+      ...grouped.manager,
+    ];
+    const match = all.find((p) => p.id === initialPolicyId);
+    if (match) {
+      setSelected(match);
+      onInitialPolicyOpened?.();
+    }
+  }, [initialPolicyId, loading, grouped, onInitialPolicyOpened]);
 
   const handleSigned = async () => {
     setSelected(null);
@@ -88,6 +110,22 @@ export default function PoliciesTab({ language }: Props) {
         </p>
 
         <ProgressBar progress={progress} language={language} />
+
+        {/* ── Handbook Acknowledgment — master document, sits above all
+            individual policies. Distinct navy card so it reads as the
+            foundational sign-this-first. ── */}
+        {grouped.handbook && (
+          <>
+            <SectionHeading>
+              {isES ? 'Reconocimiento del Manual' : 'Handbook Acknowledgment'}
+            </SectionHeading>
+            <HandbookCard
+              policy={grouped.handbook}
+              language={language}
+              onClick={() => setSelected(grouped.handbook!)}
+            />
+          </>
+        )}
 
         <SectionHeading>
           {isES ? 'Políticas de Empleado' : 'Employee Policies'}
@@ -172,6 +210,54 @@ function esOrEn(policy: PolicyWithStatus, field: 'purpose' | 'details' | 'conseq
   }
   const enVal = policy[field];
   return typeof enVal === 'string' ? enVal : null;
+}
+
+/** Master Handbook Acknowledgment card — distinct from individual policies.
+ *  Sits at the top of the Policies tab. Navy gradient + larger type to
+ *  read as the foundational sign-this-first document. */
+function HandbookCard({
+  policy,
+  language,
+  onClick,
+}: {
+  policy: PolicyWithStatus;
+  language: 'en' | 'es';
+  onClick: () => void;
+}) {
+  const isES = language === 'es';
+  const signed = !!policy.signed && !policy.needs_resign;
+  const badge = policy.needs_resign
+    ? { label: isES ? 'Nueva versión — firme de nuevo' : 'New version — re-sign', cls: 'bg-orange-100 text-orange-800 border-orange-200' }
+    : signed
+    ? { label: isES ? `Firmado ${new Date(policy.signed_at!).toLocaleDateString()}` : `Signed ${new Date(policy.signed_at!).toLocaleDateString()}`, cls: 'bg-green-100 text-green-800 border-green-200' }
+    : { label: isES ? 'Firma requerida' : 'Signature required', cls: 'bg-amber-100 text-amber-900 border-amber-200' };
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] rounded-2xl p-5 mb-6 shadow-lg hover:shadow-xl transition-all border border-[#1B3A6B]"
+    >
+      <div className="flex items-start justify-between gap-3 mb-1.5">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-1">
+            📘 {isES ? 'Documento Fundacional' : 'Foundational document'}
+          </p>
+          <h3 className="font-bold text-white text-base md:text-lg leading-tight">{policy.title}</h3>
+        </div>
+        <span className={`text-xs px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0 ${badge.cls}`}>
+          {badge.label}
+        </span>
+      </div>
+      <p className="text-sm text-white/80 leading-relaxed mt-2">
+        {isES
+          ? 'Lea el manual completo en la pestaña Manual, luego firme aquí para confirmar que lo entiende y acepta cumplirlo.'
+          : 'Read the full handbook in the Handbook tab, then sign here to confirm you understand and agree to follow it.'}
+      </p>
+      <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-300">
+        {signed ? '✓' : '✍️'} {signed ? (isES ? 'Firmado' : 'Signed') : (isES ? 'Tocar para firmar' : 'Tap to sign')} →
+      </div>
+    </button>
+  );
 }
 
 function PolicyCard({
