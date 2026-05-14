@@ -30,19 +30,27 @@ interface Props {
   onComplete: () => void;
   /** Called when user hits "Let's get started" — navigate to checklist. */
   onGoToChecklist: () => void;
+  /**
+   * Replay mode — when true, show every step regardless of whether the
+   * user has already acknowledged welcome/story. Used by the
+   * "Watch intro again" link on the Onboarding tab.
+   */
+  forceReplay?: boolean;
 }
 
 interface WelcomeData {
   content: string | null;
   content_es: string | null;
+  dismissed: boolean;
 }
 
 interface StoryData {
   title: string | null;
   body: string | null;
+  acknowledged: boolean;
 }
 
-export default function WelcomeWizard({ firstName, restaurantName, onComplete, onGoToChecklist }: Props) {
+export default function WelcomeWizard({ firstName, restaurantName, onComplete, onGoToChecklist, forceReplay = false }: Props) {
   const [device, setDevice] = useState<DeviceKind>('desktop');
   const [welcome, setWelcome] = useState<WelcomeData | null>(null);
   const [story, setStory] = useState<StoryData | null>(null);
@@ -66,11 +74,17 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
     && (window.matchMedia?.('(display-mode: standalone)').matches
         || (window.navigator as Navigator & { standalone?: boolean }).standalone === true);
 
-  // Step list — install step hidden on desktop or if already installed.
+  // Step list — dynamic, skipping anything the user has already done.
+  //   • install: hidden on desktop or PWA-installed
+  //   • welcome: hidden if welcome already dismissed (unless replay)
+  //   • story:   hidden if story already acknowledged (unless replay)
+  //   • checklist: always shown — the closing CTA
   const steps: Array<'install' | 'welcome' | 'story' | 'checklist'> = (() => {
     const list: Array<'install' | 'welcome' | 'story' | 'checklist'> = [];
     if (device !== 'desktop' && !isInstalled) list.push('install');
-    list.push('welcome', 'story', 'checklist');
+    if (forceReplay || !welcome?.dismissed) list.push('welcome');
+    if (forceReplay || !story?.acknowledged) list.push('story');
+    list.push('checklist');
     return list;
   })();
 
@@ -79,6 +93,8 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
   const isFirst = stepIdx === 0;
 
   // Fetch welcome + Our Story content on mount in parallel.
+  // Both endpoints return the dismissed/acknowledged flags so we can skip
+  // any step the user has already completed.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -88,8 +104,20 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
           fetch('/api/our-story', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
         ]);
         if (cancelled) return;
-        setWelcome(welcomeRes?.message || null);
-        setStory(storyRes && storyRes.body ? { title: storyRes.title, body: storyRes.body } : null);
+        setWelcome(welcomeRes?.message
+          ? {
+              content: welcomeRes.message.content ?? null,
+              content_es: welcomeRes.message.content_es ?? null,
+              dismissed: !!welcomeRes.dismissed,
+            }
+          : null);
+        setStory(storyRes && storyRes.body
+          ? {
+              title: storyRes.title,
+              body: storyRes.body,
+              acknowledged: !!storyRes.acknowledged,
+            }
+          : null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -129,8 +157,8 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#1B3A6B] via-[#2C4F8A] to-[#1B3A6B] flex flex-col">
-      {/* Top bar — progress dots + skip-for-now in top-right */}
-      <div className="flex items-center justify-between px-5 pt-safe pt-3 pb-3 flex-shrink-0">
+      {/* Top bar — progress dots centered, no big skip button */}
+      <div className="flex items-center justify-center px-5 pt-safe pt-3 pb-3 flex-shrink-0">
         <div className="flex items-center gap-1.5">
           {steps.map((_, i) => (
             <div
@@ -141,12 +169,6 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
             />
           ))}
         </div>
-        <button
-          onClick={onComplete}
-          className="text-white/60 hover:text-white text-xs font-semibold"
-        >
-          Skip for now
-        </button>
       </div>
 
       {/* Body — scrollable */}
@@ -167,33 +189,44 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
         </div>
       </div>
 
-      {/* Footer — back + primary action */}
-      <div className="border-t border-white/10 bg-black/20 backdrop-blur-sm px-5 py-3 pb-safe flex items-center gap-3 flex-shrink-0">
-        {!isFirst ? (
-          <button
-            onClick={back}
-            className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:text-white"
-          >
-            ← Back
-          </button>
-        ) : <div className="w-16" />}
+      {/* Footer — back + primary action. Subtle "skip" lives below as a
+          tiny escape hatch, not competing with Continue. */}
+      <div className="border-t border-white/10 bg-black/20 backdrop-blur-sm px-5 py-3 pb-safe flex-shrink-0">
+        <div className="flex items-center gap-3">
+          {!isFirst ? (
+            <button
+              onClick={back}
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:text-white"
+            >
+              ← Back
+            </button>
+          ) : <div className="w-16" />}
 
-        {!isLast ? (
+          {!isLast ? (
+            <button
+              onClick={advance}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-white text-[#1B3A6B] hover:bg-gray-100 shadow-lg"
+            >
+              Continue →
+            </button>
+          ) : (
+            <button
+              onClick={finish}
+              disabled={submitting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-emerald-400 text-[#0B2447] hover:bg-emerald-300 shadow-lg disabled:opacity-50"
+            >
+              {submitting ? 'Saving…' : "Let's get started →"}
+            </button>
+          )}
+        </div>
+        <div className="text-center mt-2">
           <button
-            onClick={advance}
-            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-white text-[#1B3A6B] hover:bg-gray-100 shadow-lg"
+            onClick={onComplete}
+            className="text-[10px] text-white/40 hover:text-white/70 underline-offset-2 hover:underline"
           >
-            Continue →
+            Skip for now — you can finish this later
           </button>
-        ) : (
-          <button
-            onClick={finish}
-            disabled={submitting}
-            className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-emerald-400 text-[#0B2447] hover:bg-emerald-300 shadow-lg disabled:opacity-50"
-          >
-            {submitting ? 'Saving…' : "Let's get started →"}
-          </button>
-        )}
+        </div>
       </div>
     </div>
   );

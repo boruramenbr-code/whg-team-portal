@@ -84,6 +84,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
   // session only; completing it via the final step calls /api/wizard/complete
   // which stamps wizard_completed_at so it never fires again.
   const [showWizard, setShowWizard] = useState<boolean>(!profile.wizard_completed_at);
+  // Replay mode — true when user re-launched the wizard via the "Watch intro
+  // again" link. Forces every step to render regardless of acknowledgment
+  // status so they get the full refresher.
+  const [wizardReplay, setWizardReplay] = useState(false);
 
   const handleSplashComplete = useCallback(() => setShowSplash(false), []);
 
@@ -126,12 +130,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
     <div className="flex flex-col flex-1 overflow-hidden relative">
       {/* Welcome Wizard — first-login onboarding flow (steps: install,
           welcome, our story, checklist intro). Sits above everything else,
-          including the splash. */}
+          including the splash. Can also be replayed manually from the
+          "Watch intro again" link in the Onboarding tab. */}
       {showWizard && !showSplash && (
         <WelcomeWizard
           firstName={firstName}
           restaurantName={restaurantName}
-          onComplete={() => setShowWizard(false)}
+          forceReplay={wizardReplay}
+          onComplete={() => { setShowWizard(false); setWizardReplay(false); }}
           onGoToChecklist={() => {
             setActiveTop('handbook');
             setActiveHandbookSub('checklist');
@@ -254,9 +260,17 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {activeTop === 'handbook' && activeHandbookSub === 'checklist' && (
           <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] tab-content-enter">
             <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
-              <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] mb-1">
-                {isES ? 'Tu Lista de Bienvenida' : 'Your Onboarding'}
-              </h1>
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">
+                  {isES ? 'Tu Lista de Bienvenida' : 'Your Onboarding'}
+                </h1>
+                <button
+                  onClick={() => { setWizardReplay(true); setShowWizard(true); }}
+                  className="flex-shrink-0 text-[11px] text-[#2E86C1] hover:text-[#1B3A6B] underline underline-offset-2 mt-1.5"
+                >
+                  {isES ? 'Ver intro de nuevo' : 'Watch intro again'}
+                </button>
+              </div>
               <p className="text-sm text-gray-600 mb-5">
                 {isES
                   ? 'Trabaja en cada elemento. Tu manager confirmará los completados.'
