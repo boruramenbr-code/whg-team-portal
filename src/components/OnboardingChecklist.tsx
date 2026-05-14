@@ -23,6 +23,7 @@ interface OnboardingItem {
   applies_to: 'all' | OnboardingCategory;
   title: string;
   description: string | null;
+  manager_instructions: string | null;
   auto_track_source: string | null;
   requires_employee_check: boolean;
   requires_manager_check: boolean;
@@ -369,9 +370,9 @@ function ItemRow({
     <div className={`px-4 py-3 ${item.is_complete ? 'bg-green-50/40' : ''}`}>
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+          <p className="text-sm font-semibold text-gray-800 whitespace-pre-wrap">{item.title}</p>
           {item.description && (
-            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{item.description}</p>
+            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed whitespace-pre-wrap">{item.description}</p>
           )}
           {item.links.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -388,6 +389,9 @@ function ItemRow({
                 </a>
               ))}
             </div>
+          )}
+          {managerMode && item.manager_instructions && (
+            <ManagerInstructions text={item.manager_instructions} />
           )}
         </div>
       </div>
@@ -416,6 +420,77 @@ function ItemRow({
       </div>
     </div>
   );
+}
+
+/* ───────── Manager-only instructions block ─────────
+ * Collapsible amber-tinted callout that renders the item's
+ * manager_instructions text. Only used in manager view.
+ * Lightweight markdown: blank lines split paragraphs, lines
+ * starting with **bold** are rendered bold inline. */
+function ManagerInstructions({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-amber-100 transition-colors"
+      >
+        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-800">
+          📘 Manager instructions
+        </span>
+        <span className={`text-amber-700 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3 pt-1 border-t border-amber-200">
+          <div className="text-[12px] text-amber-900 leading-relaxed whitespace-pre-wrap">
+            {renderBoldInline(text)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Renders **bold** segments inline. Splits on the bold delimiters and
+ *  alternates plain/bold spans. URLs auto-link. */
+function renderBoldInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const lines = text.split('\n');
+  lines.forEach((line, lineIdx) => {
+    let lastIndex = 0;
+    let keyCounter = 0;
+    const lineNodes: React.ReactNode[] = [];
+    const boldRegex = /\*\*([^*]+)\*\*/g;
+    let m: RegExpExecArray | null;
+    while ((m = boldRegex.exec(line)) !== null) {
+      if (m.index > lastIndex) lineNodes.push(linkify(line.slice(lastIndex, m.index), `${lineIdx}-${keyCounter++}`));
+      lineNodes.push(<strong key={`b-${lineIdx}-${keyCounter++}`}>{m[1]}</strong>);
+      lastIndex = m.index + m[0].length;
+    }
+    if (lastIndex < line.length) lineNodes.push(linkify(line.slice(lastIndex), `${lineIdx}-${keyCounter++}`));
+    parts.push(<span key={`l-${lineIdx}`}>{lineNodes}</span>);
+    if (lineIdx < lines.length - 1) parts.push(<br key={`br-${lineIdx}`} />);
+  });
+  return parts;
+}
+
+function linkify(s: string, baseKey: string): React.ReactNode {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let k = 0;
+  let m: RegExpExecArray | null;
+  while ((m = urlRegex.exec(s)) !== null) {
+    if (m.index > lastIndex) parts.push(s.slice(lastIndex, m.index));
+    parts.push(
+      <a key={`u-${baseKey}-${k++}`} href={m[1]} target="_blank" rel="noopener noreferrer" className="underline text-amber-700 hover:text-amber-900">
+        {m[1]}
+      </a>
+    );
+    lastIndex = m.index + m[0].length;
+  }
+  if (lastIndex < s.length) parts.push(s.slice(lastIndex));
+  return <>{parts}</>;
 }
 
 /* ───────── Dual-check pill ───────── */

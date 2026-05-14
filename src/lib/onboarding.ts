@@ -44,6 +44,8 @@ export interface OnboardingItemWithStatus {
   applies_to: AppliesTo;
   title: string;
   description: string | null;
+  /** Extra instructions only shown when a manager is viewing the hire's checklist. */
+  manager_instructions: string | null;
   auto_track_source: AutoTrackSource | null;
   requires_employee_check: boolean;
   requires_manager_check: boolean;
@@ -135,7 +137,7 @@ export async function getOnboardingForUser(
 
   let itemQuery = supabase
     .from('onboarding_checklist_items')
-    .select('id, section, sort_order, restaurant_id, applies_to, title, description, auto_track_source, requires_employee_check, requires_manager_check')
+    .select('id, section, sort_order, restaurant_id, applies_to, title, description, manager_instructions, auto_track_source, requires_employee_check, requires_manager_check')
     .eq('active', true)
     .in('applies_to', allowedApplies)
     .order('section', { ascending: true })
@@ -173,6 +175,7 @@ export async function getOnboardingForUser(
     applies_to: AppliesTo;
     title: string;
     description: string | null;
+    manager_instructions: string | null;
     auto_track_source: AutoTrackSource | null;
     requires_employee_check: boolean;
     requires_manager_check: boolean;
@@ -304,6 +307,7 @@ export async function getOnboardingForUser(
       applies_to: item.applies_to,
       title: item.title,
       description: item.description,
+      manager_instructions: item.manager_instructions,
       auto_track_source: item.auto_track_source,
       requires_employee_check: item.requires_employee_check,
       requires_manager_check: item.requires_manager_check,
