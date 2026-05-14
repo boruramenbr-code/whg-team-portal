@@ -235,8 +235,9 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       setFormError('Email and a password of at least 8 characters are required.');
       return;
     }
-    if (!form.onboarding_category) {
-      setFormError('Please pick a category (FOH / BOH / Management) so their onboarding scopes correctly.');
+    // Employees must pick FOH or BOH. Elevated roles auto-derive as mgmt.
+    if (form.role === 'employee' && !form.onboarding_category) {
+      setFormError('Please pick FOH or BOH for this employee.');
       return;
     }
 
@@ -244,13 +245,18 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     setFormError('');
     setFormSuccess('');
 
+    // Elevated roles always get category='mgmt'. Employees use what was picked.
+    const resolvedCategory: 'foh' | 'boh' | 'mgmt' | null = isElevatedRole
+      ? 'mgmt'
+      : (form.onboarding_category || null);
+
     // Strip empty dates so we send null instead of ""
     const payload = {
       ...form,
       date_of_birth: form.date_of_birth || null,
       hire_date: form.hire_date || null,
       welcome_until: form.welcome_until || null,
-      onboarding_category: form.onboarding_category || null,
+      onboarding_category: resolvedCategory,
     };
 
     const res = await fetch('/api/admin/users', {
@@ -678,47 +684,61 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       )}
                     </div>
 
-                    {/* Onboarding Category — drives Telegram, uniform, etc. */}
-                    <div className="mt-4">
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
-                        🏷️ Category
-                      </label>
-                      <div className="grid grid-cols-3 gap-2 md:max-w-[16rem]">
-                        {([
-                          { key: 'foh', label: 'FOH', sub: 'Front of House' },
-                          { key: 'boh', label: 'BOH', sub: 'Back of House' },
-                          { key: 'mgmt', label: 'MGMT', sub: 'Management' },
-                        ] as const).map((c) => {
-                          const active = u.onboarding_category === c.key;
-                          return (
-                            <button
-                              key={c.key}
-                              type="button"
-                              onClick={() => {
-                                fetch(`/api/admin/users/${u.id}`, {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ onboarding_category: c.key }),
-                                }).then(() => fetchUsers());
-                              }}
-                              className={`px-2 py-2 rounded-lg border-2 text-xs font-semibold transition-colors ${
-                                active
-                                  ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                              }`}
-                            >
-                              <div className="text-sm">{c.label}</div>
-                              <div className={`text-[9px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
-                            </button>
-                          );
-                        })}
+                    {/* Onboarding Category — only meaningful for employees.
+                        Elevated roles (manager/asst_manager/admin) are
+                        always MGMT and don't get a picker. */}
+                    {u.role === 'employee' ? (
+                      <div className="mt-4">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                          🏷️ Category
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 md:max-w-[12rem]">
+                          {([
+                            { key: 'foh', label: 'FOH', sub: 'Front of House' },
+                            { key: 'boh', label: 'BOH', sub: 'Back of House' },
+                          ] as const).map((c) => {
+                            const active = u.onboarding_category === c.key;
+                            return (
+                              <button
+                                key={c.key}
+                                type="button"
+                                onClick={() => {
+                                  // Optimistic update — no full re-fetch, so the
+                                  // expanded panel keeps its scroll position.
+                                  setUsers((prev) => prev.map((x) =>
+                                    x.id === u.id ? { ...x, onboarding_category: c.key } : x
+                                  ));
+                                  fetch(`/api/admin/users/${u.id}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ onboarding_category: c.key }),
+                                  }).catch(() => fetchUsers()); // revert via refetch on failure
+                                }}
+                                className={`px-3 py-2.5 rounded-lg border-2 text-xs font-semibold transition-colors ${
+                                  active
+                                    ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
+                                    : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="text-sm">{c.label}</div>
+                                <div className={`text-[9px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {!u.onboarding_category && (
+                          <p className="text-[10px] text-amber-700 mt-1.5 font-semibold">
+                            ⚠ Not set — they won&apos;t see category-specific Telegram groups, uniform, or bar card items.
+                          </p>
+                        )}
                       </div>
-                      {!u.onboarding_category && (
-                        <p className="text-[10px] text-amber-700 mt-1.5 font-semibold">
-                          ⚠ Not set — they won&apos;t see category-specific Telegram groups, uniform, or bar card items.
-                        </p>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="mt-4 inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Category</span>
+                        <span className="text-[11px] font-bold text-[#1B3A6B]">MGMT</span>
+                        <span className="text-[9px] text-gray-400 italic">auto for managers</span>
+                      </div>
+                    )}
 
                     {/* Requires bar card toggle + card status */}
                     <div className="mt-4">
@@ -729,11 +749,16 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                         type="button"
                         onClick={() => {
                           const next = !u.requires_bar_card;
+                          // Optimistic update — preserves scroll on the
+                          // expanded panel instead of re-fetching the full list.
+                          setUsers((prev) => prev.map((x) =>
+                            x.id === u.id ? { ...x, requires_bar_card: next } : x
+                          ));
                           fetch(`/api/admin/users/${u.id}`, {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ requires_bar_card: next }),
-                          }).then(() => fetchUsers());
+                          }).catch(() => fetchUsers()); // revert on failure
                         }}
                         className={`w-full md:w-auto md:min-w-[16rem] px-3 py-2 rounded-lg text-xs font-semibold border-2 transition-all flex items-center justify-between gap-3 ${
                           u.requires_bar_card
@@ -961,40 +986,48 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </select>
                 </div>
 
-                {/* Onboarding Category — drives Telegram, uniform, bar card,
-                    and other category-scoped checklist items. Required. */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                    Category <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {([
-                      { key: 'foh', label: 'FOH', sub: 'Front of House' },
-                      { key: 'boh', label: 'BOH', sub: 'Back of House' },
-                      { key: 'mgmt', label: 'MGMT', sub: 'Management' },
-                    ] as const).map((c) => {
-                      const active = form.onboarding_category === c.key;
-                      return (
-                        <button
-                          key={c.key}
-                          type="button"
-                          onClick={() => setForm({ ...form, onboarding_category: c.key })}
-                          className={`px-2 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                            active
-                              ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
-                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="text-sm">{c.label}</div>
-                          <div className={`text-[10px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
-                        </button>
-                      );
-                    })}
+                {/* Onboarding Category — only shown for employees. Elevated
+                    roles (manager/asst_manager/admin) are always MGMT and
+                    auto-resolved on submit, no picker needed. */}
+                {isEmployeeRole ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                      Category <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { key: 'foh', label: 'FOH', sub: 'Front of House' },
+                        { key: 'boh', label: 'BOH', sub: 'Back of House' },
+                      ] as const).map((c) => {
+                        const active = form.onboarding_category === c.key;
+                        return (
+                          <button
+                            key={c.key}
+                            type="button"
+                            onClick={() => setForm({ ...form, onboarding_category: c.key })}
+                            className={`px-3 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+                              active
+                                ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            <div>{c.label}</div>
+                            <div className={`text-[10px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1.5">
+                      Drives Telegram group scoping, uniform spec, and category-specific checklist items.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1.5">
-                    Drives Telegram group scoping, uniform spec, bar card requirement, and category-specific checklist items.
-                  </p>
-                </div>
+                ) : (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Category</span>
+                    <span className="text-xs font-semibold text-[#1B3A6B]">MGMT</span>
+                    <span className="text-[10px] text-gray-400 italic">— auto-set for managers</span>
+                  </div>
+                )}
 
                 {/* Birthday + Hire Date — applies to every role */}
                 <div className="grid grid-cols-2 gap-3">
