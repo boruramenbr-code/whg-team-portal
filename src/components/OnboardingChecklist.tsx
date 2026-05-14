@@ -105,7 +105,17 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<Set<OnboardingSection>>(() => new Set<OnboardingSection>(['paperwork']));
+  const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(() => new Set<string>());
   const [savingCategory, setSavingCategory] = useState(false);
+
+  const toggleItemExpand = useCallback((id: string) => {
+    setExpandedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -308,15 +318,21 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
         )}
       </div>
 
-      {/* Sections */}
+      {/* Sections — each renders a sticky header followed by item cards */}
       {sections.map((sec) => {
         const sectionItems = data.items.filter((i) => i.section === sec);
         if (sectionItems.length === 0) return null;
         const isOpen = openSections.has(sec);
         const done = sectionItems.filter((i) => i.is_complete).length;
         const total = sectionItems.length;
+        const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+        const sectionComplete = pct === 100;
+
         return (
-          <div key={sec} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <section key={sec} className="space-y-2">
+            {/* Sticky section header — navy band stays visible while
+                scrolling through its items so the user always knows
+                what phase they're in. */}
             <button
               onClick={() =>
                 setOpenSections((prev) => {
@@ -326,31 +342,42 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
                   return next;
                 })
               }
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className={`w-full sticky top-0 z-10 rounded-xl shadow-md px-4 py-3 flex items-center justify-between transition-colors ${
+                sectionComplete
+                  ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                  : 'bg-[#1B3A6B] hover:bg-[#2C4F8A] text-white'
+              }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-base">{SECTION_LABEL[sec].emoji}</span>
-                <span className="font-bold text-sm text-[#1B3A6B] truncate">{SECTION_LABEL[sec].en}</span>
-                <span className="text-[11px] text-gray-500 shrink-0">
-                  {done}/{total}
-                </span>
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-lg">{SECTION_LABEL[sec].emoji}</span>
+                <div className="text-left min-w-0">
+                  <div className="font-bold text-sm truncate">{SECTION_LABEL[sec].en}</div>
+                  <div className="text-[10px] text-white/60 uppercase tracking-widest mt-0.5">
+                    {done}/{total} done · {pct}%
+                  </div>
+                </div>
               </div>
-              <span className={`text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`}>›</span>
+              <div className="flex items-center gap-2 shrink-0">
+                {sectionComplete && <span className="text-emerald-300 text-base">✓</span>}
+                <span className={`text-white/70 transition-transform text-lg ${isOpen ? 'rotate-90' : ''}`}>›</span>
+              </div>
             </button>
-            {isOpen && (
-              <div className="border-t border-gray-100 divide-y divide-gray-100">
-                {sectionItems.map((item) => (
-                  <ItemRow
-                    key={item.id}
-                    item={item}
-                    onToggle={toggleCheck}
-                    onAction={onAction}
-                    managerMode={managerMode}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+
+            {/* Item cards — each is its own visual unit with a colored
+                status stripe on the left, breathing room between them. */}
+            {isOpen && sectionItems.map((item, idx) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                stepNumber={idx + 1}
+                onToggle={toggleCheck}
+                onAction={onAction}
+                managerMode={managerMode}
+                isExpanded={expandedItemIds.has(item.id)}
+                onToggleExpand={() => toggleItemExpand(item.id)}
+              />
+            ))}
+          </section>
         );
       })}
     </div>
@@ -372,91 +399,207 @@ function actionForSource(source: string | null): { key: string; label: string } 
   }
 }
 
-/* ───────── Item row ───────── */
-function ItemRow({
+/** Truncate text at a sentence/word boundary near maxLen for the
+ *  description preview. Tries to break at "." then " " then hard. */
+function truncatePreview(text: string, maxLen = 110): string {
+  if (text.length <= maxLen) return text;
+  const window = text.slice(0, maxLen);
+  // Prefer a sentence boundary
+  const lastPeriod = window.lastIndexOf('.');
+  if (lastPeriod > maxLen - 40) return window.slice(0, lastPeriod + 1).trim();
+  // Fall back to a word boundary
+  const lastSpace = window.lastIndexOf(' ');
+  if (lastSpace > 0) return window.slice(0, lastSpace).trim() + '…';
+  return window + '…';
+}
+
+/* ───────── Item card ─────────
+ * Each checklist item renders as its own card with:
+ *   • A 4px colored left stripe (gray/amber/emerald) showing status
+ *   • Step number + title + status badge in the header
+ *   • Description that auto-truncates if > 80 chars (Read more / Show less)
+ *   • Inline action links (always visible — these are the work surface)
+ *   • Manager instructions (collapsible amber box, manager view only)
+ *   • Dual-check pills OR a primary action button in the footer
+ *
+ * Completed items auto-collapse to a single-line summary; tap "View" to
+ * re-expand. Long-description items start with the description collapsed
+ * but everything else visible.
+ */
+function ItemCard({
   item,
+  stepNumber,
   onToggle,
   onAction,
   managerMode,
+  isExpanded,
+  onToggleExpand,
 }: {
   item: OnboardingItem;
+  stepNumber: number;
   onToggle: (itemId: string, column: 'employee' | 'manager', currentlyChecked: boolean) => void;
   onAction?: (action: string, detail?: string) => void;
   managerMode: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }) {
-  const canToggleManager = managerMode;
-
   const employeeChecked = !!item.employee_checked_at;
   const managerChecked = !!item.manager_checked_at;
+  const isComplete = item.is_complete;
 
-  // For auto-tracked items that aren't yet auto-checked, replace the
-  // employee check pill with a primary action button that takes the user
-  // to the right surface (signature pad, bar card upload, etc.).
+  // Status drives the left-edge stripe.
+  const stripeClass = isComplete
+    ? 'bg-emerald-500'
+    : (employeeChecked || managerChecked)
+    ? 'bg-amber-400'
+    : 'bg-gray-200';
+
+  const description = item.description ?? '';
+  const isLongDesc = description.length > 80;
+  // Completed items collapse fully (just title + checkmark) until tapped.
+  const isCompact = isComplete && !isExpanded;
+
+  // ── Compact mode for completed items ──
+  if (isCompact) {
+    return (
+      <div className="flex items-stretch bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className={`w-1 ${stripeClass}`} />
+        <button
+          onClick={onToggleExpand}
+          className="flex-1 flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-emerald-500 text-sm shrink-0" aria-hidden>✓</span>
+            <span className="text-[10px] font-bold text-gray-400 shrink-0">#{stepNumber}</span>
+            <span className="text-xs font-semibold text-gray-700 truncate">{item.title}</span>
+          </div>
+          <span className="text-[10px] text-gray-400 shrink-0 font-semibold">View</span>
+        </button>
+      </div>
+    );
+  }
+
+  // ── Full card ──
   const action = !employeeChecked && onAction ? actionForSource(item.auto_track_source) : null;
+  const canToggleManager = managerMode;
+  const showDescTruncated = isLongDesc && !isExpanded;
+
+  // Status badge
+  const badge = isComplete
+    ? { text: 'Done', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+    : (employeeChecked || managerChecked)
+    ? { text: 'In progress', cls: 'bg-amber-100 text-amber-800 border-amber-200' }
+    : { text: 'Pending', cls: 'bg-gray-100 text-gray-600 border-gray-200' };
 
   return (
-    <div className={`px-4 py-3 ${item.is_complete ? 'bg-green-50/40' : ''}`}>
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 whitespace-pre-wrap">{item.title}</p>
-          {item.description && (
-            <div className="text-xs text-gray-600 mt-0.5 leading-relaxed whitespace-pre-wrap">
-              {renderBoldInline(item.description)}
-            </div>
-          )}
-          {item.links.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {item.links.map((link) => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors ${LINK_TYPE_BG[link.link_type]}`}
+    <div className="flex items-stretch bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className={`w-1 ${stripeClass}`} />
+      <div className="flex-1 p-4 min-w-0">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className="text-[10px] font-bold text-gray-400 shrink-0">#{stepNumber}</span>
+            <h3 className="text-sm font-semibold text-gray-800 leading-snug">{item.title}</h3>
+          </div>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 font-semibold ${badge.cls}`}>
+            {badge.text}
+          </span>
+        </div>
+
+        {/* Description */}
+        {description && (
+          <div className="text-xs text-gray-600 mt-1.5 leading-relaxed whitespace-pre-wrap">
+            {showDescTruncated ? (
+              <>
+                {renderBoldInline(truncatePreview(description))}
+                <button
+                  onClick={onToggleExpand}
+                  className="text-[#2E86C1] font-semibold ml-1 hover:underline"
                 >
-                  <span aria-hidden>{LINK_ICON[link.link_type]}</span>
-                  <span>{link.label}</span>
-                </a>
-              ))}
-            </div>
+                  Read more →
+                </button>
+              </>
+            ) : (
+              <>
+                {renderBoldInline(description)}
+                {isLongDesc && (
+                  <div className="mt-2">
+                    <button
+                      onClick={onToggleExpand}
+                      className="text-[#2E86C1] text-[11px] font-semibold hover:underline"
+                    >
+                      Show less
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Action links — always visible, these are the work surface */}
+        {item.links.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {item.links.map((link) => (
+              <a
+                key={link.id}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors ${LINK_TYPE_BG[link.link_type]}`}
+              >
+                <span aria-hidden>{LINK_ICON[link.link_type]}</span>
+                <span>{link.label}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Manager instructions (collapsible amber box, manager view only) */}
+        {managerMode && item.manager_instructions && (
+          <ManagerInstructions text={item.manager_instructions} />
+        )}
+
+        {/* Footer — separated by a thin divider */}
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+          {item.requires_employee_check && (
+            action ? (
+              <button
+                onClick={() => onAction?.(action.key)}
+                className="flex-1 px-3 py-2.5 rounded-lg text-[12px] font-bold transition-colors bg-[#1B3A6B] text-white hover:bg-[#2C4F8A] shadow-sm flex items-center justify-center gap-1.5"
+              >
+                <span>{action.label}</span>
+                <span>→</span>
+              </button>
+            ) : (
+              <CheckPill
+                label={managerMode ? 'Employee' : 'You'}
+                checked={employeeChecked}
+                disabled={false}
+                timestamp={item.employee_checked_at}
+                autoChecked={item.auto_checked}
+                onClick={() => onToggle(item.id, 'employee', employeeChecked)}
+              />
+            )
           )}
-          {managerMode && item.manager_instructions && (
-            <ManagerInstructions text={item.manager_instructions} />
+          {item.requires_manager_check && (
+            <CheckPill
+              label="Manager"
+              checked={managerChecked}
+              disabled={!canToggleManager}
+              timestamp={item.manager_checked_at}
+              onClick={() => canToggleManager && onToggle(item.id, 'manager', managerChecked)}
+            />
+          )}
+          {isComplete && (
+            <button
+              onClick={onToggleExpand}
+              className="text-[10px] text-gray-400 hover:text-gray-600 px-2 py-1 font-semibold"
+            >
+              Collapse
+            </button>
           )}
         </div>
-      </div>
-
-      {/* Dual-check row */}
-      <div className="flex items-center gap-2 mt-3">
-        {item.requires_employee_check && (
-          action ? (
-            <button
-              onClick={() => onAction?.(action.key)}
-              className="flex-1 px-3 py-2.5 rounded-lg text-[12px] font-bold transition-colors bg-[#1B3A6B] text-white hover:bg-[#2C4F8A] shadow-sm flex items-center justify-center gap-1.5"
-            >
-              <span>{action.label}</span>
-              <span>→</span>
-            </button>
-          ) : (
-            <CheckPill
-              label={managerMode ? 'Employee' : 'You'}
-              checked={employeeChecked}
-              disabled={false}
-              timestamp={item.employee_checked_at}
-              autoChecked={item.auto_checked}
-              onClick={() => onToggle(item.id, 'employee', employeeChecked)}
-            />
-          )
-        )}
-        {item.requires_manager_check && (
-          <CheckPill
-            label="Manager"
-            checked={managerChecked}
-            disabled={!canToggleManager}
-            timestamp={item.manager_checked_at}
-            onClick={() => canToggleManager && onToggle(item.id, 'manager', managerChecked)}
-          />
-        )}
       </div>
     </div>
   );
