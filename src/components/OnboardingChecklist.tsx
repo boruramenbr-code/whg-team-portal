@@ -400,7 +400,9 @@ function ItemRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-800 whitespace-pre-wrap">{item.title}</p>
           {item.description && (
-            <p className="text-xs text-gray-600 mt-0.5 leading-relaxed whitespace-pre-wrap">{item.description}</p>
+            <div className="text-xs text-gray-600 mt-0.5 leading-relaxed whitespace-pre-wrap">
+              {renderBoldInline(item.description)}
+            </div>
           )}
           {item.links.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
