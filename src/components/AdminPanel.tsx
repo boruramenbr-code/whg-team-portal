@@ -115,6 +115,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     hire_date: todayStr,
     welcome_until: defaultWelcomeUntil,
     requires_bar_card: false,
+    onboarding_category: '' as '' | 'foh' | 'boh' | 'mgmt',
   });
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
@@ -220,6 +221,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       hire_date: todayStr,
       welcome_until: defaultWelcomeUntil,
       requires_bar_card: false,
+      onboarding_category: '',
     });
   };
 
@@ -233,6 +235,10 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       setFormError('Email and a password of at least 8 characters are required.');
       return;
     }
+    if (!form.onboarding_category) {
+      setFormError('Please pick a category (FOH / BOH / Management) so their onboarding scopes correctly.');
+      return;
+    }
 
     setFormLoading(true);
     setFormError('');
@@ -244,6 +250,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       date_of_birth: form.date_of_birth || null,
       hire_date: form.hire_date || null,
       welcome_until: form.welcome_until || null,
+      onboarding_category: form.onboarding_category || null,
     };
 
     const res = await fetch('/api/admin/users', {
@@ -671,6 +678,48 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       )}
                     </div>
 
+                    {/* Onboarding Category — drives Telegram, uniform, etc. */}
+                    <div className="mt-4">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                        🏷️ Category
+                      </label>
+                      <div className="grid grid-cols-3 gap-2 md:max-w-[16rem]">
+                        {([
+                          { key: 'foh', label: 'FOH', sub: 'Front of House' },
+                          { key: 'boh', label: 'BOH', sub: 'Back of House' },
+                          { key: 'mgmt', label: 'MGMT', sub: 'Management' },
+                        ] as const).map((c) => {
+                          const active = u.onboarding_category === c.key;
+                          return (
+                            <button
+                              key={c.key}
+                              type="button"
+                              onClick={() => {
+                                fetch(`/api/admin/users/${u.id}`, {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ onboarding_category: c.key }),
+                                }).then(() => fetchUsers());
+                              }}
+                              className={`px-2 py-2 rounded-lg border-2 text-xs font-semibold transition-colors ${
+                                active
+                                  ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="text-sm">{c.label}</div>
+                              <div className={`text-[9px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {!u.onboarding_category && (
+                        <p className="text-[10px] text-amber-700 mt-1.5 font-semibold">
+                          ⚠ Not set — they won&apos;t see category-specific Telegram groups, uniform, or bar card items.
+                        </p>
+                      )}
+                    </div>
+
                     {/* Requires bar card toggle + card status */}
                     <div className="mt-4">
                       <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
@@ -910,6 +959,41 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                       <option key={r.id} value={r.id}>{r.name}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Onboarding Category — drives Telegram, uniform, bar card,
+                    and other category-scoped checklist items. Required. */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Category <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { key: 'foh', label: 'FOH', sub: 'Front of House' },
+                      { key: 'boh', label: 'BOH', sub: 'Back of House' },
+                      { key: 'mgmt', label: 'MGMT', sub: 'Management' },
+                    ] as const).map((c) => {
+                      const active = form.onboarding_category === c.key;
+                      return (
+                        <button
+                          key={c.key}
+                          type="button"
+                          onClick={() => setForm({ ...form, onboarding_category: c.key })}
+                          className={`px-2 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+                            active
+                              ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
+                              : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="text-sm">{c.label}</div>
+                          <div className={`text-[10px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Drives Telegram group scoping, uniform spec, bar card requirement, and category-specific checklist items.
+                  </p>
                 </div>
 
                 {/* Birthday + Hire Date — applies to every role */}

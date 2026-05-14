@@ -189,7 +189,7 @@ export async function getOnboardingForUser(
     ? await Promise.all([
         supabase
           .from('onboarding_checklist_links')
-          .select('*')
+          .select('id, item_id, label, url, link_type, applies_to, sort_order')
           .in('item_id', itemIds)
           .order('sort_order', { ascending: true }),
         supabase
@@ -199,18 +199,27 @@ export async function getOnboardingForUser(
           .in('item_id', itemIds),
       ])
     : [
-        { data: [] as Array<{ id: string; item_id: string; label: string; url: string; link_type: LinkType; sort_order: number }> },
+        { data: [] as Array<{ id: string; item_id: string; label: string; url: string; link_type: LinkType; applies_to: string; sort_order: number }> },
         { data: [] as Array<{ item_id: string; employee_checked_at: string | null; manager_checked_at: string | null; manager_id: string | null }> },
       ];
 
-  const links = (linksRes.data ?? []) as Array<{
+  // Filter links by the user's onboarding category. A link with
+  // applies_to='all' shows to everyone; category-specific links only
+  // show to matching users. If user has no category set yet, only
+  // 'all' links appear.
+  const allowedLinkApplies = new Set<string>(
+    profile.onboarding_category ? ['all', profile.onboarding_category] : ['all']
+  );
+
+  const links = ((linksRes.data ?? []) as Array<{
     id: string;
     item_id: string;
     label: string;
     url: string;
     link_type: LinkType;
+    applies_to?: string;
     sort_order: number;
-  }>;
+  }>).filter((l) => allowedLinkApplies.has(l.applies_to ?? 'all'));
   const linksByItem = new Map<string, OnboardingLink[]>();
   for (const l of links) {
     const arr = linksByItem.get(l.item_id) ?? [];

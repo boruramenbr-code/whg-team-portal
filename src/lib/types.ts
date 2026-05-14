@@ -23,6 +23,7 @@ export interface Profile {
   requires_bar_card?: boolean;
   hire_date?: string | null;
   wizard_completed_at?: string | null;
+  onboarding_category?: 'foh' | 'boh' | 'mgmt' | null;
   created_at: string;
   updated_at: string;
   restaurants?: Restaurant;
