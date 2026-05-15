@@ -301,6 +301,28 @@ function Step({ number, children }: { number: number; children: React.ReactNode 
   );
 }
 
+/** Render text with **bold** markdown segments inline. Preserves newlines. */
+function renderBoldInline(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  const lines = text.split('\n');
+  lines.forEach((line, lineIdx) => {
+    let lastIndex = 0;
+    let keyCounter = 0;
+    const lineNodes: React.ReactNode[] = [];
+    const boldRegex = /\*\*([^*]+)\*\*/g;
+    let m: RegExpExecArray | null;
+    while ((m = boldRegex.exec(line)) !== null) {
+      if (m.index > lastIndex) lineNodes.push(line.slice(lastIndex, m.index));
+      lineNodes.push(<strong key={`b-${lineIdx}-${keyCounter++}`}>{m[1]}</strong>);
+      lastIndex = m.index + m[0].length;
+    }
+    if (lastIndex < line.length) lineNodes.push(line.slice(lastIndex));
+    parts.push(<span key={`l-${lineIdx}`}>{lineNodes}</span>);
+    if (lineIdx < lines.length - 1) parts.push(<br key={`br-${lineIdx}`} />);
+  });
+  return parts;
+}
+
 /* ───────── Step 2: Welcome ───────── */
 function WelcomeStep({ firstName, restaurantName, content }: { firstName: string; restaurantName: string | null; content: string | null }) {
   return (
@@ -311,7 +333,9 @@ function WelcomeStep({ firstName, restaurantName, content }: { firstName: string
 
       <div className="bg-white rounded-2xl p-5 text-gray-800 shadow-lg">
         {content ? (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">{content}</div>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+            {renderBoldInline(content)}
+          </div>
         ) : (
           <p className="text-sm italic text-gray-500">No welcome note has been written yet — but we&rsquo;re glad you&rsquo;re here.</p>
         )}
@@ -326,7 +350,7 @@ function StoryStep({ title, body }: { title: string; body: string }) {
     <div className="text-white pt-4">
       <p className="text-xs uppercase tracking-widest text-white/60 mb-2">Who we are</p>
       <h1 className="text-2xl font-bold mb-2">{title}</h1>
-      <p className="text-sm text-white/80 mb-5">A few minutes — it&rsquo;s what we hold ourselves to.</p>
+      <p className="text-sm text-white/80 mb-5">Quick read — this is the team you&rsquo;ve joined and what we stand for.</p>
 
       <div className="bg-white rounded-2xl p-5 text-gray-800 shadow-lg max-h-[60vh] overflow-y-auto">
         <StoryBody body={body} />
@@ -340,23 +364,26 @@ function ChecklistStep({ firstName }: { firstName: string }) {
   return (
     <div className="text-white pt-4">
       <p className="text-xs uppercase tracking-widest text-white/60 mb-2">Final step</p>
-      <h1 className="text-2xl font-bold mb-2">Your checklist is ready, {firstName}.</h1>
+      <h1 className="text-2xl font-bold mb-2">You&rsquo;re in, {firstName} — let&rsquo;s get you moving.</h1>
       <p className="text-sm text-white/80 leading-relaxed mb-5">
-        We built you a step-by-step onboarding checklist. Work through each item on your own time — many have direct links (Telegram groups, app downloads, training videos). Your manager will confirm completed items as you go.
+        Restaurants don&rsquo;t have time for slow starts. We built this checklist so you can knock out paperwork, get trained, and start earning real shifts without chasing people down.
+      </p>
+      <p className="text-sm text-white/80 leading-relaxed mb-5">
+        Most of it auto-tracks when you finish. Your manager confirms the rest. Come back anytime in the Onboarding tab.
       </p>
 
       <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 space-y-3">
         <Bullet>
-          ✅ <strong>Auto-tracked</strong> — things you already did (signing policies, reviewing Our Story) will check themselves off.
+          ✅ <strong>Auto-tracks</strong> when you finish things (signing policies, reading Our Story, etc.)
         </Bullet>
         <Bullet>
-          🤝 <strong>Dual check</strong> — you tap your column when you do something; your manager confirms.
+          🤝 <strong>Dual check</strong> — you mark your part, your manager confirms theirs.
         </Bullet>
         <Bullet>
-          🔗 <strong>One-tap setup</strong> — each item has buttons for whatever you need (download Paychex, join Telegram groups, etc.).
+          🔗 <strong>One tap</strong> to join Telegram groups, download apps, watch training videos.
         </Bullet>
         <Bullet>
-          🏁 <strong>Always available</strong> — find it anytime in the <strong>Onboarding</strong> tab.
+          🏁 <strong>Always here</strong> — find it again in the Onboarding tab whenever you need it.
         </Bullet>
       </div>
     </div>
