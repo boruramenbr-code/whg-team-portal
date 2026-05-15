@@ -24,6 +24,7 @@ export interface Profile {
   hire_date?: string | null;
   wizard_completed_at?: string | null;
   onboarding_category?: 'foh' | 'boh' | 'mgmt' | null;
+  position_slug?: string | null;
   created_at: string;
   updated_at: string;
   restaurants?: Restaurant;

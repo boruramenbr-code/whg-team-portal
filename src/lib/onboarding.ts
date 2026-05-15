@@ -98,7 +98,7 @@ export async function getOnboardingForUser(
   const { data: profileRaw } = await supabase
     .from('profiles')
     .select(
-      'id, full_name, restaurant_id, onboarding_category, hire_date, welcome_until, welcome_dismissed_at, story_acknowledged_at, restaurants(id, name)'
+      'id, full_name, restaurant_id, onboarding_category, position_slug, hire_date, welcome_until, welcome_dismissed_at, story_acknowledged_at, restaurants(id, name)'
     )
     .eq('id', userId)
     .single();
@@ -112,6 +112,7 @@ export async function getOnboardingForUser(
     full_name: string;
     restaurant_id: string | null;
     onboarding_category: OnboardingCategory | null;
+    position_slug: string | null;
     hire_date: string | null;
     welcome_until: string | null;
     welcome_dismissed_at: string | null;
@@ -189,7 +190,7 @@ export async function getOnboardingForUser(
     ? await Promise.all([
         supabase
           .from('onboarding_checklist_links')
-          .select('id, item_id, label, url, link_type, applies_to, sort_order')
+          .select('id, item_id, label, url, link_type, applies_to, position_slugs, sort_order')
           .in('item_id', itemIds)
           .order('sort_order', { ascending: true }),
         supabase
@@ -203,10 +204,12 @@ export async function getOnboardingForUser(
         { data: [] as Array<{ item_id: string; employee_checked_at: string | null; manager_checked_at: string | null; manager_id: string | null }> },
       ];
 
-  // Filter links by the user's onboarding category. A link with
-  // applies_to='all' shows to everyone; category-specific links only
-  // show to matching users. If user has no category set yet, only
-  // 'all' links appear.
+  // Filter links by the user's onboarding category AND optional position.
+  //   • applies_to='all' shows to everyone; foh/boh/mgmt show to matching
+  //     category only (or empty if user category not set).
+  //   • position_slugs (text[]) further narrows by exact position match.
+  //     If position_slugs is null/empty, no position filter applied.
+  //     If non-empty AND user has no position_slug, link is hidden.
   const allowedLinkApplies = new Set<string>(
     profile.onboarding_category ? ['all', profile.onboarding_category] : ['all']
   );
@@ -218,8 +221,17 @@ export async function getOnboardingForUser(
     url: string;
     link_type: LinkType;
     applies_to?: string;
+    position_slugs?: string[] | null;
     sort_order: number;
-  }>).filter((l) => allowedLinkApplies.has(l.applies_to ?? 'all'));
+  }>).filter((l) => {
+    if (!allowedLinkApplies.has(l.applies_to ?? 'all')) return false;
+    const slugs = l.position_slugs;
+    if (slugs && slugs.length > 0) {
+      if (!profile.position_slug) return false;
+      if (!slugs.includes(profile.position_slug)) return false;
+    }
+    return true;
+  });
   const linksByItem = new Map<string, OnboardingLink[]>();
   for (const l of links) {
     const arr = linksByItem.get(l.item_id) ?? [];

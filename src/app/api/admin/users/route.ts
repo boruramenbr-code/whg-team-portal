@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { full_name, restaurant_id, role, pin, email, password, preferred_language, date_of_birth, welcome_until, requires_bar_card, hire_date, onboarding_category } = body;
+  const { full_name, restaurant_id, role, pin, email, password, preferred_language, date_of_birth, welcome_until, requires_bar_card, hire_date, onboarding_category, position_slug } = body;
 
   if (!full_name || !restaurant_id) {
     return Response.json({ error: 'Name and restaurant are required' }, { status: 400 });
@@ -159,6 +159,7 @@ export async function POST(req: NextRequest) {
     if (typeof requires_bar_card === 'boolean') profilePayload.requires_bar_card = requires_bar_card;
     if (hire_date) profilePayload.hire_date = hire_date;
     if (onboarding_category) profilePayload.onboarding_category = onboarding_category;
+    if (position_slug) profilePayload.position_slug = position_slug;
 
     const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
 
@@ -199,6 +200,7 @@ export async function POST(req: NextRequest) {
   if (date_of_birth) profilePayload.date_of_birth = date_of_birth;
   if (resolvedWelcomeUntil !== null) profilePayload.welcome_until = resolvedWelcomeUntil;
   if (onboarding_category) profilePayload.onboarding_category = onboarding_category;
+  if (position_slug) profilePayload.position_slug = position_slug;
 
   const { error: profileError } = await adminClient.from('profiles').insert(profilePayload);
 

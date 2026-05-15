@@ -116,7 +116,18 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
     welcome_until: defaultWelcomeUntil,
     requires_bar_card: false,
     onboarding_category: '' as '' | 'foh' | 'boh' | 'mgmt',
+    position_slug: '',
   });
+
+  // Positions for the currently-selected restaurant in the Add Member form.
+  // Loaded on modal open / restaurant change so the position dropdown
+  // shows only positions valid at that restaurant.
+  const [formPositions, setFormPositions] = useState<Array<{
+    slug: string;
+    name: string;
+    emoji?: string;
+    department: string;
+  }>>([]);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
@@ -222,7 +233,34 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       welcome_until: defaultWelcomeUntil,
       requires_bar_card: false,
       onboarding_category: '',
+      position_slug: '',
     });
+  };
+
+  // Fetch positions whenever the form's restaurant changes (or on open).
+  useEffect(() => {
+    if (!showForm || !form.restaurant_id) {
+      setFormPositions([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/positions?restaurant_id=${form.restaurant_id}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled) return;
+        setFormPositions(j?.positions ?? []);
+      })
+      .catch(() => { if (!cancelled) setFormPositions([]); });
+    return () => { cancelled = true; };
+  }, [showForm, form.restaurant_id]);
+
+  /** Map department string from positions.department to onboarding_category. */
+  const departmentToCategory = (department: string): '' | 'foh' | 'boh' | 'mgmt' => {
+    const d = (department || '').toLowerCase();
+    if (d === 'foh' || d === 'front_of_house' || d === 'front-of-house') return 'foh';
+    if (d === 'boh' || d === 'back_of_house' || d === 'back-of-house') return 'boh';
+    if (d === 'mgmt' || d === 'management') return 'mgmt';
+    return '';
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -257,6 +295,7 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       hire_date: form.hire_date || null,
       welcome_until: form.welcome_until || null,
       onboarding_category: resolvedCategory,
+      position_slug: form.position_slug || null,
     };
 
     const res = await fetch('/api/admin/users', {
@@ -986,41 +1025,86 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                   </select>
                 </div>
 
-                {/* Onboarding Category — only shown for employees. Elevated
-                    roles (manager/asst_manager/admin) are always MGMT and
-                    auto-resolved on submit, no picker needed. */}
+                {/* Position picker — drives both position_slug and category.
+                    For employees, manager picks specific role (Server, Bartender,
+                    etc.) and the category auto-derives from the position's
+                    department. Falls back to category-only picker if no
+                    positions are defined for the selected restaurant.
+                    Elevated roles skip this entirely (auto-set to MGMT). */}
                 {isEmployeeRole ? (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                      Category <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {([
-                        { key: 'foh', label: 'FOH', sub: 'Front of House' },
-                        { key: 'boh', label: 'BOH', sub: 'Back of House' },
-                      ] as const).map((c) => {
-                        const active = form.onboarding_category === c.key;
-                        return (
-                          <button
-                            key={c.key}
-                            type="button"
-                            onClick={() => setForm({ ...form, onboarding_category: c.key })}
-                            className={`px-3 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
-                              active
-                                ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                            }`}
-                          >
-                            <div>{c.label}</div>
-                            <div className={`text-[10px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
-                          </button>
-                        );
-                      })}
+                  formPositions.length > 0 ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        Position <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={form.position_slug}
+                        onChange={(e) => {
+                          const slug = e.target.value;
+                          const pos = formPositions.find((p) => p.slug === slug);
+                          const cat = pos ? departmentToCategory(pos.department) : '';
+                          setForm({ ...form, position_slug: slug, onboarding_category: cat });
+                        }}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                        required
+                      >
+                        <option value="">Select a position...</option>
+                        {(['foh', 'boh', 'mgmt'] as const).map((dept) => {
+                          const positions = formPositions.filter((p) => departmentToCategory(p.department) === dept);
+                          if (positions.length === 0) return null;
+                          const label = dept === 'foh' ? 'Front of House' : dept === 'boh' ? 'Back of House' : 'Management';
+                          return (
+                            <optgroup key={dept} label={label}>
+                              {positions.map((p) => (
+                                <option key={p.slug} value={p.slug}>
+                                  {p.emoji ? `${p.emoji} ` : ''}{p.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })}
+                      </select>
+                      {form.onboarding_category && (
+                        <p className="text-[11px] text-gray-500 mt-1.5">
+                          Category: <span className="font-semibold text-[#1B3A6B]">{form.onboarding_category.toUpperCase()}</span> — auto-derived from position
+                        </p>
+                      )}
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-1.5">
-                      Drives Telegram group scoping, uniform spec, and category-specific checklist items.
-                    </p>
-                  </div>
+                  ) : (
+                    // Fallback: no positions defined for this restaurant yet.
+                    // Show the category buttons.
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+                        Category <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {([
+                          { key: 'foh', label: 'FOH', sub: 'Front of House' },
+                          { key: 'boh', label: 'BOH', sub: 'Back of House' },
+                        ] as const).map((c) => {
+                          const active = form.onboarding_category === c.key;
+                          return (
+                            <button
+                              key={c.key}
+                              type="button"
+                              onClick={() => setForm({ ...form, onboarding_category: c.key, position_slug: '' })}
+                              className={`px-3 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${
+                                active
+                                  ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                              }`}
+                            >
+                              <div>{c.label}</div>
+                              <div className={`text-[10px] mt-0.5 ${active ? 'text-white/70' : 'text-gray-400'}`}>{c.sub}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1.5">
+                        No positions defined for this restaurant yet — using category only. Telegram subgroups will use category scope.
+                      </p>
+                    </div>
+                  )
                 ) : (
                   <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Category</span>
