@@ -114,6 +114,23 @@ interface ActiveHoliday {
 /* ───────── Component ───────── */
 const VIEW_RESTAURANT_KEY = 'whg_view_restaurant_id';
 
+/* ───────── Quick Action placeholders ─────────
+ * Buttons shown at the top of HomeTab for features that are coming
+ * but not yet live. Each renders as a card; tapping shows a small
+ * "Coming soon" modal with what the feature will do.
+ *
+ * To remove a card once a feature ships, just delete its entry here.
+ */
+const QUICK_ACTIONS: Array<{ id: string; emoji: string; title: string; description: string }> = [
+  {
+    id: 'anonymous_comment',
+    emoji: '💭',
+    title: 'Anonymous Comment',
+    description:
+      'A private channel to share feedback, concerns, or suggestions directly with ownership — with no name attached. We’re building this so every voice on the team can be heard, even on the hard stuff.',
+  },
+];
+
 export default function HomeTab({ firstName, restaurantName, language, onNavigate }: Props) {
   const [note, setNote] = useState<PreshiftNote | null>(null);
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
@@ -122,6 +139,8 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
   const [loading, setLoading] = useState(true);
   // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
   const [reopenWelcome, setReopenWelcome] = useState(false);
+  // Coming-soon modal — set when a placeholder quick action is tapped.
+  const [comingSoon, setComingSoon] = useState<{ title: string; emoji: string; description: string } | null>(null);
   // Story modal gates the welcome modal — first-time users see the brand
   // story before any operational content. Default true (assume not-yet-ack'd);
   // the modal itself fetches /api/our-story and hides immediately if the
@@ -268,6 +287,29 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
         <OurStoryModal onAcknowledged={() => setShowStoryModal(false)} />
       )}
 
+      {/* Coming-soon modal for placeholder Quick Action buttons */}
+      {comingSoon && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setComingSoon(null)}>
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-5xl mb-3" aria-hidden>{comingSoon.emoji}</div>
+            <p className="text-[10px] uppercase tracking-widest text-amber-600 font-bold mb-1">Coming soon</p>
+            <h2 className="text-lg font-bold text-[#1B3A6B] mb-2">{comingSoon.title}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed mb-5">
+              {comingSoon.description}
+            </p>
+            <button
+              onClick={() => setComingSoon(null)}
+              className="w-full py-3 bg-[#1B3A6B] text-white text-sm font-bold rounded-xl hover:bg-[#2C4F8A] transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Welcome note modal — only shows once the Story modal has been
           acknowledged (or skipped because the user already acknowledged). */}
       {!showStoryModal && (
@@ -310,6 +352,33 @@ export default function HomeTab({ firstName, restaurantName, language, onNavigat
           </h1>
           <p className="text-sm text-gray-400 mt-1">{todayLabel}</p>
         </div>
+
+        {/* ── Quick Actions — placeholder buttons for features in flight.
+            Each shows a "Coming soon" modal with what the feature will do
+            so staff know what's planned. Easy to add more entries to the
+            QUICK_ACTIONS array, or to remove a card once a feature ships. ── */}
+        {QUICK_ACTIONS.length > 0 && (
+          <section>
+            <div
+              className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {QUICK_ACTIONS.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setComingSoon({ title: a.title, emoji: a.emoji, description: a.description })}
+                  className="flex-shrink-0 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 px-4 py-3 flex items-center gap-2.5 min-w-[180px] text-left"
+                >
+                  <span className="text-2xl" aria-hidden>{a.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-[#1B3A6B] truncate">{a.title}</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Soon</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
         <NewHiresSection language={language} />
