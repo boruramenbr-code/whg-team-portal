@@ -44,6 +44,51 @@ const SHIFT_EMOJI: Record<ShiftType, string> = {
   other: '⏱️',
 };
 
+/** Per-shift color palette — keyed for instant visual scanning of the
+ *  history list and the shift selector pills. Lunch is warm amber,
+ *  Mid is a cool cyan between, Dinner is evening indigo, Other is neutral. */
+const SHIFT_COLOR: Record<ShiftType, {
+  stripe: string;     // left-edge bar background
+  avatarBg: string;   // emoji circle background
+  avatarText: string; // emoji color (mostly emoji's own color but used for text fallback)
+  pillActive: string; // active state for the shift selector pills
+  pillBorder: string; // border tint of active pill
+  badge: string;      // small shift label chip in the row
+}> = {
+  lunch: {
+    stripe: 'bg-amber-400',
+    avatarBg: 'bg-amber-50',
+    avatarText: 'text-amber-700',
+    pillActive: 'bg-amber-500 text-white',
+    pillBorder: 'border-amber-500',
+    badge: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  mid: {
+    stripe: 'bg-cyan-400',
+    avatarBg: 'bg-cyan-50',
+    avatarText: 'text-cyan-700',
+    pillActive: 'bg-cyan-500 text-white',
+    pillBorder: 'border-cyan-500',
+    badge: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+  },
+  dinner: {
+    stripe: 'bg-indigo-500',
+    avatarBg: 'bg-indigo-50',
+    avatarText: 'text-indigo-700',
+    pillActive: 'bg-indigo-600 text-white',
+    pillBorder: 'border-indigo-600',
+    badge: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+  },
+  other: {
+    stripe: 'bg-gray-300',
+    avatarBg: 'bg-gray-100',
+    avatarText: 'text-gray-700',
+    pillActive: 'bg-gray-700 text-white',
+    pillBorder: 'border-gray-700',
+    badge: 'bg-gray-100 text-gray-700 border-gray-200',
+  },
+};
+
 interface Props {
   onClose: () => void;
 }
@@ -202,24 +247,33 @@ function EntryRow({ entry, onTap }: { entry: TipEntry; onTap: () => void }) {
   const amount = Number(entry.cash_tips) || 0;
   const dt = new Date(entry.shift_date + 'T00:00:00');
   const dateLabel = dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const color = SHIFT_COLOR[entry.shift_type];
+
   return (
     <button
       onClick={onTap}
-      className="w-full bg-white rounded-xl shadow-sm hover:shadow-md hover:border-[#1B3A6B] transition-all border border-transparent px-4 py-3 flex items-center gap-3 text-left"
+      className="w-full bg-white rounded-xl shadow-sm hover:shadow-md transition-all overflow-hidden flex items-stretch text-left"
     >
-      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-base flex-shrink-0" aria-hidden>
-        {SHIFT_EMOJI[entry.shift_type]}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">
-          {dateLabel} <span className="text-gray-400">·</span> {SHIFT_LABEL[entry.shift_type]}
-        </p>
-        {entry.notes && (
-          <p className="text-[11px] text-gray-500 truncate">{entry.notes}</p>
-        )}
-      </div>
-      <div className="text-right flex-shrink-0">
-        <p className="text-base font-bold text-[#1B3A6B]">${amount.toFixed(2)}</p>
+      {/* Shift color stripe — instant visual cue for which shift this was */}
+      <div className={`w-1.5 flex-shrink-0 ${color.stripe}`} />
+      <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 ${color.avatarBg}`} aria-hidden>
+          {SHIFT_EMOJI[entry.shift_type]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-sm font-semibold text-gray-800 truncate">{dateLabel}</p>
+            <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${color.badge} shrink-0`}>
+              {SHIFT_LABEL[entry.shift_type]}
+            </span>
+          </div>
+          {entry.notes && (
+            <p className="text-[11px] text-gray-500 truncate">{entry.notes}</p>
+          )}
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-base font-bold text-[#1B3A6B]">${amount.toFixed(2)}</p>
+        </div>
       </div>
     </button>
   );
@@ -321,25 +375,29 @@ function TipEntryForm({
             />
           </div>
 
-          {/* Shift pills */}
+          {/* Shift pills — colored to match the history list */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">Shift</label>
             <div className="grid grid-cols-4 gap-1.5">
-              {(['lunch', 'mid', 'dinner', 'other'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setShiftType(s)}
-                  className={`px-2 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-                    shiftType === s
-                      ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white shadow-sm'
-                      : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-base block leading-none mb-0.5" aria-hidden>{SHIFT_EMOJI[s]}</span>
-                  <span>{SHIFT_LABEL[s]}</span>
-                </button>
-              ))}
+              {(['lunch', 'mid', 'dinner', 'other'] as const).map((s) => {
+                const color = SHIFT_COLOR[s];
+                const active = shiftType === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setShiftType(s)}
+                    className={`px-2 py-2 rounded-xl border-2 text-xs font-semibold transition-colors ${
+                      active
+                        ? `${color.pillActive} ${color.pillBorder} shadow-sm`
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-base block leading-none mb-0.5" aria-hidden>{SHIFT_EMOJI[s]}</span>
+                    <span>{SHIFT_LABEL[s]}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
