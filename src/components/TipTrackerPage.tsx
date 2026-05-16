@@ -374,13 +374,10 @@ export default function TipTrackerPage({ onClose }: Props) {
               </div>
             ) : (
               <div className="space-y-2">
-                {summaries.viewedEntries.map((e) => (
-                  <EntryRow
-                    key={e.id}
-                    entry={e}
-                    onTap={() => { setEditing(e); setShowForm(true); }}
-                  />
-                ))}
+                <ShiftList
+                  entries={summaries.viewedEntries}
+                  onEditEntry={(e) => { setEditing(e); setShowForm(true); }}
+                />
               </div>
             )}
           </div>
@@ -559,6 +556,137 @@ function SummaryCard({ label, total, count, avg }: { label: string; total: numbe
         {count} shift{count === 1 ? '' : 's'} {count > 0 && `· $${avg.toFixed(0)}/shift`}
       </p>
     </div>
+  );
+}
+
+/* ───────── Shift list ─────────
+ * Groups entries by date. Single-shift days render as a normal EntryRow
+ * (no extra UI cost). Multi-shift days collapse into a DayGroup card that
+ * shows the day total + shift count, expandable to reveal sub-rows.
+ *
+ * Keeps the typical list short for servers who work 6–8 shifts a week. */
+function ShiftList({
+  entries,
+  onEditEntry,
+}: {
+  entries: TipEntry[];
+  onEditEntry: (e: TipEntry) => void;
+}) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, TipEntry[]>();
+    for (const e of entries) {
+      const list = map.get(e.shift_date) ?? [];
+      list.push(e);
+      map.set(e.shift_date, list);
+    }
+    // Within a day, order by shift (lunch → mid → dinner → other)
+    const order: Record<ShiftType, number> = { lunch: 0, mid: 1, dinner: 2, other: 3 };
+    Array.from(map.values()).forEach((list) => {
+      list.sort((a: TipEntry, b: TipEntry) => order[a.shift_type] - order[b.shift_type]);
+    });
+    // Outer order: most recent date first
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [entries]);
+
+  return (
+    <>
+      {grouped.map(([date, dayEntries]) =>
+        dayEntries.length === 1 ? (
+          <EntryRow
+            key={dayEntries[0].id}
+            entry={dayEntries[0]}
+            onTap={() => onEditEntry(dayEntries[0])}
+          />
+        ) : (
+          <DayGroup
+            key={date}
+            date={date}
+            entries={dayEntries}
+            onEditEntry={onEditEntry}
+          />
+        )
+      )}
+    </>
+  );
+}
+
+/* ───────── Day group (multi-shift day) ───────── */
+function DayGroup({
+  date,
+  entries,
+  onEditEntry,
+}: {
+  date: string;
+  entries: TipEntry[];
+  onEditEntry: (e: TipEntry) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const dt = new Date(date + 'T00:00:00');
+  const dateLabel = dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const total = entries.reduce((sum, e) => sum + Number(e.cash_tips), 0);
+  const shiftLabels = entries.map((e) => SHIFT_LABEL[e.shift_type]).join(' + ');
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {/* Day header — tap anywhere to expand/collapse */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-stretch text-left hover:bg-gray-50 transition-colors"
+      >
+        <div className="w-1.5 bg-[#1B3A6B] flex-shrink-0" />
+        <div className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-[#1B3A6B] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+            {entries.length}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <p className="text-sm font-semibold text-gray-800 truncate">{dateLabel}</p>
+              <span className={`text-gray-400 text-xs transition-transform ${expanded ? 'rotate-90' : ''}`}>›</span>
+            </div>
+            <p className="text-[11px] text-gray-500 truncate">{shiftLabels}</p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-base font-bold text-[#1B3A6B]">${total.toFixed(2)}</p>
+            <p className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold">day total</p>
+          </div>
+        </div>
+      </button>
+
+      {/* Expanded sub-rows — each tappable to edit */}
+      {expanded && (
+        <div className="border-t border-gray-100 divide-y divide-gray-100">
+          {entries.map((e) => (
+            <SubEntryRow key={e.id} entry={e} onTap={() => onEditEntry(e)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ───────── Sub-row inside an expanded DayGroup ───────── */
+function SubEntryRow({ entry, onTap }: { entry: TipEntry; onTap: () => void }) {
+  const amount = Number(entry.cash_tips) || 0;
+  const color = SHIFT_COLOR[entry.shift_type];
+  return (
+    <button
+      onClick={onTap}
+      className="w-full flex items-stretch text-left hover:bg-gray-50 transition-colors"
+    >
+      <div className={`w-1.5 ${color.stripe} flex-shrink-0`} />
+      <div className="flex-1 flex items-center gap-3 px-4 py-2.5 min-w-0">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0 ${color.avatarBg}`} aria-hidden>
+          {SHIFT_EMOJI[entry.shift_type]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-800">{SHIFT_LABEL[entry.shift_type]}</p>
+          {entry.notes && (
+            <p className="text-[10px] text-gray-500 truncate">{entry.notes}</p>
+          )}
+        </div>
+        <p className="text-sm font-bold text-[#1B3A6B] flex-shrink-0">${amount.toFixed(2)}</p>
+      </div>
+    </button>
   );
 }
 
