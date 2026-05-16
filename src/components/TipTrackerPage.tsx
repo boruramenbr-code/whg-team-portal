@@ -124,9 +124,13 @@ export default function TipTrackerPage({ onClose }: Props) {
   // Month being viewed (YYYY-MM). Default = current month.
   const [viewedMonth, setViewedMonth] = useState<string>(() => currentYearMonth());
   const isCurrentMonth = viewedMonth === currentYearMonth();
-  // Chart view: 'week' = last 7 days, 'month' = all days in viewed month.
-  // For past months the chart is always 'month' (no 7-day relative to today).
-  const [chartMode, setChartMode] = useState<'week' | 'month'>('week');
+  // Chart view options — each one mirrors a summary card so users can
+  // see what's behind the headline number:
+  //   • 'week'      = last 7 days rolling      (matches "This Week" card)
+  //   • 'rolling30' = last 30 days rolling     (matches "Last 30 Days" card)
+  //   • 'month'     = all days in viewed month (matches "This Month" card)
+  // Past months always render 'month' (the other two are relative-to-today).
+  const [chartMode, setChartMode] = useState<'week' | 'rolling30' | 'month'>('week');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -160,9 +164,20 @@ export default function TipTrackerPage({ onClose }: Props) {
     let allTime = 0, allTimeCount = 0;
     // Per-day stacked totals for the 7-day chart (last 7 days, today inclusive).
     const sevenDay: Record<string, Record<ShiftType, number>> = {};
+    const sevenDayList: string[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = dateInCentralTime(-i);
       sevenDay[d] = { lunch: 0, mid: 0, dinner: 0, other: 0 };
+      sevenDayList.push(d);
+    }
+
+    // Per-day stacked totals for the rolling 30-day chart.
+    const thirtyDay: Record<string, Record<ShiftType, number>> = {};
+    const thirtyDayList: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = dateInCentralTime(-i);
+      thirtyDay[d] = { lunch: 0, mid: 0, dinner: 0, other: 0 };
+      thirtyDayList.push(d);
     }
 
     // Per-day buckets for the entire viewed month. Sized by the actual
@@ -196,6 +211,9 @@ export default function TipTrackerPage({ onClose }: Props) {
       if (sevenDay[e.shift_date]) {
         sevenDay[e.shift_date][e.shift_type] += amount;
       }
+      if (thirtyDay[e.shift_date]) {
+        thirtyDay[e.shift_date][e.shift_type] += amount;
+      }
     }
 
     return {
@@ -204,6 +222,9 @@ export default function TipTrackerPage({ onClose }: Props) {
       rolling30: { total: rolling30, count: rolling30Count, avg: rolling30Count ? rolling30 / rolling30Count : 0 },
       allTime: { total: allTime, count: allTimeCount },
       sevenDay,
+      sevenDayList,
+      thirtyDay,
+      thirtyDayList,
       monthDays,
       monthDayList,
       viewedEntries: viewedFiltered,
@@ -291,12 +312,24 @@ export default function TipTrackerPage({ onClose }: Props) {
             </div>
           )}
 
-          {/* Bar chart — toggleable between 7-day and current-month view on
-              the current month. Past months always render the month view. */}
+          {/* Bar chart — each mode mirrors a summary card on current month.
+              Past months always render 'month' (only mode that's calendar-anchored). */}
           {isCurrentMonth ? (
             <TipBarChart
-              days={chartMode === 'week' ? Object.keys(summaries.sevenDay).sort() : summaries.monthDayList}
-              dailyTotals={chartMode === 'week' ? summaries.sevenDay : summaries.monthDays}
+              days={
+                chartMode === 'week'
+                  ? summaries.sevenDayList
+                  : chartMode === 'rolling30'
+                  ? summaries.thirtyDayList
+                  : summaries.monthDayList
+              }
+              dailyTotals={
+                chartMode === 'week'
+                  ? summaries.sevenDay
+                  : chartMode === 'rolling30'
+                  ? summaries.thirtyDay
+                  : summaries.monthDays
+              }
               today={summaries.today}
               mode={chartMode}
               onChangeMode={setChartMode}
@@ -390,6 +423,8 @@ export default function TipTrackerPage({ onClose }: Props) {
  * If `onChangeMode` is passed, a Week / Month toggle renders in the header.
  *
  * Pure CSS flex — no chart library dependency. */
+type ChartMode = 'week' | 'rolling30' | 'month';
+
 function TipBarChart({
   days,
   dailyTotals,
@@ -400,8 +435,8 @@ function TipBarChart({
   days: string[];
   dailyTotals: Record<string, Record<ShiftType, number>>;
   today: string;
-  mode: 'week' | 'month';
-  onChangeMode?: (m: 'week' | 'month') => void;
+  mode: ChartMode;
+  onChangeMode?: (m: ChartMode) => void;
 }) {
   const dayTotals = days.map((d) => {
     const b = dailyTotals[d];
@@ -411,13 +446,17 @@ function TipBarChart({
   const allZero = max === 0;
 
   const showAmountLabels = mode === 'week';
-  const isMonth = mode === 'month';
+  // Dense modes — 30+ bars — get tighter spacing and sparse labels.
+  const isDense = mode === 'rolling30' || mode === 'month';
 
-  const headerLabel = mode === 'week' ? 'Last 7 Days' : 'This Month';
+  const headerLabel =
+    mode === 'week' ? 'Last 7 Days' :
+    mode === 'rolling30' ? 'Last 30 Days' :
+    'This Month';
 
-  // For month mode, only label every 5th day plus today plus the 1st and last.
-  function monthLabel(idx: number, d: string): string {
-    if (!isMonth) return '';
+  // For dense modes, only label every 5th day plus today plus the 1st and last.
+  function denseLabel(idx: number, d: string): string {
+    if (!isDense) return '';
     const dayNum = Number(d.split('-')[2]);
     const isFirst = idx === 0;
     const isLast = idx === days.length - 1;
@@ -427,55 +466,54 @@ function TipBarChart({
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3 gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{headerLabel}</h3>
-        <div className="flex items-center gap-2">
-          {onChangeMode && (
-            <div className="flex bg-gray-100 rounded-full p-0.5">
+        {onChangeMode && (
+          <div className="flex bg-gray-100 rounded-full p-0.5">
+            {([
+              { id: 'week' as const, label: '7 Days' },
+              { id: 'rolling30' as const, label: '30 Days' },
+              { id: 'month' as const, label: 'Month' },
+            ]).map((opt) => (
               <button
-                onClick={() => onChangeMode('week')}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                  mode === 'week' ? 'bg-[#1B3A6B] text-white' : 'text-gray-600 hover:text-gray-800'
+                key={opt.id}
+                onClick={() => onChangeMode(opt.id)}
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                  mode === opt.id ? 'bg-[#1B3A6B] text-white' : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                7 Days
+                {opt.label}
               </button>
-              <button
-                onClick={() => onChangeMode('month')}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                  mode === 'month' ? 'bg-[#1B3A6B] text-white' : 'text-gray-600 hover:text-gray-800'
-                }`}
-              >
-                Month
-              </button>
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-[9px] text-gray-500">
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Lunch</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mid</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Dinner</span>
+            ))}
           </div>
-        </div>
+        )}
+      </div>
+      <div className="flex items-center gap-3 text-[9px] text-gray-500 mb-2">
+        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Lunch</span>
+        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mid</span>
+        <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Dinner</span>
       </div>
 
       {allZero ? (
         <div className="text-center text-xs text-gray-400 py-8">
           {mode === 'week'
             ? 'No tips logged in the last 7 days. Add one to start filling in your chart.'
+            : mode === 'rolling30'
+            ? 'No tips logged in the last 30 days yet.'
             : 'No tips logged this month yet.'}
         </div>
       ) : (
-        <div className={`flex items-end justify-between h-36 ${isMonth ? 'gap-0.5' : 'gap-1.5'}`}>
+        <div className={`flex items-end justify-between h-36 ${isDense ? 'gap-0.5' : 'gap-1.5'}`}>
           {days.map((d, idx) => {
             const buckets = dailyTotals[d];
             const total = dayTotals[idx];
             const heightPct = max > 0 ? (total / max) * 100 : 0;
             const dt = new Date(d + 'T00:00:00');
             const isToday = d === today;
-            const dayLabel = isMonth ? monthLabel(idx, d) : dt.toLocaleDateString(undefined, { weekday: 'short' });
+            const dayLabel = isDense ? denseLabel(idx, d) : dt.toLocaleDateString(undefined, { weekday: 'short' });
             return (
               <div key={d} className="flex-1 flex flex-col items-center min-w-0 gap-1 h-full">
-                {/* Amount label above bar — only in week mode (too crowded in month) */}
+                {/* Amount label above bar — only in week mode (too crowded otherwise) */}
                 {showAmountLabels && (
                   <div className="text-[9px] font-bold text-gray-700 leading-none h-3">
                     {total > 0 ? `$${Math.round(total)}` : ''}
@@ -484,12 +522,12 @@ function TipBarChart({
                 {/* Bar area */}
                 <div className="flex-1 w-full flex items-end">
                   <div
-                    className={`w-full ${isMonth ? 'rounded-sm' : 'rounded-t'} overflow-hidden flex flex-col-reverse transition-all ${
+                    className={`w-full ${isDense ? 'rounded-sm' : 'rounded-t'} overflow-hidden flex flex-col-reverse transition-all ${
                       isToday ? 'ring-1 ring-[#1B3A6B]' : ''
                     }`}
                     style={{
                       height: total > 0 ? `${Math.max(heightPct, 4)}%` : 0,
-                      minHeight: total > 0 ? (isMonth ? 4 : 6) : 0,
+                      minHeight: total > 0 ? (isDense ? 4 : 6) : 0,
                     }}
                   >
                     {buckets?.lunch > 0 && <div className="bg-amber-400" style={{ flex: buckets.lunch }} />}
