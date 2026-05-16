@@ -93,12 +93,37 @@ interface Props {
   onClose: () => void;
 }
 
+/** Returns "YYYY-MM" for today in Central Time. */
+function currentYearMonth(): string {
+  return todayInCentralTime().slice(0, 7);
+}
+
+/** Increment / decrement a YYYY-MM string by N months. */
+function shiftYearMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Pretty month name from YYYY-MM. */
+function formatYearMonth(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 export default function TipTrackerPage({ onClose }: Props) {
   const [entries, setEntries] = useState<TipEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TipEntry | null>(null);
+  // Month being viewed (YYYY-MM). Default = current month.
+  const [viewedMonth, setViewedMonth] = useState<string>(() => currentYearMonth());
+  const isCurrentMonth = viewedMonth === currentYearMonth();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,30 +145,50 @@ export default function TipTrackerPage({ onClose }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Summary calculations (Central Time aware) ──
+  // ── Summary + filtering calculations (Central Time aware) ──
   const summaries = useMemo(() => {
     const today = todayInCentralTime();
-    const weekAgo = dateInCentralTime(-6); // includes today + 6 prior = 7-day window
-    const monthAgo = dateInCentralTime(-29); // 30-day window
-    const monthStart = today.slice(0, 7) + '-01'; // YYYY-MM-01 for "this calendar month"
+    const weekAgo = dateInCentralTime(-6); // 7-day window inclusive of today
+    const monthAgo = dateInCentralTime(-29); // 30-day rolling
 
     let week = 0, weekCount = 0;
-    let month = 0, monthCount = 0;
     let rolling30 = 0, rolling30Count = 0;
+    let viewedMonthTotal = 0, viewedMonthCount = 0;
+    let allTime = 0, allTimeCount = 0;
+    // Per-day stacked totals for the chart (current month view only).
+    const sevenDay: Record<string, Record<ShiftType, number>> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = dateInCentralTime(-i);
+      sevenDay[d] = { lunch: 0, mid: 0, dinner: 0, other: 0 };
+    }
+
+    const viewedFiltered: TipEntry[] = [];
 
     for (const e of entries) {
       const amount = Number(e.cash_tips) || 0;
-      if (e.shift_date >= monthStart) { month += amount; monthCount++; }
+      allTime += amount; allTimeCount++;
       if (e.shift_date >= weekAgo) { week += amount; weekCount++; }
       if (e.shift_date >= monthAgo) { rolling30 += amount; rolling30Count++; }
+      if (e.shift_date.startsWith(viewedMonth)) {
+        viewedMonthTotal += amount;
+        viewedMonthCount++;
+        viewedFiltered.push(e);
+      }
+      if (sevenDay[e.shift_date]) {
+        sevenDay[e.shift_date][e.shift_type] += amount;
+      }
     }
 
     return {
       week: { total: week, count: weekCount, avg: weekCount ? week / weekCount : 0 },
-      month: { total: month, count: monthCount, avg: monthCount ? month / monthCount : 0 },
+      viewedMonth: { total: viewedMonthTotal, count: viewedMonthCount, avg: viewedMonthCount ? viewedMonthTotal / viewedMonthCount : 0 },
       rolling30: { total: rolling30, count: rolling30Count, avg: rolling30Count ? rolling30 / rolling30Count : 0 },
+      allTime: { total: allTime, count: allTimeCount },
+      sevenDay,
+      viewedEntries: viewedFiltered,
+      today,
     };
-  }, [entries]);
+  }, [entries, viewedMonth]);
 
   return (
     <div className="fixed inset-0 z-40 bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] flex flex-col">
@@ -171,39 +216,95 @@ export default function TipTrackerPage({ onClose }: Props) {
             </p>
           </div>
 
-          {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-2">
-            <SummaryCard label="This Week" {...summaries.week} />
-            <SummaryCard label="This Month" {...summaries.month} />
-            <SummaryCard label="Last 30 Days" {...summaries.rolling30} />
+          {/* Month navigator — arrows to scroll back/forward through history */}
+          <div className="bg-white rounded-2xl shadow-sm flex items-center justify-between px-2 py-2">
+            <button
+              onClick={() => setViewedMonth((m) => shiftYearMonth(m, -1))}
+              className="px-3 py-2 text-[#1B3A6B] hover:bg-gray-50 rounded-lg font-bold text-base"
+              aria-label="Previous month"
+            >
+              ←
+            </button>
+            <div className="text-center min-w-0">
+              <div className="text-sm font-bold text-[#1B3A6B] truncate">{formatYearMonth(viewedMonth)}</div>
+              {!isCurrentMonth && (
+                <button
+                  onClick={() => setViewedMonth(currentYearMonth())}
+                  className="text-[10px] text-[#2E86C1] hover:underline font-semibold"
+                >
+                  ↻ Jump to current month
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setViewedMonth((m) => shiftYearMonth(m, 1))}
+              disabled={isCurrentMonth}
+              className="px-3 py-2 text-[#1B3A6B] hover:bg-gray-50 rounded-lg font-bold text-base disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Next month"
+            >
+              →
+            </button>
           </div>
 
-          {/* Add CTA */}
-          <button
-            onClick={() => { setEditing(null); setShowForm(true); }}
-            className="w-full bg-[#1B3A6B] hover:bg-[#2C4F8A] text-white font-bold py-4 rounded-2xl shadow-md transition-colors flex items-center justify-center gap-2 text-base"
-          >
-            <span className="text-lg">＋</span> Add tonight&rsquo;s tips
-          </button>
+          {/* Summary cards
+              • Current month: 3 windows (This Week / This Month / Last 30 Days)
+              • Past month:    one big card with that month's total */}
+          {isCurrentMonth ? (
+            <div className="grid grid-cols-3 gap-2">
+              <SummaryCard label="This Week" {...summaries.week} />
+              <SummaryCard label="This Month" {...summaries.viewedMonth} />
+              <SummaryCard label="Last 30 Days" {...summaries.rolling30} />
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm p-4 text-center">
+              <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">
+                {formatYearMonth(viewedMonth)} Total
+              </p>
+              <p className="text-3xl font-bold text-[#1B3A6B] leading-tight">
+                ${summaries.viewedMonth.total.toFixed(2)}
+              </p>
+              <p className="text-[11px] text-gray-500 mt-1">
+                {summaries.viewedMonth.count} shift{summaries.viewedMonth.count === 1 ? '' : 's'}
+                {summaries.viewedMonth.count > 0 && ` · $${summaries.viewedMonth.avg.toFixed(0)}/shift avg`}
+              </p>
+            </div>
+          )}
 
-          {/* Recent shifts list */}
+          {/* 7-day bar chart — only on current month view */}
+          {isCurrentMonth && <SevenDayChart sevenDay={summaries.sevenDay} today={summaries.today} />}
+
+          {/* Add CTA — only on current month (can't add to a past month easily) */}
+          {isCurrentMonth && (
+            <button
+              onClick={() => { setEditing(null); setShowForm(true); }}
+              className="w-full bg-[#1B3A6B] hover:bg-[#2C4F8A] text-white font-bold py-4 rounded-2xl shadow-md transition-colors flex items-center justify-center gap-2 text-base"
+            >
+              <span className="text-lg">＋</span> Add tonight&rsquo;s tips
+            </button>
+          )}
+
+          {/* Shift list — scoped to viewed month */}
           <div>
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2 mt-4">
-              Recent Shifts
+              {isCurrentMonth ? 'This Month’s Shifts' : 'Shifts'}
             </h2>
             {loading ? (
               <div className="bg-white rounded-2xl shadow-sm p-6 text-center text-sm text-gray-400">Loading…</div>
             ) : error ? (
               <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">{error}</div>
-            ) : entries.length === 0 ? (
+            ) : summaries.viewedEntries.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
                 <div className="text-4xl mb-2">💰</div>
-                <p className="text-sm font-semibold text-gray-700">No tip entries yet.</p>
-                <p className="text-xs text-gray-500 mt-1">Tap the button above to log tonight&rsquo;s tips.</p>
+                <p className="text-sm font-semibold text-gray-700">
+                  {isCurrentMonth ? 'No tip entries yet this month.' : 'No tip entries for this month.'}
+                </p>
+                {isCurrentMonth && (
+                  <p className="text-xs text-gray-500 mt-1">Tap the button above to log tonight&rsquo;s tips.</p>
+                )}
               </div>
             ) : (
               <div className="space-y-2">
-                {entries.map((e) => (
+                {summaries.viewedEntries.map((e) => (
                   <EntryRow
                     key={e.id}
                     entry={e}
@@ -213,6 +314,17 @@ export default function TipTrackerPage({ onClose }: Props) {
               </div>
             )}
           </div>
+
+          {/* All-time total footer */}
+          {summaries.allTime.count > 0 && (
+            <div className="bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] rounded-2xl shadow-md p-4 text-center text-white mt-4">
+              <p className="text-[10px] uppercase tracking-widest text-amber-300 font-bold mb-1">All-Time Total</p>
+              <p className="text-2xl font-bold leading-tight">${summaries.allTime.total.toFixed(2)}</p>
+              <p className="text-[11px] text-white/70 mt-0.5">
+                Across {summaries.allTime.count} shift{summaries.allTime.count === 1 ? '' : 's'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -224,6 +336,85 @@ export default function TipTrackerPage({ onClose }: Props) {
           onSaved={() => { setShowForm(false); setEditing(null); load(); }}
           onDeleted={() => { setShowForm(false); setEditing(null); load(); }}
         />
+      )}
+    </div>
+  );
+}
+
+/* ───────── 7-day bar chart ─────────
+ * Stacked bar chart of the last 7 days' tips, colored by shift type.
+ * Lunch (amber) at bottom, then Mid (cyan), Dinner (indigo), Other (gray) on top.
+ * Today's bar gets a subtle ring. Heights are scaled to the max in the window.
+ * Pure CSS flex — no chart library dependency. */
+function SevenDayChart({
+  sevenDay,
+  today,
+}: {
+  sevenDay: Record<string, Record<ShiftType, number>>;
+  today: string;
+}) {
+  const dayList = Object.keys(sevenDay).sort();
+  const dayTotals = dayList.map((d) =>
+    sevenDay[d].lunch + sevenDay[d].mid + sevenDay[d].dinner + sevenDay[d].other
+  );
+  const max = Math.max(...dayTotals, 0);
+  const allZero = max === 0;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Last 7 Days</h3>
+        <div className="flex items-center gap-2 text-[9px] text-gray-500">
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Lunch</span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mid</span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Dinner</span>
+        </div>
+      </div>
+
+      {allZero ? (
+        <div className="text-center text-xs text-gray-400 py-8">
+          No tips logged in the last 7 days. Add one to start filling in your chart.
+        </div>
+      ) : (
+        <div className="flex items-end justify-between gap-1.5 h-36">
+          {dayList.map((d, idx) => {
+            const buckets = sevenDay[d];
+            const total = dayTotals[idx];
+            const heightPct = max > 0 ? (total / max) * 100 : 0;
+            const dt = new Date(d + 'T00:00:00');
+            const isToday = d === today;
+            const dayLabel = dt.toLocaleDateString(undefined, { weekday: 'short' });
+            return (
+              <div key={d} className="flex-1 flex flex-col items-center min-w-0 gap-1 h-full">
+                {/* Total label above bar */}
+                <div className="text-[9px] font-bold text-gray-700 leading-none h-3">
+                  {total > 0 ? `$${Math.round(total)}` : ''}
+                </div>
+                {/* Bar area */}
+                <div className="flex-1 w-full flex items-end">
+                  <div
+                    className={`w-full rounded-t overflow-hidden flex flex-col-reverse transition-all ${
+                      isToday ? 'ring-2 ring-[#1B3A6B] ring-offset-1' : ''
+                    }`}
+                    style={{
+                      height: total > 0 ? `${Math.max(heightPct, 4)}%` : 0,
+                      minHeight: total > 0 ? 6 : 0,
+                    }}
+                  >
+                    {buckets.lunch > 0 && <div className="bg-amber-400" style={{ flex: buckets.lunch }} />}
+                    {buckets.mid > 0 && <div className="bg-cyan-400" style={{ flex: buckets.mid }} />}
+                    {buckets.dinner > 0 && <div className="bg-indigo-500" style={{ flex: buckets.dinner }} />}
+                    {buckets.other > 0 && <div className="bg-gray-300" style={{ flex: buckets.other }} />}
+                  </div>
+                </div>
+                {/* Day label below bar */}
+                <div className={`text-[9px] font-semibold leading-none ${isToday ? 'text-[#1B3A6B]' : 'text-gray-500'}`}>
+                  {dayLabel}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
