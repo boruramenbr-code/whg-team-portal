@@ -124,6 +124,9 @@ export default function TipTrackerPage({ onClose }: Props) {
   // Month being viewed (YYYY-MM). Default = current month.
   const [viewedMonth, setViewedMonth] = useState<string>(() => currentYearMonth());
   const isCurrentMonth = viewedMonth === currentYearMonth();
+  // Chart view: 'week' = last 7 days, 'month' = all days in viewed month.
+  // For past months the chart is always 'month' (no 7-day relative to today).
+  const [chartMode, setChartMode] = useState<'week' | 'month'>('week');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,11 +158,24 @@ export default function TipTrackerPage({ onClose }: Props) {
     let rolling30 = 0, rolling30Count = 0;
     let viewedMonthTotal = 0, viewedMonthCount = 0;
     let allTime = 0, allTimeCount = 0;
-    // Per-day stacked totals for the chart (current month view only).
+    // Per-day stacked totals for the 7-day chart (last 7 days, today inclusive).
     const sevenDay: Record<string, Record<ShiftType, number>> = {};
     for (let i = 6; i >= 0; i--) {
       const d = dateInCentralTime(-i);
       sevenDay[d] = { lunch: 0, mid: 0, dinner: 0, other: 0 };
+    }
+
+    // Per-day buckets for the entire viewed month. Sized by the actual
+    // number of days in that calendar month so the chart renders a full
+    // month even if no entries exist yet.
+    const [vy, vm] = viewedMonth.split('-').map(Number);
+    const daysInMonth = new Date(Date.UTC(vy, vm, 0)).getUTCDate();
+    const monthDays: Record<string, Record<ShiftType, number>> = {};
+    const monthDayList: string[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = `${viewedMonth}-${String(d).padStart(2, '0')}`;
+      monthDays[ds] = { lunch: 0, mid: 0, dinner: 0, other: 0 };
+      monthDayList.push(ds);
     }
 
     const viewedFiltered: TipEntry[] = [];
@@ -173,6 +189,9 @@ export default function TipTrackerPage({ onClose }: Props) {
         viewedMonthTotal += amount;
         viewedMonthCount++;
         viewedFiltered.push(e);
+        if (monthDays[e.shift_date]) {
+          monthDays[e.shift_date][e.shift_type] += amount;
+        }
       }
       if (sevenDay[e.shift_date]) {
         sevenDay[e.shift_date][e.shift_type] += amount;
@@ -185,6 +204,8 @@ export default function TipTrackerPage({ onClose }: Props) {
       rolling30: { total: rolling30, count: rolling30Count, avg: rolling30Count ? rolling30 / rolling30Count : 0 },
       allTime: { total: allTime, count: allTimeCount },
       sevenDay,
+      monthDays,
+      monthDayList,
       viewedEntries: viewedFiltered,
       today,
     };
@@ -270,8 +291,24 @@ export default function TipTrackerPage({ onClose }: Props) {
             </div>
           )}
 
-          {/* 7-day bar chart — only on current month view */}
-          {isCurrentMonth && <SevenDayChart sevenDay={summaries.sevenDay} today={summaries.today} />}
+          {/* Bar chart — toggleable between 7-day and current-month view on
+              the current month. Past months always render the month view. */}
+          {isCurrentMonth ? (
+            <TipBarChart
+              days={chartMode === 'week' ? Object.keys(summaries.sevenDay).sort() : summaries.monthDayList}
+              dailyTotals={chartMode === 'week' ? summaries.sevenDay : summaries.monthDays}
+              today={summaries.today}
+              mode={chartMode}
+              onChangeMode={setChartMode}
+            />
+          ) : (
+            <TipBarChart
+              days={summaries.monthDayList}
+              dailyTotals={summaries.monthDays}
+              today={summaries.today}
+              mode="month"
+            />
+          )}
 
           {/* Add CTA — only on current month (can't add to a past month easily) */}
           {isCurrentMonth && (
@@ -341,75 +378,129 @@ export default function TipTrackerPage({ onClose }: Props) {
   );
 }
 
-/* ───────── 7-day bar chart ─────────
- * Stacked bar chart of the last 7 days' tips, colored by shift type.
- * Lunch (amber) at bottom, then Mid (cyan), Dinner (indigo), Other (gray) on top.
- * Today's bar gets a subtle ring. Heights are scaled to the max in the window.
+/* ───────── Bar chart ─────────
+ * Stacked bar chart, generalized for both 7-day and full-month views.
+ *
+ * Pass `days` (ordered date strings) and `dailyTotals` (map of date → shift
+ * sums). Mode controls label density:
+ *   • 'week'  — every bar has a $ amount above and a 3-letter weekday below.
+ *   • 'month' — bars are skinny (no $ labels), with date numbers shown at
+ *               regular intervals plus today's date.
+ *
+ * If `onChangeMode` is passed, a Week / Month toggle renders in the header.
+ *
  * Pure CSS flex — no chart library dependency. */
-function SevenDayChart({
-  sevenDay,
+function TipBarChart({
+  days,
+  dailyTotals,
   today,
+  mode,
+  onChangeMode,
 }: {
-  sevenDay: Record<string, Record<ShiftType, number>>;
+  days: string[];
+  dailyTotals: Record<string, Record<ShiftType, number>>;
   today: string;
+  mode: 'week' | 'month';
+  onChangeMode?: (m: 'week' | 'month') => void;
 }) {
-  const dayList = Object.keys(sevenDay).sort();
-  const dayTotals = dayList.map((d) =>
-    sevenDay[d].lunch + sevenDay[d].mid + sevenDay[d].dinner + sevenDay[d].other
-  );
+  const dayTotals = days.map((d) => {
+    const b = dailyTotals[d];
+    return b ? b.lunch + b.mid + b.dinner + b.other : 0;
+  });
   const max = Math.max(...dayTotals, 0);
   const allZero = max === 0;
 
+  const showAmountLabels = mode === 'week';
+  const isMonth = mode === 'month';
+
+  const headerLabel = mode === 'week' ? 'Last 7 Days' : 'This Month';
+
+  // For month mode, only label every 5th day plus today plus the 1st and last.
+  function monthLabel(idx: number, d: string): string {
+    if (!isMonth) return '';
+    const dayNum = Number(d.split('-')[2]);
+    const isFirst = idx === 0;
+    const isLast = idx === days.length - 1;
+    if (isFirst || isLast || dayNum % 5 === 0 || d === today) return String(dayNum);
+    return '';
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Last 7 Days</h3>
-        <div className="flex items-center gap-2 text-[9px] text-gray-500">
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Lunch</span>
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mid</span>
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Dinner</span>
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h3 className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">{headerLabel}</h3>
+        <div className="flex items-center gap-2">
+          {onChangeMode && (
+            <div className="flex bg-gray-100 rounded-full p-0.5">
+              <button
+                onClick={() => onChangeMode('week')}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                  mode === 'week' ? 'bg-[#1B3A6B] text-white' : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                7 Days
+              </button>
+              <button
+                onClick={() => onChangeMode('month')}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                  mode === 'month' ? 'bg-[#1B3A6B] text-white' : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Month
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-[9px] text-gray-500">
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Lunch</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-cyan-400" />Mid</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-500" />Dinner</span>
+          </div>
         </div>
       </div>
 
       {allZero ? (
         <div className="text-center text-xs text-gray-400 py-8">
-          No tips logged in the last 7 days. Add one to start filling in your chart.
+          {mode === 'week'
+            ? 'No tips logged in the last 7 days. Add one to start filling in your chart.'
+            : 'No tips logged this month yet.'}
         </div>
       ) : (
-        <div className="flex items-end justify-between gap-1.5 h-36">
-          {dayList.map((d, idx) => {
-            const buckets = sevenDay[d];
+        <div className={`flex items-end justify-between h-36 ${isMonth ? 'gap-0.5' : 'gap-1.5'}`}>
+          {days.map((d, idx) => {
+            const buckets = dailyTotals[d];
             const total = dayTotals[idx];
             const heightPct = max > 0 ? (total / max) * 100 : 0;
             const dt = new Date(d + 'T00:00:00');
             const isToday = d === today;
-            const dayLabel = dt.toLocaleDateString(undefined, { weekday: 'short' });
+            const dayLabel = isMonth ? monthLabel(idx, d) : dt.toLocaleDateString(undefined, { weekday: 'short' });
             return (
               <div key={d} className="flex-1 flex flex-col items-center min-w-0 gap-1 h-full">
-                {/* Total label above bar */}
-                <div className="text-[9px] font-bold text-gray-700 leading-none h-3">
-                  {total > 0 ? `$${Math.round(total)}` : ''}
-                </div>
+                {/* Amount label above bar — only in week mode (too crowded in month) */}
+                {showAmountLabels && (
+                  <div className="text-[9px] font-bold text-gray-700 leading-none h-3">
+                    {total > 0 ? `$${Math.round(total)}` : ''}
+                  </div>
+                )}
                 {/* Bar area */}
                 <div className="flex-1 w-full flex items-end">
                   <div
-                    className={`w-full rounded-t overflow-hidden flex flex-col-reverse transition-all ${
-                      isToday ? 'ring-2 ring-[#1B3A6B] ring-offset-1' : ''
+                    className={`w-full ${isMonth ? 'rounded-sm' : 'rounded-t'} overflow-hidden flex flex-col-reverse transition-all ${
+                      isToday ? 'ring-1 ring-[#1B3A6B]' : ''
                     }`}
                     style={{
                       height: total > 0 ? `${Math.max(heightPct, 4)}%` : 0,
-                      minHeight: total > 0 ? 6 : 0,
+                      minHeight: total > 0 ? (isMonth ? 4 : 6) : 0,
                     }}
                   >
-                    {buckets.lunch > 0 && <div className="bg-amber-400" style={{ flex: buckets.lunch }} />}
-                    {buckets.mid > 0 && <div className="bg-cyan-400" style={{ flex: buckets.mid }} />}
-                    {buckets.dinner > 0 && <div className="bg-indigo-500" style={{ flex: buckets.dinner }} />}
-                    {buckets.other > 0 && <div className="bg-gray-300" style={{ flex: buckets.other }} />}
+                    {buckets?.lunch > 0 && <div className="bg-amber-400" style={{ flex: buckets.lunch }} />}
+                    {buckets?.mid > 0 && <div className="bg-cyan-400" style={{ flex: buckets.mid }} />}
+                    {buckets?.dinner > 0 && <div className="bg-indigo-500" style={{ flex: buckets.dinner }} />}
+                    {buckets?.other > 0 && <div className="bg-gray-300" style={{ flex: buckets.other }} />}
                   </div>
                 </div>
                 {/* Day label below bar */}
                 <div className={`text-[9px] font-semibold leading-none ${isToday ? 'text-[#1B3A6B]' : 'text-gray-500'}`}>
-                  {dayLabel}
+                  {dayLabel || ''}
                 </div>
               </div>
             );
