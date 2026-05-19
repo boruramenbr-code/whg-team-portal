@@ -97,16 +97,25 @@ export async function GET(req: NextRequest) {
       .eq('language', 'en')
       .in('role_visibility', audienceFilter)
       .order('sort_order', { ascending: true });
-    return NextResponse.json({
-      sections: decorate(fallback as RawSection[] | null),
-      language: 'en',
-      fallback_used: true,
-    });
+    return NextResponse.json(
+      {
+        sections: decorate(fallback as RawSection[] | null),
+        language: 'en',
+        fallback_used: true,
+      },
+      { headers: { 'Cache-Control': 'private, max-age=120, stale-while-revalidate=600' } }
+    );
   }
 
-  return NextResponse.json({
-    sections: decorate(sections as RawSection[] | null),
-    language,
-    fallback_used: false,
-  });
+  // Cache for 2 min. Handbook sections are edited rarely (and an active
+  // edit invalidates `updated_at` but not browser caches — managers can
+  // force a hard reload). Audience-scoped, so `private`.
+  return NextResponse.json(
+    {
+      sections: decorate(sections as RawSection[] | null),
+      language,
+      fallback_used: false,
+    },
+    { headers: { 'Cache-Control': 'private, max-age=120, stale-while-revalidate=600' } }
+  );
 }

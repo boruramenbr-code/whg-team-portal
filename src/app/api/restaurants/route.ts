@@ -16,5 +16,11 @@ export async function GET() {
 
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
-  return Response.json({ restaurants: data });
+  // Cache aggressively on Vercel's edge — the restaurant list changes once
+  // or twice a year. `public` because it's pre-auth (login screen) and the
+  // same for everyone.
+  return Response.json(
+    { restaurants: data },
+    { headers: { 'Cache-Control': 'public, s-maxage=300, max-age=300, stale-while-revalidate=3600' } }
+  );
 }

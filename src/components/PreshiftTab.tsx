@@ -45,10 +45,14 @@ export default function PreshiftTab({ language, restaurantName, restaurantId }: 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const ridParam = restaurantId ? `&restaurant_id=${restaurantId}` : '';
+      // Phase 1 perf: drop cache-busters. Preshift notes update through the
+      // day so we keep that one no-store; owner messages now ride server
+      // 60s cache.
+      const ridParam = restaurantId ? `?restaurant_id=${restaurantId}` : '';
+      const ridParamAmp = restaurantId ? `&restaurant_id=${restaurantId}` : '';
       const [noteRes, ownerRes] = await Promise.all([
-        fetch(`/api/preshift-notes?t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
-        fetch(`/api/owner-messages?audience=staff&t=${Date.now()}${ridParam}`, { cache: 'no-store' }),
+        fetch(`/api/preshift-notes${ridParam}`, { cache: 'no-store' }),
+        fetch(`/api/owner-messages?audience=staff${ridParamAmp}`),
       ]);
       const noteData = await noteRes.json();
       const ownerData = await ownerRes.json();

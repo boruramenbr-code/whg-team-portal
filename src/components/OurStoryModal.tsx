@@ -39,7 +39,8 @@ export default function OurStoryModal({ onAcknowledged }: Props) {
   // Fetch story status + content on mount
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/our-story', { cache: 'no-store' })
+    // Phase 1 perf: server returns 10-min cache once acknowledged.
+    fetch('/api/our-story')
       .then((r) => (r.ok ? r.json() : null))
       .then((d: StoryData | null) => {
         if (cancelled) return;

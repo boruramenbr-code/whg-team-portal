@@ -48,9 +48,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ messages: [] }, { headers: { 'Cache-Control': 'no-store' } });
   }
 
+  // Cache for 60s in the browser. Owner messages change rarely (admin posts
+  // a few per month) and a 60s stale window keeps the UI snappy on tab swaps
+  // without showing wildly outdated content. `private` because content is
+  // audience-scoped (staff vs. managers).
   return NextResponse.json(
     { messages: messages || [] },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' } }
   );
 }
 

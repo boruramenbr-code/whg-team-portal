@@ -84,9 +84,13 @@ export async function GET(req: NextRequest) {
     return userRestaurantIds.has(r.restaurant_id);
   });
 
+  // Cache for 60s in the browser. Holidays/events are seeded weeks in
+  // advance — a stale window of a minute is fine and saves a round trip
+  // on every tab swap. `private` because each user gets a filtered list
+  // (company-wide + their own restaurants).
   return NextResponse.json(
     { holidays: filtered },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' } }
   );
 }
 

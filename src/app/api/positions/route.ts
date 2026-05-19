@@ -151,9 +151,15 @@ export async function GET(req: Request) {
     description: p.position_descriptions?.[0]?.description || null,
   }));
 
-  return NextResponse.json({
-    positions,
-    restaurant_id: effectiveRestaurantId,
-    available_restaurants: availableRestaurants,
-  });
+  // Cache for 60s. Position catalog changes rarely (only when an admin
+  // edits a description). `private` because each user gets a restaurant-
+  // scoped list.
+  return NextResponse.json(
+    {
+      positions,
+      restaurant_id: effectiveRestaurantId,
+      available_restaurants: availableRestaurants,
+    },
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' } }
+  );
 }

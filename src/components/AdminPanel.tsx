@@ -244,7 +244,8 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
       return;
     }
     let cancelled = false;
-    fetch(`/api/positions?restaurant_id=${form.restaurant_id}`, { cache: 'no-store' })
+    // Phase 1 perf: positions are server-cached 60s; admins still see edits within a minute.
+    fetch(`/api/positions?restaurant_id=${form.restaurant_id}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (cancelled) return;

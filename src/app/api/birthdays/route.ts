@@ -105,9 +105,15 @@ export async function GET() {
       return a.days_until - b.days_until;            // 0, 1, 2, ...
     });
 
-  return NextResponse.json({
-    birthdays,
-    current_month: currentMonth,
-    next_month: nextMonth,
-  });
+  // Cache for 60s in the browser. Birthdays are computed from static
+  // date_of_birth values — they only "change" when someone is added or
+  // their DOB is corrected. 60s is plenty fresh for a UI card.
+  return NextResponse.json(
+    {
+      birthdays,
+      current_month: currentMonth,
+      next_month: nextMonth,
+    },
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' } }
+  );
 }

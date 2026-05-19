@@ -1,18 +1,30 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Profile } from '@/lib/types';
-import ChatInterface from './ChatInterface';
-import Sidebar from './Sidebar';
 import WelcomeSplash from './WelcomeSplash';
-import PreshiftTab from './PreshiftTab';
-import PoliciesTab from './PoliciesTab';
-import HandbookReaderTab from './HandbookReaderTab';
-import OurTeamTab from './OurTeamTab';
 import HomeTab from './HomeTab';
-import PositionsSection from './PositionsSection';
-import OnboardingChecklist from './OnboardingChecklist';
-import WelcomeWizard from './WelcomeWizard';
+
+// ── Lazy-loaded tabs ──────────────────────────────────────────
+// Phase 1 perf fix (May 2026): Each tab is its own chunk so first-paint
+// JS only ships HomeTab + WelcomeSplash. Other tabs download on first
+// visit. `ssr: false` is safe because DashboardClient is already 'use client'.
+const TabLoader = () => (
+  <div className="flex-1 flex items-center justify-center text-gray-400 text-sm py-12">
+    Loading…
+  </div>
+);
+
+const ChatInterface = dynamic(() => import('./ChatInterface'), { loading: TabLoader, ssr: false });
+const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
+const PreshiftTab = dynamic(() => import('./PreshiftTab'), { loading: TabLoader, ssr: false });
+const PoliciesTab = dynamic(() => import('./PoliciesTab'), { loading: TabLoader, ssr: false });
+const HandbookReaderTab = dynamic(() => import('./HandbookReaderTab'), { loading: TabLoader, ssr: false });
+const OurTeamTab = dynamic(() => import('./OurTeamTab'), { loading: TabLoader, ssr: false });
+const PositionsSection = dynamic(() => import('./PositionsSection'), { loading: TabLoader, ssr: false });
+const OnboardingChecklist = dynamic(() => import('./OnboardingChecklist'), { loading: TabLoader, ssr: false });
+const WelcomeWizard = dynamic(() => import('./WelcomeWizard'), { ssr: false });
 
 interface Props {
   profile: Profile;

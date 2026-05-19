@@ -49,7 +49,8 @@ export default function HolidaysWidget({ language }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch('/api/holidays', { cache: 'no-store' });
+        // Phase 1 perf: server caches for 60s, no need to bust here.
+        const r = await fetch('/api/holidays');
         if (!r.ok) {
           if (!cancelled) setLoading(false);
           return;

@@ -100,8 +100,8 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
     (async () => {
       try {
         const [welcomeRes, storyRes] = await Promise.all([
-          fetch('/api/welcome', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
-          fetch('/api/our-story', { cache: 'no-store' }).then((r) => r.json()).catch(() => null),
+          fetch('/api/welcome').then((r) => r.json()).catch(() => null),
+          fetch('/api/our-story').then((r) => r.json()).catch(() => null),
         ]);
         if (cancelled) return;
         setWelcome(welcomeRes?.message

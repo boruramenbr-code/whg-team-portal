@@ -1,15 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Profile, Restaurant } from '@/lib/types';
-import AdminPanel from './AdminPanel';
-import PreshiftAdminContent from './PreshiftAdminContent';
-import ManagerStandardsTab from './ManagerStandardsTab';
-import BarCardsTab from './BarCardsTab';
-import ComplianceTab from './ComplianceTab';
 import MissionControlDashboard from './MissionControlDashboard';
-import PayRatesTab from './PayRatesTab';
-import OnboardingAdminTab from './OnboardingAdminTab';
+
+// ── Lazy-loaded admin tabs ────────────────────────────────────
+// Phase 1 perf fix (May 2026): Mission Control is the admin landing tab
+// so it stays eager. Every other admin tab is its own chunk and only
+// downloads when the manager clicks into it.
+const TabLoader = () => (
+  <div className="flex-1 flex items-center justify-center text-gray-400 text-sm py-12">
+    Loading…
+  </div>
+);
+
+const AdminPanel = dynamic(() => import('./AdminPanel'), { loading: TabLoader, ssr: false });
+const PreshiftAdminContent = dynamic(() => import('./PreshiftAdminContent'), { loading: TabLoader, ssr: false });
+const ManagerStandardsTab = dynamic(() => import('./ManagerStandardsTab'), { loading: TabLoader, ssr: false });
+const BarCardsTab = dynamic(() => import('./BarCardsTab'), { loading: TabLoader, ssr: false });
+const ComplianceTab = dynamic(() => import('./ComplianceTab'), { loading: TabLoader, ssr: false });
+const PayRatesTab = dynamic(() => import('./PayRatesTab'), { loading: TabLoader, ssr: false });
+const OnboardingAdminTab = dynamic(() => import('./OnboardingAdminTab'), { loading: TabLoader, ssr: false });
 
 interface Props {
   profile: Profile;

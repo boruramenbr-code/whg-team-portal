@@ -41,7 +41,12 @@ export async function GET() {
   const acknowledged = !!profile?.story_acknowledged_at;
 
   if (acknowledged) {
-    return NextResponse.json({ acknowledged: true, title: null, body: null });
+    // Once acknowledged, the answer never changes for this user. Cache
+    // aggressively so the browser stops asking.
+    return NextResponse.json(
+      { acknowledged: true, title: null, body: null },
+      { headers: { 'Cache-Control': 'private, max-age=600, stale-while-revalidate=1800' } }
+    );
   }
 
   // Not acknowledged yet — fetch the content. Use admin client because

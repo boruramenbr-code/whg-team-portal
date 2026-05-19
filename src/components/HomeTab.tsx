@@ -232,10 +232,14 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   const loadGeneral = useCallback(async () => {
     setLoading(true);
     try {
+      // Phase 1 perf (May 2026): Let the server's Cache-Control headers
+      // (60s) do their job — no cache-busters or no-store needed. Manager
+      // edits will still show within a minute, which is fine for these
+      // slow-changing surfaces (owner messages, birthdays, holidays).
       const [ownerRes, bdayRes, holidaysRes] = await Promise.all([
-        fetch(`/api/owner-messages?audience=staff&t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/birthdays?t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/holidays?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch('/api/owner-messages?audience=staff'),
+        fetch('/api/birthdays'),
+        fetch('/api/holidays'),
       ]);
       if (ownerRes.ok) {
         const ownerData = await ownerRes.json();
