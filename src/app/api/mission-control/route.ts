@@ -426,10 +426,17 @@ export async function GET(req: NextRequest) {
   const anniversariesUpcoming = anniversaries.filter((a) => a.days_until > 0);
 
   // ── Adoption tracker ─────────────────────────────────────────────────
-  // For each active staff: most recent of last_seen_at OR welcome_dismissed_at.
-  // (policy_signatures.created_at is folded into last_seen_at via the
-  // backfill in migration 043 — once a signature exists, last_seen_at is set
-  // to at least that timestamp.)
+  // Signal = last_seen_at ONLY. `last_seen_at` is bumped on every
+  // authenticated request via pingLastSeen(), and migration 043 backfilled
+  // it from real signals (policy signatures) for staff who engaged before
+  // the column existed.
+  //
+  // We deliberately do NOT use welcome_dismissed_at here. Migration 053
+  // stamped welcome_dismissed_at = now() on every veteran so they wouldn't
+  // see the legacy welcome modal on first login — that means the timestamp
+  // is a SQL backfill, not real activity. Treating it as activity inflates
+  // the active counts and hides who actually needs to be onboarded to the
+  // app (e.g., Ichiban staff before launch).
   type AdoptionStaff = {
     profile_id: string;
     full_name: string;
@@ -448,13 +455,7 @@ export async function GET(req: NextRequest) {
 
   for (const s of staff || []) {
     const lastSeen = (s as { last_seen_at?: string | null }).last_seen_at;
-    const welcomeDismissed = (s as { welcome_dismissed_at?: string | null }).welcome_dismissed_at;
-    // Most recent signal = effective last_seen
-    const effectiveTs = (() => {
-      const a = lastSeen ? new Date(lastSeen).getTime() : 0;
-      const b = welcomeDismissed ? new Date(welcomeDismissed).getTime() : 0;
-      return Math.max(a, b) || null;
-    })();
+    const effectiveTs = lastSeen ? new Date(lastSeen).getTime() : null;
 
     const item: AdoptionStaff = {
       profile_id: s.id,
