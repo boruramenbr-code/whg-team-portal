@@ -212,59 +212,73 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         </div>
       )}
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0">
+      {/* Tab content
+          Pattern: parent is a flex column with overflow-hidden so each tab
+          can flex naturally to fill the remaining height. Tabs that need
+          their own internal scroll (Bar Cards, Manager Bible — both have a
+          sticky header above a scroll list) use `flex-1 flex flex-col
+          overflow-hidden`. All other tabs use `flex-1 overflow-y-auto` so
+          they scroll as a whole.
+          The previous structure relied on `overflow-y-auto` here + an inline
+          `height: calc(100vh - 240px)` magic number on the two scroll-list
+          tabs, which left a ~1in band of empty gradient at the bottom on
+          mobile (the calc didn't account for the fixed bottom nav). */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0">
         {activeTop === 'dashboard' && (
-          <div className="tab-content-enter">
+          <div className="flex-1 overflow-y-auto tab-content-enter">
             <MissionControlDashboard onNavigate={navigate} />
           </div>
         )}
 
         {/* ── PEOPLE ── */}
         {activeTop === 'people' && peopleSub === 'staff' && (
-          <div className="tab-content-enter">
+          <div className="flex-1 overflow-y-auto tab-content-enter">
             <AdminPanel currentUser={profile} restaurants={restaurants} />
           </div>
         )}
         {activeTop === 'people' && peopleSub === 'onboarding' && (
-          <div className="tab-content-enter">
+          <div className="flex-1 overflow-y-auto tab-content-enter">
             <OnboardingAdminTab />
           </div>
         )}
         {activeTop === 'people' && peopleSub === 'barcards' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 240px)' }}>
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
           </div>
         )}
         {activeTop === 'people' && peopleSub === 'payrates' && (
-          <div className="tab-content-enter">
+          <div className="flex-1 overflow-y-auto tab-content-enter">
             <PayRatesTab profile={profile} />
           </div>
         )}
 
         {/* ── PRE-SHIFT ── */}
         {activeTop === 'preshift' && (
-          <PreshiftAdminContent isAdmin={isAdmin} restaurants={restaurants} />
+          <div className="flex-1 overflow-y-auto tab-content-enter">
+            <PreshiftAdminContent isAdmin={isAdmin} restaurants={restaurants} />
+          </div>
         )}
 
         {/* ── STANDARDS ── */}
         {activeTop === 'standards' && standardsSub === 'bible' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter" style={{ height: 'calc(100vh - 240px)' }}>
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <ManagerStandardsTab profile={profile} />
           </div>
         )}
         {activeTop === 'standards' && standardsSub === 'compliance' && (
-          <div className="tab-content-enter">
+          <div className="flex-1 overflow-y-auto tab-content-enter">
             <ComplianceTab />
           </div>
         )}
 
         {/* ── SETTINGS ── */}
         {activeTop === 'settings' && isAdmin && (
-          <div className="max-w-3xl mx-auto px-4 md:px-6 py-12 text-center tab-content-enter">
-            <div className="text-4xl mb-3">⚙️</div>
-            <h3 className="text-lg font-bold text-gray-400">Settings</h3>
-            <p className="text-sm text-gray-400 mt-1">Coming soon — restaurant management, notifications, and more.</p>
+          <div className="flex-1 overflow-y-auto tab-content-enter">
+            <div className="max-w-3xl mx-auto px-4 md:px-6 py-12 text-center">
+              <div className="text-4xl mb-3">⚙️</div>
+              <h3 className="text-lg font-bold text-gray-400">Settings</h3>
+              <p className="text-sm text-gray-400 mt-1">Coming soon — restaurant management, notifications, and more.</p>
+            </div>
           </div>
         )}
       </div>
