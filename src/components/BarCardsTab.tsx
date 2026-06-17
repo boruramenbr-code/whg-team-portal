@@ -633,9 +633,14 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
   const [uploading, setUploading] = useState(false);
   const [ocrDone, setOcrDone] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  // Inline error banner — replaces browser alert() so the message can't be
+  // silenced by the "prevent additional dialogs" checkbox in Chrome/Safari.
+  const [error, setError] = useState<string | null>(null);
 
   // Shared: process a file (from camera capture or file picker) — convert, preview, OCR
   const processFile = async (raw: File) => {
+    // Clear any prior error — they're picking a fresh file
+    setError(null);
     let f: File;
     try {
       f = await convertToJpeg(raw);
@@ -683,6 +688,7 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
 
   const handleSubmit = async () => {
     if (!file || !employeeName.trim() || !expirationDate) return;
+    setError(null);
     setUploading(true);
     try {
       const fd = new FormData();
@@ -697,10 +703,10 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
       if (res.ok && json.card) {
         onSuccess(json.card);
       } else {
-        alert(json.error || 'Upload failed');
+        setError(json.error || 'Upload failed');
       }
     } catch {
-      alert('Upload failed. Please try again.');
+      setError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -812,6 +818,19 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
               className="w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm text-[#1B3A6B] font-medium placeholder:text-gray-300 focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
             />
           </div>
+
+          {/* Inline error banner — always visible, can't be dismissed by
+              "prevent additional dialogs". Renders only when an error exists. */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p className="text-xs text-red-700 font-medium leading-snug">{error}</p>
+            </div>
+          )}
 
           {/* Submit */}
           <button
