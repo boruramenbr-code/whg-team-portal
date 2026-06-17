@@ -55,8 +55,14 @@ const STATUS_CONFIG: Record<CardStatus, { label: string; bg: string; text: strin
 };
 
 /* ───────── image conversion helper ───────── */
-// Converts HEIC files to JPEG using heic2any (WASM decoder — works in any browser).
-// Also compresses oversized JPEGs/PNGs via Canvas.
+// Two-stage pipe so every upload lands well under Vercel's ~4.5MB request
+// body limit:
+//   1) If it's HEIC, decode to a JPEG blob via heic2any (no size guarantee).
+//   2) Always canvas-resize/recompress (max 2048px, q=0.8). This guarantees
+//      every final upload is roughly 0.5-2MB regardless of source.
+// Previously, large iPhone HEIC photos would convert to >4MB JPEGs and skip
+// the canvas step — those exceeded Vercel's limit and produced a generic
+// "Upload failed" without ever reaching our handler.
 async function convertToJpeg(file: File): Promise<File> {
   // Detect HEIC by MIME type OR file extension (some browsers report empty MIME for HEIC)
   const isHeic =
@@ -67,25 +73,22 @@ async function convertToJpeg(file: File): Promise<File> {
     /\.heic$/i.test(file.name) ||
     /\.heif$/i.test(file.name);
 
+  let working: File = file;
   if (isHeic) {
     // Dynamically import heic2any (WASM-based, ~400KB, loads only when needed)
     const heic2any = (await import('heic2any')).default;
     const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
     const jpegBlob = Array.isArray(result) ? result[0] : result;
     const name = file.name.replace(/\.[^.]+$/, '.jpg');
-    return new File([jpegBlob], name, { type: 'image/jpeg' });
+    working = new File([jpegBlob], name, { type: 'image/jpeg' });
   }
 
-  // Already a supported format and under 4MB — use as-is
-  const supported = ['image/jpeg', 'image/png', 'image/webp'];
-  if (supported.includes(file.type) && file.size < 4 * 1024 * 1024) {
-    return file;
-  }
-
-  // Compress oversized images via Canvas
+  // Always run canvas resize+recompress so output stays well under Vercel's
+  // request body limit. The previous "skip if under 4MB" shortcut left a
+  // gap right at the limit where HEIC->JPEG conversions could land.
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(working);
     img.onload = () => {
       const maxDim = 2048;
       let { width, height } = img;
@@ -104,11 +107,11 @@ async function convertToJpeg(file: File): Promise<File> {
         (blob) => {
           URL.revokeObjectURL(url);
           if (!blob) { reject(new Error('Conversion failed')); return; }
-          const name = file.name.replace(/\.[^.]+$/, '.jpg');
+          const name = working.name.replace(/\.[^.]+$/, '.jpg');
           resolve(new File([blob], name, { type: 'image/jpeg' }));
         },
         'image/jpeg',
-        0.85
+        0.8
       );
     };
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')); };
@@ -699,14 +702,21 @@ function UploadModal({ restaurantId, onClose, onSuccess }: {
       if (notes.trim()) fd.append('notes', notes.trim());
 
       const res = await fetch('/api/bar-cards', { method: 'POST', body: fd });
+      // Differentiate body-too-large (Vercel limit) from server errors
+      if (res.status === 413) {
+        setError('Photo is too large. Try a smaller image or use the in-app camera.');
+        return;
+      }
       const json = await res.json();
       if (res.ok && json.card) {
         onSuccess(json.card);
       } else {
-        setError(json.error || 'Upload failed');
+        setError(json.error || 'Upload failed.');
       }
     } catch {
-      setError('Upload failed. Please try again.');
+      // Reaches here only on a real network failure — distinct from any
+      // server-side error so we know to chase connectivity, not the API.
+      setError('Network error — the request never reached the server. Check your connection and try again.');
     } finally {
       setUploading(false);
     }

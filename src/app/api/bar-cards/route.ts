@@ -118,8 +118,14 @@ export async function POST(req: NextRequest) {
     });
 
   if (uploadError) {
-    console.error('Bar card upload failed:', uploadError.message);
-    return NextResponse.json({ error: 'Upload failed. Please try again.' }, { status: 500 });
+    // Surface the real Supabase storage error so the manager (and future
+    // logs) can see whether it's a quota, path collision, RLS, or
+    // content-type issue. Generic "try again" hides the cause.
+    console.error('Bar card storage upload failed:', uploadError.message);
+    return NextResponse.json(
+      { error: `Storage upload failed: ${uploadError.message}` },
+      { status: 500 }
+    );
   }
 
   // Get public URL
