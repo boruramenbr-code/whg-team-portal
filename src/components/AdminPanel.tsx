@@ -578,6 +578,44 @@ export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps
                 {/* Expanded edit row */}
                 {isExpanded && !isSelf && (
                   <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4">
+                    {/* Full Name — editable, onBlur saves. Empty / whitespace-
+                        only values revert. Uses optimistic update so the row
+                        header reflects the new name immediately without
+                        losing scroll position on the expanded panel.
+                        `key` is set to u.full_name so a successful save
+                        re-mounts the input with the new defaultValue.
+                        Permission: backend allows managers to edit employees
+                        at their own restaurant and admins to edit anyone. */}
+                    <div className="mb-4">
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                        Full Name
+                      </label>
+                      <input
+                        key={u.full_name}
+                        type="text"
+                        defaultValue={u.full_name}
+                        onBlur={(e) => {
+                          const next = e.target.value.trim();
+                          if (!next) {
+                            // Empty or whitespace-only — revert and skip
+                            e.target.value = u.full_name;
+                            return;
+                          }
+                          if (next === u.full_name) return;
+                          setUsers((prev) => prev.map((x) =>
+                            x.id === u.id ? { ...x, full_name: next } : x
+                          ));
+                          fetch(`/api/admin/users/${u.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ full_name: next }),
+                          }).catch(() => fetchUsers()); // revert via refetch on failure
+                        }}
+                        placeholder="First Last"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E86C1] bg-white"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Change Primary Restaurant */}
                       {isAdmin && (
