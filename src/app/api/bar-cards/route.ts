@@ -104,10 +104,29 @@ export async function POST(req: NextRequest) {
 
   const adminClient = getAdminClient();
 
-  // Upload image to storage
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+  // Upload image to storage.
+  //
+  // Supabase Storage rejects object keys containing characters outside
+  // its allowed set (commas, accents, slashes, etc.) with "Invalid key".
+  // OCR-extracted names often contain those — e.g. "Sadmandiartha, Éleisa R."
+  // arrives with a comma + acute-e. We slugify the name aggressively:
+  //   1) NFD-normalize so é decomposes into e + combining mark
+  //   2) Strip the combining marks
+  //   3) Replace any run of non-alphanumeric chars with a single underscore
+  //   4) Trim trailing underscores, lowercase, cap length
+  // Ext is also restricted to a safe whitelist so a weird OCR-suggested
+  // filename can't sneak something exotic through.
+  const rawExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const ext = ['jpg', 'jpeg', 'png', 'webp'].includes(rawExt) ? rawExt : 'jpg';
   const timestamp = Date.now();
-  const filePath = `${restaurantId}/${timestamp}-${employeeName.replace(/\s+/g, '_').toLowerCase()}.${ext}`;
+  const safeName = employeeName
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')   // strip combining marks (é -> e)
+    .replace(/[^a-zA-Z0-9]+/g, '_')    // collapse anything else to _
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase()
+    .slice(0, 60) || 'card';
+  const filePath = `${restaurantId}/${timestamp}-${safeName}.${ext}`;
 
   const arrayBuffer = await file.arrayBuffer();
   const { error: uploadError } = await adminClient.storage
