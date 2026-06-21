@@ -38,6 +38,16 @@ interface OwnerMessage {
   end_date: string;
 }
 
+/** Used by the "Latest Training" highlight card. */
+interface LatestTrainingVideo {
+  id: string;
+  title: string;
+  description: string | null;
+  youtube_id: string;
+  duration: string | null;
+  series_title: string;
+}
+
 interface Props {
   firstName: string;
   restaurantName: string | null;
@@ -159,6 +169,10 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [activeHolidays, setActiveHolidays] = useState<ActiveHoliday[]>([]);
+  // Latest training video for the HomeTab spotlight card. null = no
+  // videos uploaded yet → card hides itself. Refreshed alongside the
+  // owner/birthday/holiday batch.
+  const [latestTraining, setLatestTraining] = useState<LatestTrainingVideo | null>(null);
   const [loading, setLoading] = useState(true);
   // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
   const [reopenWelcome, setReopenWelcome] = useState(false);
@@ -236,10 +250,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       // (60s) do their job — no cache-busters or no-store needed. Manager
       // edits will still show within a minute, which is fine for these
       // slow-changing surfaces (owner messages, birthdays, holidays).
-      const [ownerRes, bdayRes, holidaysRes] = await Promise.all([
+      const [ownerRes, bdayRes, holidaysRes, trainingRes] = await Promise.all([
         fetch('/api/owner-messages?audience=staff'),
         fetch('/api/birthdays'),
         fetch('/api/holidays'),
+        fetch('/api/training/latest'),
       ]);
       if (ownerRes.ok) {
         const ownerData = await ownerRes.json();
@@ -262,6 +277,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           return start <= todayMs && end >= todayMs;
         });
         setActiveHolidays(active);
+      }
+      // Latest training video (one card on Home → "Watch now" → Training tab).
+      if (trainingRes.ok) {
+        const trainingData = await trainingRes.json();
+        setLatestTraining(trainingData.video || null);
       }
     } catch {
       // ignore
@@ -452,12 +472,9 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 </span>
               )}
             </h2>
-            <button
-              onClick={() => onNavigate('preshift')}
-              className="text-[11px] font-semibold text-[#2E86C1] hover:underline"
-            >
-              {isES ? 'Ver todo' : 'View all'}  →
-            </button>
+            {/* "View all" button removed June 2026 — staff bottom nav no
+                longer has a Pre-Shift tab. Today's note still surfaces
+                here; date-nav history is admin-only. */}
           </div>
 
           {/* Restaurant switcher — admin & multi-location only */}
@@ -668,6 +685,61 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             </div>
           )}
         </section>
+
+        {/* ── Latest Training (only renders when a video exists) ──
+            Sticky-button card that highlights the most recently added
+            training video. Tap → switch to the Training tab. Hides itself
+            if no videos have been uploaded yet so empty restaurants
+            don't see a dead spot. */}
+        {latestTraining && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-2">
+              <span className="text-base">🎬</span>
+              {isES ? 'Capacitación Nueva' : 'New Training'}
+            </h2>
+            <button
+              onClick={() => onNavigate('training')}
+              className="group w-full text-left bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="flex flex-col sm:flex-row">
+                {/* Thumbnail — uses YouTube's hqdefault for a sharper feel */}
+                <div className="relative flex-shrink-0 w-full sm:w-44 aspect-video sm:aspect-auto bg-gray-200 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://i.ytimg.com/vi/${latestTraining.youtube_id}/hqdefault.jpg`}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/0 transition-colors">
+                    <div className="w-12 h-12 rounded-full bg-white/95 shadow-md flex items-center justify-center">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#1B3A6B">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    </div>
+                  </div>
+                  {latestTraining.duration && (
+                    <span className="absolute bottom-1.5 right-1.5 bg-black/75 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                      {latestTraining.duration}
+                    </span>
+                  )}
+                </div>
+                {/* Text */}
+                <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center">
+                  <p className="text-[10px] font-bold text-[#2E86C1] uppercase tracking-widest mb-1 truncate">
+                    {latestTraining.series_title}
+                  </p>
+                  <p className="text-sm font-semibold text-[#1B3A6B] leading-snug line-clamp-2">
+                    {latestTraining.title}
+                  </p>
+                  <p className="text-[11px] font-semibold text-amber-600 mt-2">
+                    {isES ? 'Ver ahora →' : 'Watch now →'}
+                  </p>
+                </div>
+              </div>
+            </button>
+          </section>
+        )}
 
         {/* ── Owner's Message (pinned, if any) ── */}
         {ownerMessages.length > 0 && (
