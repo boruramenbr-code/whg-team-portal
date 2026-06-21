@@ -248,9 +248,16 @@ function VideoPlayer({
         </div>
       </div>
 
-      {/* Player */}
-      <div className="flex-1 flex flex-col items-center justify-start overflow-y-auto">
-        <div className="w-full max-w-4xl aspect-video bg-black">
+      {/* Player.
+          Portrait: 16:9 player at top of screen, description scrollable below.
+          Landscape: 16:9 lock is dropped — the player flex-1's to fill the
+          full remaining height (the video itself stays 16:9, with letter-
+          boxing handled by the YouTube embed). Description is hidden
+          because there's no vertical room for it. This avoids the iOS
+          zoom-in artifact where rotating from portrait kept the iframe at
+          the old portrait size and YouTube's player CSS cropped to fit. */}
+      <div className="flex-1 flex flex-col items-stretch overflow-y-auto landscape:overflow-hidden">
+        <div className="w-full max-w-4xl mx-auto aspect-video landscape:aspect-auto landscape:flex-1 landscape:max-w-none bg-black">
           <iframe
             src={embedUrl}
             title={video.title}
@@ -260,7 +267,7 @@ function VideoPlayer({
           />
         </div>
         {video.description && (
-          <div className="w-full max-w-4xl px-4 py-4 text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
+          <div className="w-full max-w-4xl mx-auto px-4 py-4 text-sm text-white/80 leading-relaxed whitespace-pre-wrap landscape:hidden">
             {video.description}
           </div>
         )}
