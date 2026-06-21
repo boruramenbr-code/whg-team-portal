@@ -228,8 +228,11 @@ function VideoPlayer({
 
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 bg-black/80 backdrop-blur-sm">
+      {/* Top bar — pt-safe pushes the back button below the iOS status
+          bar in portrait mode (clock/battery icons were sitting on top
+          of the button before, making it unclickable on iPhone).
+          Landscape was unaffected because iOS hides the status bar. */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-3 pt-safe bg-black/80 backdrop-blur-sm">
         <button
           onClick={onClose}
           className="tap-highlight flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-medium"
