@@ -18,7 +18,7 @@ const TabLoader = () => (
 
 const ChatInterface = dynamic(() => import('./ChatInterface'), { loading: TabLoader, ssr: false });
 const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
-const PreshiftTab = dynamic(() => import('./PreshiftTab'), { loading: TabLoader, ssr: false });
+const TrainingTab = dynamic(() => import('./TrainingTab'), { loading: TabLoader, ssr: false });
 const PoliciesTab = dynamic(() => import('./PoliciesTab'), { loading: TabLoader, ssr: false });
 const HandbookReaderTab = dynamic(() => import('./HandbookReaderTab'), { loading: TabLoader, ssr: false });
 const OurTeamTab = dynamic(() => import('./OurTeamTab'), { loading: TabLoader, ssr: false });
@@ -31,8 +31,11 @@ interface Props {
   isManager: boolean;
 }
 
-type TopTabKey = 'home' | 'positions' | 'handbook' | 'preshift' | 'ourteam';
+type TopTabKey = 'home' | 'positions' | 'handbook' | 'training' | 'ourteam';
 // "handbook" key kept for stability — labeled "Onboarding" in the UI.
+// Pre-Shift was demoted from the bottom nav in June 2026 — today's note is
+// still visible on Home, and the dedicated PreshiftTab lives in the admin
+// section. Training took its slot.
 type HandbookSubTab = 'checklist' | 'read' | 'policies' | 'ask';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ── */
@@ -63,12 +66,11 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   ),
-  preshift: (a) => (
+  training: (a) => (
+    // Play-button-in-rectangle — reads as "video" at small sizes
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill={a ? '#1B3A6B' : 'none'} />
-      <polyline points="14 2 14 8 20 8" stroke={a ? 'white' : 'currentColor'} />
-      <line x1="16" y1="13" x2="8" y2="13" stroke={a ? 'white' : 'currentColor'} />
-      <line x1="16" y1="17" x2="8" y2="17" stroke={a ? 'white' : 'currentColor'} />
+      <rect x="2" y="4" width="20" height="16" rx="2" fill={a ? '#1B3A6B' : 'none'} />
+      <polygon points="10 8 16 12 10 16" fill={a ? 'white' : 'none'} stroke={a ? 'white' : 'currentColor'} />
     </svg>
   ),
 };
@@ -154,8 +156,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
     { key: 'home', label: 'Home', labelEs: 'Inicio', emoji: '🏠' },
     { key: 'positions', label: 'Positions', labelEs: 'Posiciones', emoji: '🧭' },
     { key: 'handbook', label: 'Onboarding', labelEs: 'Onboarding', emoji: '📘' },
+    { key: 'training', label: 'Training', labelEs: 'Capacitación', emoji: '🎬' },
     { key: 'ourteam', label: 'Our Team', labelEs: 'Nuestro Equipo', emoji: '👥' },
-    { key: 'preshift', label: 'Pre-Shift', labelEs: 'Pre-Turno', emoji: '📋' },
   ];
 
   /* Short labels for bottom nav on mobile */
@@ -163,8 +165,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
     home: { en: 'Home', es: 'Inicio' },
     positions: { en: 'Positions', es: 'Posiciones' },
     handbook: { en: 'Onboarding', es: 'Onboarding' },
+    training: { en: 'Training', es: 'Capacitar' },
     ourteam: { en: 'Team', es: 'Equipo' },
-    preshift: { en: 'Pre-Shift', es: 'Pre-Turno' },
   };
 
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
@@ -426,10 +428,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </div>
         )}
 
-        {/* PRE-SHIFT */}
-        {activeTop === 'preshift' && (
+        {/* TRAINING */}
+        {activeTop === 'training' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <PreshiftTab language={language} restaurantName={restaurantName} />
+            <TrainingTab language={language} />
           </div>
         )}
       </div>

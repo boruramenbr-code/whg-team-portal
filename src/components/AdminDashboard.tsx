@@ -22,6 +22,7 @@ const BarCardsTab = dynamic(() => import('./BarCardsTab'), { loading: TabLoader,
 const ComplianceTab = dynamic(() => import('./ComplianceTab'), { loading: TabLoader, ssr: false });
 const PayRatesTab = dynamic(() => import('./PayRatesTab'), { loading: TabLoader, ssr: false });
 const OnboardingAdminTab = dynamic(() => import('./OnboardingAdminTab'), { loading: TabLoader, ssr: false });
+const TrainingAdminTab = dynamic(() => import('./TrainingAdminTab'), { loading: TabLoader, ssr: false });
 
 interface Props {
   profile: Profile;
@@ -39,7 +40,7 @@ interface Props {
  *     new top+sub combination so deep-links still work without refactoring
  *     every alert card.
  */
-type TopTab = 'dashboard' | 'people' | 'preshift' | 'standards' | 'settings';
+type TopTab = 'dashboard' | 'people' | 'preshift' | 'standards' | 'training' | 'settings';
 type PeopleSubTab = 'staff' | 'onboarding' | 'barcards' | 'payrates';
 type StandardsSubTab = 'bible' | 'compliance';
 
@@ -73,6 +74,12 @@ const AdminNavIcons: Record<string, (active: boolean) => React.ReactNode> = {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" fill={a ? '#1B3A6B' : 'none'} />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  ),
+  training: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" fill={a ? '#1B3A6B' : 'none'} />
+      <polygon points="10 8 16 12 10 16" fill={a ? 'white' : 'none'} stroke={a ? 'white' : 'currentColor'} />
     </svg>
   ),
   settings: (a) => (
@@ -113,6 +120,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         break;
       case 'dashboard':
       case 'preshift':
+      case 'training':
       case 'settings':
         setActiveTop(target as TopTab);
         break;
@@ -123,6 +131,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
     { key: 'dashboard', label: 'Dashboard', emoji: '🎛️' },
     { key: 'people', label: 'People', emoji: '👥' },
     { key: 'preshift', label: 'Pre-Shift', emoji: '📋' },
+    { key: 'training', label: 'Training', emoji: '🎬' },
     { key: 'standards', label: 'Standards', emoji: '📖' },
     ...(isAdmin
       ? [{ key: 'settings' as TopTab, label: 'Settings', emoji: '⚙️', adminOnly: true, comingSoon: true }]
@@ -256,6 +265,13 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {activeTop === 'preshift' && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <PreshiftAdminContent isAdmin={isAdmin} restaurants={restaurants} />
+          </div>
+        )}
+
+        {/* ── TRAINING ── */}
+        {activeTop === 'training' && (
+          <div className="flex-1 overflow-y-auto tab-content-enter">
+            <TrainingAdminTab />
           </div>
         )}
 
