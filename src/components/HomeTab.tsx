@@ -92,12 +92,14 @@ const TAB_GUIDE = [
     descriptionEs: 'Ve el organigrama — quién hace qué, quién reporta a quién y cómo está estructurado el equipo.',
   },
   {
-    key: 'preshift',
-    emoji: '📋',
-    title: 'Pre-Shift Notes',
-    titleEs: 'Notas Pre-Turno',
-    description: "Full history of daily pre-shift notes, today's specials, 86'd items, and focus areas.",
-    descriptionEs: 'Historial completo de notas pre-turno, especiales del día, artículos 86 y áreas de enfoque.',
+    // Pre-Shift left the staff bottom nav in June 2026 — this card now
+    // points at Training so it can't navigate to a tab that no longer renders.
+    key: 'training',
+    emoji: '🎬',
+    title: 'Training',
+    titleEs: 'Capacitación',
+    description: 'Watch training videos from your leadership team — service, hospitality, and how we do things here.',
+    descriptionEs: 'Mira videos de capacitación de tu equipo de liderazgo — servicio, hospitalidad y cómo hacemos las cosas aquí.',
   },
 ];
 
@@ -457,10 +459,9 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           );
         })()}
 
-        {/* ── Welcome New Teammates (Position #2 — top of feed for 30 days) ── */}
-        <NewHiresSection language={language} />
-
-        {/* ── Pre-Shift Notes (live) — promoted to top of feed ── */}
+        {/* ── Pre-Shift Notes (live) — the operational brief owns the top of
+            the feed. 86'd items and specials must be readable before a shift
+            without scrolling past celebration content. ── */}
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
@@ -686,6 +687,9 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           )}
         </section>
 
+        {/* ── Welcome New Teammates (below the operational brief) ── */}
+        <NewHiresSection language={language} />
+
         {/* ── Latest Training (only renders when a video exists) ──
             Sticky-button card that highlights the most recently added
             training video. Tap → switch to the Training tab. Hides itself
@@ -862,61 +866,6 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         {/* ── Upcoming Holidays and Events ── */}
         <HolidaysWidget language={language} />
 
-        {/* ── Two-column: Latest Review + Leaderboard ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Latest Review Spotlight */}
-          <section className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                <span className="text-base">⭐</span>
-                {isES ? 'Última Reseña' : 'Latest Review'}
-              </h2>
-              <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">
-                {isES ? 'Próximamente' : 'Coming Soon'}
-              </span>
-            </div>
-            <div className="px-5 py-8 text-center">
-              <div className="text-4xl mb-3 opacity-30">⭐</div>
-              <p className="text-sm text-gray-400">
-                {isES
-                  ? 'Las reseñas de Google y Yelp aparecerán aquí.'
-                  : 'Google & Yelp reviews will show up here.'}
-              </p>
-              <p className="text-xs text-gray-300 mt-1">
-                {isES
-                  ? 'Destaca lo que nuestros clientes dicen.'
-                  : 'Spotlight what our guests are saying.'}
-              </p>
-            </div>
-          </section>
-
-          {/* Leaderboard / Callouts */}
-          <section className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                <span className="text-base">🏆</span>
-                {isES ? 'Reconocimientos' : 'Shout-Outs'}
-              </h2>
-              <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">
-                {isES ? 'Próximamente' : 'Coming Soon'}
-              </span>
-            </div>
-            <div className="px-5 py-8 text-center">
-              <div className="text-4xl mb-3 opacity-30">🏆</div>
-              <p className="text-sm text-gray-400">
-                {isES
-                  ? 'Reconocimientos del equipo y líderes en reseñas.'
-                  : 'Team shout-outs and review leaders will appear here.'}
-              </p>
-              <p className="text-xs text-gray-300 mt-1">
-                {isES
-                  ? 'Celebra a los que marcan la diferencia.'
-                  : 'Celebrate the ones making a difference.'}
-              </p>
-            </div>
-          </section>
-        </div>
-
         {/* ── Tab Guide ── */}
         <section>
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
@@ -939,26 +888,6 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 </p>
               </button>
             ))}
-          </div>
-        </section>
-
-        {/* ── Reviews Hub placeholder ── */}
-        <section className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-              <span className="text-base">💬</span>
-              {isES ? 'Centro de Reseñas' : 'Reviews Hub'}
-            </h2>
-            <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">
-              {isES ? 'Próximamente' : 'Coming Soon'}
-            </span>
-          </div>
-          <div className="px-5 py-6 text-center">
-            <p className="text-sm text-gray-400">
-              {isES
-                ? 'Todas las reseñas de Google y Yelp en un solo lugar. Filtra por calificación, fecha o menciones de empleados.'
-                : 'All Google & Yelp reviews in one place. Filter by rating, date, or employee mentions.'}
-            </p>
           </div>
         </section>
 

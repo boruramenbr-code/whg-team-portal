@@ -155,25 +155,55 @@ export default function CardingDateWidget({ language }: Props) {
           </p>
         </div>
 
-        {/* Carding checklist */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 mt-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/85 mb-2">
-            {isES ? 'Cómo Verificar la ID' : 'How to Card'}
-          </p>
-          <ul className="space-y-1.5 text-xs leading-relaxed">
-            {(isES ? [
-              'Tome la ID en su mano — no deje que se la muestren rápido.',
-              'Calcule la edad por la fecha de nacimiento — no confíe en la fecha de vencimiento.',
-              'Compare la foto con la persona cuidadosamente.',
-              'Las IDs de LA para menores de 21 son verticales con texto rojo "Under 21" o "Under 18" junto a la foto.',
-              'Si tiene duda, rechace cortésmente o llame a un gerente.',
-            ] : [
-              'Take the ID in your hand — don’t let them flash it.',
-              'Calculate age from the date of birth — don’t trust the expiration.',
-              'Compare the photo to the person carefully.',
-              'LA under-21 IDs are vertical with red "Under 21" or "Under 18" next to the photo.',
-              'When in doubt, refuse politely or get a manager.',
-            ]).map((b, i) => (
+        {/* How to Card — expandable. The cutoff date above is the daily-fresh
+            part of this widget; the checklist never changes, so it collapses
+            to keep the Home feed scannable. */}
+        <HowToCardSection language={language} />
+
+        {/* Spot a Fake ID — expandable */}
+        <FakeIdSection language={language} />
+      </div>
+    </div>
+  );
+}
+
+/* ───────── How to Card (collapsible inside CardingDateWidget) ───────── */
+function HowToCardSection({ language }: { language: 'en' | 'es' }) {
+  const [open, setOpen] = useState(false);
+  const isES = language === 'es';
+
+  const bullets = isES ? [
+    'Tome la ID en su mano — no deje que se la muestren rápido.',
+    'Calcule la edad por la fecha de nacimiento — no confíe en la fecha de vencimiento.',
+    'Compare la foto con la persona cuidadosamente.',
+    'Las IDs de LA para menores de 21 son verticales con texto rojo "Under 21" o "Under 18" junto a la foto.',
+    'Si tiene duda, rechace cortésmente o llame a un gerente.',
+  ] : [
+    'Take the ID in your hand — don’t let them flash it.',
+    'Calculate age from the date of birth — don’t trust the expiration.',
+    'Compare the photo to the person carefully.',
+    'LA under-21 IDs are vertical with red "Under 21" or "Under 18" next to the photo.',
+    'When in doubt, refuse politely or get a manager.',
+  ];
+
+  return (
+    <div className="bg-white/10 backdrop-blur-sm rounded-xl mt-3 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="tap-highlight w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-white/5 transition-colors"
+        aria-expanded={open}
+      >
+        <span className="text-[11px] font-bold uppercase tracking-widest text-white/85 flex items-center gap-1.5">
+          <span>🪪</span>
+          {isES ? 'Cómo Verificar la ID' : 'How to Card'}
+        </span>
+        <span className={`text-white/60 text-base transition-transform ${open ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 pt-1 border-t border-white/10">
+          <ul className="space-y-1.5 text-xs leading-relaxed pt-2">
+            {bullets.map((b, i) => (
               <li key={i} className="flex items-start gap-2">
                 <span className="text-white/60 flex-shrink-0 leading-tight">•</span>
                 <span>{b}</span>
@@ -181,10 +211,7 @@ export default function CardingDateWidget({ language }: Props) {
             ))}
           </ul>
         </div>
-
-        {/* Spot a Fake ID — expandable */}
-        <FakeIdSection language={language} />
-      </div>
+      )}
     </div>
   );
 }

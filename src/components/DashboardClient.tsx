@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Profile } from '@/lib/types';
 import WelcomeSplash from './WelcomeSplash';
@@ -92,6 +92,21 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+
+  // Splash plays once per day, not on every mount — staff who log in every
+  // shift shouldn't eat a 3-second ceremony each time. Checked in an effect
+  // (not the initializer) to avoid an SSR hydration mismatch; the splash is
+  // still opacity-0 in its enter phase, so an immediate dismiss is invisible.
+  useEffect(() => {
+    try {
+      const today = new Date().toDateString();
+      if (localStorage.getItem('whg_splash_date') === today) {
+        setShowSplash(false);
+      } else {
+        localStorage.setItem('whg_splash_date', today);
+      }
+    } catch { /* Safari private mode — keep the splash */ }
+  }, []);
 
   // Welcome Wizard — fires on first login (after migration 052 backfilled
   // existing staff). Closing via "Skip for now" suppresses it for this
@@ -186,6 +201,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
         <WelcomeWizard
           firstName={firstName}
           restaurantName={restaurantName}
+          language={language}
           forceReplay={wizardReplay}
           onComplete={() => { setShowWizard(false); setWizardReplay(false); }}
           onGoToChecklist={() => {
@@ -263,7 +279,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
           <div className="flex-shrink-0 flex items-center gap-0.5 bg-white/60 rounded-full p-0.5 border border-gray-200/60">
             <button
               onClick={() => setLanguage('en')}
-              className={`tap-highlight px-2 py-1 md:px-2 md:py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+              className={`tap-highlight px-3 py-2 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
                 language === 'en'
                   ? 'bg-[#1B3A6B] text-white'
                   : 'text-gray-500 hover:text-gray-700'
@@ -273,7 +289,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
             </button>
             <button
               onClick={() => setLanguage('es')}
-              className={`tap-highlight px-2 py-1 md:px-2 md:py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+              className={`tap-highlight px-3 py-2 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
                 language === 'es'
                   ? 'bg-[#1B3A6B] text-white'
                   : 'text-gray-500 hover:text-gray-700'
@@ -327,7 +343,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                   ? 'Trabaja en cada elemento. Tu manager confirmará los completados.'
                   : 'Work through each item — your manager will confirm completed ones.'}
               </p>
-              <OnboardingChecklist endpoint="/api/onboarding/me" onAction={handleChecklistAction} />
+              <OnboardingChecklist endpoint="/api/onboarding/me" onAction={handleChecklistAction} language={language} />
             </div>
           </div>
         )}
@@ -447,7 +463,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 key={t.key}
                 onClick={() => setActiveTop(t.key)}
                 className={`tap-highlight flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg min-w-[52px] transition-colors ${
-                  isActive ? 'text-[#1B3A6B]' : 'text-gray-400'
+                  isActive ? 'text-[#1B3A6B]' : 'text-gray-500'
                 }`}
               >
                 <div className="relative">
@@ -456,7 +472,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                     <span className="nav-dot-enter absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1B3A6B]" />
                   )}
                 </div>
-                <span className={`text-[10px] font-semibold leading-tight ${isActive ? 'text-[#1B3A6B]' : 'text-gray-400'}`}>
+                <span className={`text-[10px] font-semibold leading-tight ${isActive ? 'text-[#1B3A6B]' : 'text-gray-600'}`}>
                   {label}
                 </span>
               </button>

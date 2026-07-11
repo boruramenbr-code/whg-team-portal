@@ -72,14 +72,75 @@ interface Props {
    *   • detail (optional) — e.g. the handbook policy id for deep-linking
    */
   onAction?: (action: string, detail?: string) => void;
+  /** UI language. Defaults to English. */
+  language?: 'en' | 'es';
 }
 
-const SECTION_LABEL: Record<OnboardingSection, { en: string; emoji: string }> = {
-  paperwork: { en: 'Paperwork & Setup', emoji: '📋' },
-  training: { en: 'Training', emoji: '🎓' },
-  first_week: { en: 'First Week', emoji: '🚪' },
-  ongoing: { en: 'Ongoing', emoji: '📈' },
+const SECTION_LABEL: Record<OnboardingSection, { en: string; es: string; emoji: string }> = {
+  paperwork: { en: 'Paperwork & Setup', es: 'Papeleo y Preparación', emoji: '📋' },
+  training: { en: 'Training', es: 'Capacitación', emoji: '🎓' },
+  first_week: { en: 'First Week', es: 'Primera Semana', emoji: '🚪' },
+  ongoing: { en: 'Ongoing', es: 'Continuo', emoji: '📈' },
 };
+
+/* UI strings — follows the PoliciesTab isES pattern. Manager-facing strings
+ * stay English (manager surfaces don't pass a language yet). */
+const UI = {
+  en: {
+    loading: 'Loading checklist…',
+    headerLabel: 'Onboarding Checklist',
+    yourTitle: 'Your first few weeks',
+    complete: 'complete',
+    doneCount: (done: number, total: number) => `${done}/${total} done`,
+    yourProgress: (done: number, total: number) =>
+      done === 0
+        ? `${total} steps — take them one at a time. Your manager confirms each one behind you.`
+        : `You've knocked out ${done} of ${total} — keep it rolling. Your manager confirms each one behind you.`,
+    allDoneTitle: (name: string) => `You're all set${name ? `, ${name}` : ''}! 🎉`,
+    allDoneBody: 'Every item is checked and confirmed. You put in the work — now go be great out there.',
+    badgeDone: 'Done',
+    badgeInProgress: 'In progress',
+    badgeUpNext: 'Up next',
+    readMore: 'Read more →',
+    showLess: 'Show less',
+    view: 'View',
+    collapse: 'Collapse',
+    you: 'You',
+    manager: 'Manager',
+    employee: 'Employee',
+    signHandbook: '✍️ Sign Handbook',
+    signPolicies: '✍️ Sign Policies',
+    readAcknowledge: '📖 Read & Acknowledge',
+  },
+  es: {
+    loading: 'Cargando lista…',
+    headerLabel: 'Lista de Bienvenida',
+    yourTitle: 'Tus primeras semanas',
+    complete: 'completado',
+    doneCount: (done: number, total: number) => `${done}/${total} listos`,
+    yourProgress: (done: number, total: number) =>
+      done === 0
+        ? `${total} pasos — tómalos uno a la vez. Tu gerente confirma cada uno detrás de ti.`
+        : `Ya completaste ${done} de ${total} — sigue así. Tu gerente confirma cada uno detrás de ti.`,
+    allDoneTitle: (name: string) => `¡Todo listo${name ? `, ${name}` : ''}! 🎉`,
+    allDoneBody: 'Cada paso está marcado y confirmado. Hiciste el trabajo — ahora sal y demuestra de qué estás hecho.',
+    badgeDone: 'Listo',
+    badgeInProgress: 'En progreso',
+    badgeUpNext: 'Siguiente',
+    readMore: 'Leer más →',
+    showLess: 'Ver menos',
+    view: 'Ver',
+    collapse: 'Cerrar',
+    you: 'Tú',
+    manager: 'Gerente',
+    employee: 'Empleado',
+    signHandbook: '✍️ Firmar el Manual',
+    signPolicies: '✍️ Firmar Políticas',
+    readAcknowledge: '📖 Leer y Confirmar',
+  },
+} as const;
+
+type UIStrings = (typeof UI)['en'] | (typeof UI)['es'];
 
 const LINK_ICON: Record<LinkType, string> = {
   telegram: '💬',
@@ -100,7 +161,8 @@ const LINK_TYPE_BG: Record<LinkType, string> = {
 };
 
 /* ───────── Main widget ───────── */
-export default function OnboardingChecklist({ endpoint, managerMode = false, targetUserId, compact = false, showHeading = false, onAction }: Props) {
+export default function OnboardingChecklist({ endpoint, managerMode = false, targetUserId, compact = false, showHeading = false, onAction, language = 'en' }: Props) {
+  const t: UIStrings = UI[language] ?? UI.en;
   const [data, setData] = useState<OnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -117,8 +179,13 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
     });
   }, []);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // silent = refresh data in place after a toggle. No full-screen loading
+  // state, no accordion reset — the user keeps their place and momentum.
+  // The non-silent path (initial mount) still shows the loader and opens
+  // the first incomplete section.
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = !!opts?.silent;
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch(endpoint, { cache: 'no-store' });
@@ -128,14 +195,16 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
       }
       const j: OnboardingData = await res.json();
       setData(j);
-      // Auto-open the first section with an incomplete item
-      const firstIncomplete = (['paperwork', 'training', 'first_week', 'ongoing'] as OnboardingSection[])
-        .find((sec) => j.items.some((i) => i.section === sec && !i.is_complete));
-      if (firstIncomplete) setOpenSections(new Set<OnboardingSection>([firstIncomplete]));
+      if (!silent) {
+        // Auto-open the first section with an incomplete item
+        const firstIncomplete = (['paperwork', 'training', 'first_week', 'ongoing'] as OnboardingSection[])
+          .find((sec) => j.items.some((i) => i.section === sec && !i.is_complete));
+        if (firstIncomplete) setOpenSections(new Set<OnboardingSection>([firstIncomplete]));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [endpoint]);
 
@@ -180,10 +249,10 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
         throw new Error(j.error || 'Failed to update');
       }
       // Quietly refresh so progress stats and timestamps come back accurate
-      load();
+      load({ silent: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update');
-      load();
+      load({ silent: true });
     }
   }
 
@@ -214,7 +283,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
     if (compact && showHeading) return null;
     return (
       <div className="bg-white rounded-2xl shadow-sm p-6 text-center">
-        <div className="text-gray-400 text-sm animate-pulse">Loading checklist…</div>
+        <div className="text-gray-400 text-sm animate-pulse">{t.loading}</div>
       </div>
     );
   }
@@ -232,6 +301,8 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
   if (compact && !managerMode && data.progress.pct_complete === 100) return null;
 
   const sections: OnboardingSection[] = ['paperwork', 'training', 'first_week', 'ongoing'];
+  const isAllDone = data.progress.pct_complete === 100;
+  const firstName = (data.full_name || '').split(' ')[0];
 
   return (
     <div className="space-y-3">
@@ -240,17 +311,34 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
           <span className="text-base">✅</span>
           Your Onboarding
           <span className="ml-auto text-[11px] font-normal text-gray-500 normal-case tracking-normal">
-            {data.progress.fully_complete}/{data.progress.total} done
+            {t.doneCount(data.progress.fully_complete, data.progress.total)}
           </span>
         </h2>
       )}
+
+      {/* 100% celebration — the finish line deserves better than a widget
+          quietly disappearing. Employee view only; managers keep the stats. */}
+      {isAllDone && !managerMode && (
+        <div className="rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-[3px] shadow-xl shadow-emerald-300/40">
+          <div className="rounded-[22px] bg-gradient-to-br from-emerald-50 to-teal-50 px-6 py-7 text-center relative overflow-hidden">
+            <div className="absolute -top-2 -left-2 text-2xl opacity-60 select-none" aria-hidden>🎊</div>
+            <div className="absolute -top-2 -right-2 text-2xl opacity-60 select-none" aria-hidden>✨</div>
+            <div className="text-5xl mb-2" aria-hidden>🏆</div>
+            <h2 className="text-xl md:text-2xl font-extrabold text-emerald-900">
+              {t.allDoneTitle(firstName)}
+            </h2>
+            <p className="text-sm text-emerald-800 mt-2 leading-relaxed">{t.allDoneBody}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header / progress */}
       <div className={`bg-white rounded-2xl shadow-sm ${compact ? 'p-4' : 'p-5'}`}>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Onboarding Checklist</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{t.headerLabel}</p>
             <h2 className="text-base md:text-lg font-bold text-[#1B3A6B] truncate">
-              {managerMode ? data.full_name : 'Your first few weeks'}
+              {managerMode ? data.full_name : t.yourTitle}
             </h2>
             {managerMode && (
               <p className="text-xs text-gray-500 mt-0.5">
@@ -262,7 +350,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
           </div>
           <div className="text-right shrink-0">
             <div className="text-2xl font-bold text-[#1B3A6B]">{data.progress.pct_complete}%</div>
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider">complete</div>
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider">{t.complete}</div>
           </div>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
@@ -272,7 +360,9 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
           />
         </div>
         <p className="text-[11px] text-gray-500 mt-2">
-          {data.progress.fully_complete} of {data.progress.total} items fully complete · {data.progress.employee_checked} checked by employee · {data.progress.manager_checked} confirmed by manager
+          {managerMode
+            ? `${data.progress.fully_complete} of ${data.progress.total} items fully complete · ${data.progress.employee_checked} checked by employee · ${data.progress.manager_checked} confirmed by manager`
+            : t.yourProgress(data.progress.fully_complete, data.progress.total)}
         </p>
 
         {/* Manager: category picker if not set */}
@@ -351,7 +441,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-lg">{SECTION_LABEL[sec].emoji}</span>
                 <div className="text-left min-w-0">
-                  <div className="font-bold text-sm truncate">{SECTION_LABEL[sec].en}</div>
+                  <div className="font-bold text-sm truncate">{language === 'es' ? SECTION_LABEL[sec].es : SECTION_LABEL[sec].en}</div>
                   <div className="text-[10px] text-white/60 uppercase tracking-widest mt-0.5">
                     {done}/{total} done · {pct}%
                   </div>
@@ -375,6 +465,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
                 managerMode={managerMode}
                 isExpanded={expandedItemIds.has(item.id)}
                 onToggleExpand={() => toggleItemExpand(item.id)}
+                t={t}
               />
             ))}
           </section>
@@ -389,12 +480,12 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
  *  bar_card_uploaded is deliberately omitted — bar cards are uploaded by a
  *  manager via the admin Bar Cards tab (compliance requires a manager to
  *  physically verify the original card), not by the employee themselves. */
-function actionForSource(source: string | null): { key: string; label: string } | null {
+function actionForSource(source: string | null, t: UIStrings): { key: string; label: string } | null {
   switch (source) {
-    case 'handbook_signed': return { key: 'sign_handbook', label: '✍️ Sign Handbook' };
+    case 'handbook_signed': return { key: 'sign_handbook', label: t.signHandbook };
     case 'policy_signatures_all':
-    case 'policy_signatures_any': return { key: 'sign_policies', label: '✍️ Sign Policies' };
-    case 'our_story_ack': return { key: 'acknowledge_story', label: '📖 Read & Acknowledge' };
+    case 'policy_signatures_any': return { key: 'sign_policies', label: t.signPolicies };
+    case 'our_story_ack': return { key: 'acknowledge_story', label: t.readAcknowledge };
     default: return null;
   }
 }
@@ -434,6 +525,7 @@ function ItemCard({
   managerMode,
   isExpanded,
   onToggleExpand,
+  t,
 }: {
   item: OnboardingItem;
   stepNumber: number;
@@ -442,6 +534,7 @@ function ItemCard({
   managerMode: boolean;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  t: UIStrings;
 }) {
   const employeeChecked = !!item.employee_checked_at;
   const managerChecked = !!item.manager_checked_at;
@@ -473,23 +566,23 @@ function ItemCard({
             <span className="text-[10px] font-bold text-gray-400 shrink-0">#{stepNumber}</span>
             <span className="text-xs font-semibold text-gray-700 truncate">{item.title}</span>
           </div>
-          <span className="text-[10px] text-gray-400 shrink-0 font-semibold">View</span>
+          <span className="text-[10px] text-gray-400 shrink-0 font-semibold">{t.view}</span>
         </button>
       </div>
     );
   }
 
   // ── Full card ──
-  const action = !employeeChecked && onAction ? actionForSource(item.auto_track_source) : null;
+  const action = !employeeChecked && onAction ? actionForSource(item.auto_track_source, t) : null;
   const canToggleManager = managerMode;
   const showDescTruncated = isLongDesc && !isExpanded;
 
   // Status badge
   const badge = isComplete
-    ? { text: 'Done', cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+    ? { text: t.badgeDone, cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
     : (employeeChecked || managerChecked)
-    ? { text: 'In progress', cls: 'bg-amber-100 text-amber-800 border-amber-200' }
-    : { text: 'Pending', cls: 'bg-gray-100 text-gray-600 border-gray-200' };
+    ? { text: t.badgeInProgress, cls: 'bg-amber-100 text-amber-800 border-amber-200' }
+    : { text: t.badgeUpNext, cls: 'bg-gray-100 text-gray-600 border-gray-200' };
 
   return (
     <div className="flex items-stretch bg-white rounded-xl shadow-sm overflow-hidden">
@@ -514,9 +607,9 @@ function ItemCard({
                 {renderBoldInline(truncatePreview(description))}
                 <button
                   onClick={onToggleExpand}
-                  className="text-[#2E86C1] font-semibold ml-1 hover:underline"
+                  className="text-[#2E86C1] font-semibold ml-1 px-1 py-1 hover:underline"
                 >
-                  Read more →
+                  {t.readMore}
                 </button>
               </>
             ) : (
@@ -526,9 +619,9 @@ function ItemCard({
                   <div className="mt-2">
                     <button
                       onClick={onToggleExpand}
-                      className="text-[#2E86C1] text-[11px] font-semibold hover:underline"
+                      className="text-[#2E86C1] text-[11px] font-semibold px-1 py-1 hover:underline"
                     >
-                      Show less
+                      {t.showLess}
                     </button>
                   </div>
                 )}
@@ -573,7 +666,7 @@ function ItemCard({
               </button>
             ) : (
               <CheckPill
-                label={managerMode ? 'Employee' : 'You'}
+                label={managerMode ? t.employee : t.you}
                 checked={employeeChecked}
                 disabled={false}
                 timestamp={item.employee_checked_at}
@@ -584,7 +677,7 @@ function ItemCard({
           )}
           {item.requires_manager_check && (
             <CheckPill
-              label="Manager"
+              label={t.manager}
               checked={managerChecked}
               disabled={!canToggleManager}
               timestamp={item.manager_checked_at}
@@ -594,9 +687,9 @@ function ItemCard({
           {isComplete && (
             <button
               onClick={onToggleExpand}
-              className="text-[10px] text-gray-400 hover:text-gray-600 px-2 py-1 font-semibold"
+              className="text-[10px] text-gray-400 hover:text-gray-600 px-2 py-2 font-semibold"
             >
-              Collapse
+              {t.collapse}
             </button>
           )}
         </div>
@@ -692,7 +785,8 @@ function CheckPill({
   autoChecked?: boolean;
   onClick: () => void;
 }) {
-  const base = 'flex-1 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all border';
+  // min-h keeps the core tap target of the whole feature at the iOS 44px floor.
+  const base = 'flex-1 px-3 py-3 min-h-[44px] rounded-lg text-[11px] font-semibold transition-all border';
   if (checked) {
     return (
       <button

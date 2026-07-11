@@ -476,6 +476,7 @@ function PolicyDetail({
           employeeName={fullName || (isES ? 'Su firma' : 'Your signature')}
           onSigned={handleSigned}
           onCancel={() => setShowPad(false)}
+          language={language}
         />
       )}
     </div>

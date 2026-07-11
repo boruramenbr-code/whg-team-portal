@@ -36,6 +36,8 @@ interface Props {
    * "Watch intro again" link on the Onboarding tab.
    */
   forceReplay?: boolean;
+  /** UI language — seeded from profiles.preferred_language. Defaults to English. */
+  language?: 'en' | 'es';
 }
 
 interface WelcomeData {
@@ -50,7 +52,8 @@ interface StoryData {
   acknowledged: boolean;
 }
 
-export default function WelcomeWizard({ firstName, restaurantName, onComplete, onGoToChecklist, forceReplay = false }: Props) {
+export default function WelcomeWizard({ firstName, restaurantName, onComplete, onGoToChecklist, forceReplay = false, language = 'en' }: Props) {
+  const isES = language === 'es';
   const [device, setDevice] = useState<DeviceKind>('desktop');
   const [welcome, setWelcome] = useState<WelcomeData | null>(null);
   const [story, setStory] = useState<StoryData | null>(null);
@@ -150,7 +153,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 bg-[#1B3A6B] flex items-center justify-center">
-        <div className="text-white/70 text-sm animate-pulse">Loading…</div>
+        <div className="text-white/70 text-sm animate-pulse">{isES ? 'Cargando…' : 'Loading…'}</div>
       </div>
     );
   }
@@ -175,16 +178,27 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
       <div className="flex-1 overflow-y-auto px-5 pb-5">
         <div className="max-w-md mx-auto">
           {currentStep === 'install' && (
-            <InstallStep device={device} firstName={firstName} restaurantName={restaurantName} />
+            <InstallStep
+              device={device}
+              firstName={firstName}
+              restaurantName={restaurantName}
+              stepLabel={isES ? `Paso ${stepIdx + 1} de ${steps.length}` : `Step ${stepIdx + 1} of ${steps.length}`}
+              isES={isES}
+            />
           )}
           {currentStep === 'welcome' && (
-            <WelcomeStep firstName={firstName} restaurantName={restaurantName} content={welcome?.content || null} />
+            <WelcomeStep
+              firstName={firstName}
+              restaurantName={restaurantName}
+              content={(isES && welcome?.content_es) ? welcome.content_es : (welcome?.content || null)}
+              isES={isES}
+            />
           )}
           {currentStep === 'story' && (
-            <StoryStep title={story?.title || 'Our Story'} body={story?.body || ''} />
+            <StoryStep title={story?.title || (isES ? 'Nuestra Historia' : 'Our Story')} body={story?.body || ''} isES={isES} />
           )}
           {currentStep === 'checklist' && (
-            <ChecklistStep firstName={firstName} />
+            <ChecklistStep firstName={firstName} isES={isES} />
           )}
         </div>
       </div>
@@ -198,7 +212,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
               onClick={back}
               className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:text-white"
             >
-              ← Back
+              {isES ? '← Atrás' : '← Back'}
             </button>
           ) : <div className="w-16" />}
 
@@ -207,7 +221,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
               onClick={advance}
               className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-white text-[#1B3A6B] hover:bg-gray-100 shadow-lg"
             >
-              Continue →
+              {isES ? 'Continuar →' : 'Continue →'}
             </button>
           ) : (
             <button
@@ -215,16 +229,16 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
               disabled={submitting}
               className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-emerald-400 text-[#0B2447] hover:bg-emerald-300 shadow-lg disabled:opacity-50"
             >
-              {submitting ? 'Saving…' : "Let's get started →"}
+              {submitting ? (isES ? 'Guardando…' : 'Saving…') : (isES ? 'Empecemos →' : "Let's get started →")}
             </button>
           )}
         </div>
         <div className="text-center mt-2">
           <button
             onClick={onComplete}
-            className="text-[10px] text-white/40 hover:text-white/70 underline-offset-2 hover:underline"
+            className="text-xs text-white/40 hover:text-white/70 underline-offset-2 hover:underline px-3 py-2"
           >
-            Skip for now — you can finish this later
+            {isES ? 'Saltar por ahora — puedes terminarlo después' : 'Skip for now — you can finish this later'}
           </button>
         </div>
       </div>
@@ -233,14 +247,17 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
 }
 
 /* ───────── Step 1: Install on phone ───────── */
-function InstallStep({ device, firstName, restaurantName }: { device: DeviceKind; firstName: string; restaurantName: string | null }) {
+function InstallStep({ device, firstName, restaurantName, stepLabel, isES }: { device: DeviceKind; firstName: string; restaurantName: string | null; stepLabel: string; isES: boolean }) {
   return (
     <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">Step 1 of 4</p>
-      <h1 className="text-2xl font-bold mb-2">Put this app on your phone, {firstName}.</h1>
+      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{stepLabel}</p>
+      <h1 className="text-2xl font-bold mb-2">
+        {isES ? `Pon esta app en tu teléfono, ${firstName}.` : `Put this app on your phone, ${firstName}.`}
+      </h1>
       <p className="text-sm text-white/80 leading-relaxed mb-5">
-        You&rsquo;ll use this every shift — schedule, training, policies, your checklist.
-        Add it to your home screen so it opens like a real app.
+        {isES
+          ? 'La usarás cada turno — horario, capacitación, políticas, tu lista. Agrégala a tu pantalla de inicio para que abra como una app de verdad.'
+          : 'You’ll use this every shift — schedule, training, policies, your checklist. Add it to your home screen so it opens like a real app.'}
       </p>
 
       <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
@@ -248,43 +265,63 @@ function InstallStep({ device, firstName, restaurantName }: { device: DeviceKind
           <div className="space-y-4">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-300">iPhone — Safari</p>
             <Step number={1}>
-              Tap the <strong>Share</strong> button at the bottom of Safari (the square with an arrow pointing up <span className="inline-block">⬆</span>).
+              {isES
+                ? <>Toca el botón <strong>Compartir</strong> abajo en Safari (el cuadro con la flecha hacia arriba <span className="inline-block">⬆</span>).</>
+                : <>Tap the <strong>Share</strong> button at the bottom of Safari (the square with an arrow pointing up <span className="inline-block">⬆</span>).</>}
             </Step>
             <Step number={2}>
-              Scroll down in the share menu and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.
+              {isES
+                ? <>Baja en el menú y toca <strong>&ldquo;Agregar a inicio&rdquo;</strong>.</>
+                : <>Scroll down in the share menu and tap <strong>&ldquo;Add to Home Screen&rdquo;</strong>.</>}
             </Step>
             <Step number={3}>
-              Tap <strong>Add</strong> in the top-right corner. The {restaurantName || 'WHG'} icon will appear on your home screen.
+              {isES
+                ? <>Toca <strong>Agregar</strong> arriba a la derecha. El ícono de {restaurantName || 'WHG'} aparecerá en tu pantalla de inicio.</>
+                : <>Tap <strong>Add</strong> in the top-right corner. The {restaurantName || 'WHG'} icon will appear on your home screen.</>}
             </Step>
             <Step number={4}>
-              Come back here and tap <strong>Continue</strong> below.
+              {isES
+                ? <>Regresa aquí y toca <strong>Continuar</strong> abajo.</>
+                : <>Come back here and tap <strong>Continue</strong> below.</>}
             </Step>
           </div>
         ) : device === 'android' ? (
           <div className="space-y-4">
             <p className="text-xs font-bold uppercase tracking-wider text-amber-300">Android — Chrome</p>
             <Step number={1}>
-              Tap the <strong>three-dot menu</strong> (⋮) in the top right of Chrome.
+              {isES
+                ? <>Toca el <strong>menú de tres puntos</strong> (⋮) arriba a la derecha en Chrome.</>
+                : <>Tap the <strong>three-dot menu</strong> (⋮) in the top right of Chrome.</>}
             </Step>
             <Step number={2}>
-              Tap <strong>&ldquo;Install app&rdquo;</strong> or <strong>&ldquo;Add to Home screen&rdquo;</strong>.
+              {isES
+                ? <>Toca <strong>&ldquo;Instalar app&rdquo;</strong> o <strong>&ldquo;Agregar a pantalla de inicio&rdquo;</strong>.</>
+                : <>Tap <strong>&ldquo;Install app&rdquo;</strong> or <strong>&ldquo;Add to Home screen&rdquo;</strong>.</>}
             </Step>
             <Step number={3}>
-              Confirm <strong>Install</strong> — the icon appears on your home screen.
+              {isES
+                ? <>Confirma <strong>Instalar</strong> — el ícono aparece en tu pantalla de inicio.</>
+                : <>Confirm <strong>Install</strong> — the icon appears on your home screen.</>}
             </Step>
             <Step number={4}>
-              Come back here and tap <strong>Continue</strong> below.
+              {isES
+                ? <>Regresa aquí y toca <strong>Continuar</strong> abajo.</>
+                : <>Come back here and tap <strong>Continue</strong> below.</>}
             </Step>
           </div>
         ) : (
           <p className="text-sm text-white/80">
-            You&rsquo;re on a computer right now — no install needed. Tap Continue to keep going.
+            {isES
+              ? 'Estás en una computadora — no hay nada que instalar. Toca Continuar para seguir.'
+              : 'You’re on a computer right now — no install needed. Tap Continue to keep going.'}
           </p>
         )}
       </div>
 
       <p className="text-[11px] text-white/50 italic mt-4 text-center">
-        Don&rsquo;t worry if you skip this — you can always do it later.
+        {isES
+          ? 'No te preocupes si lo saltas — siempre puedes hacerlo después.'
+          : 'Don’t worry if you skip this — you can always do it later.'}
       </p>
     </div>
   );
@@ -324,12 +361,16 @@ function renderBoldInline(text: string): React.ReactNode[] {
 }
 
 /* ───────── Step 2: Welcome ───────── */
-function WelcomeStep({ firstName, restaurantName, content }: { firstName: string; restaurantName: string | null; content: string | null }) {
+function WelcomeStep({ firstName, restaurantName, content, isES }: { firstName: string; restaurantName: string | null; content: string | null; isES: boolean }) {
   return (
     <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">Welcome</p>
-      <h1 className="text-2xl font-bold mb-2">Welcome to {restaurantName || 'WHG'}, {firstName}!</h1>
-      <p className="text-sm text-white/80 mb-5">A quick note from the team.</p>
+      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{isES ? 'Bienvenida' : 'Welcome'}</p>
+      <h1 className="text-2xl font-bold mb-2">
+        {isES
+          ? `¡Bienvenido(a) a ${restaurantName || 'WHG'}, ${firstName}!`
+          : `Welcome to ${restaurantName || 'WHG'}, ${firstName}!`}
+      </h1>
+      <p className="text-sm text-white/80 mb-5">{isES ? 'Una nota rápida del equipo.' : 'A quick note from the team.'}</p>
 
       <div className="bg-white rounded-2xl p-5 text-gray-800 shadow-lg">
         {content ? (
@@ -337,7 +378,11 @@ function WelcomeStep({ firstName, restaurantName, content }: { firstName: string
             {renderBoldInline(content)}
           </div>
         ) : (
-          <p className="text-sm italic text-gray-500">No welcome note has been written yet — but we&rsquo;re glad you&rsquo;re here.</p>
+          <p className="text-sm italic text-gray-500">
+            {isES
+              ? 'Todavía no hay una nota de bienvenida — pero nos alegra que estés aquí.'
+              : 'No welcome note has been written yet — but we’re glad you’re here.'}
+          </p>
         )}
       </div>
     </div>
@@ -345,12 +390,16 @@ function WelcomeStep({ firstName, restaurantName, content }: { firstName: string
 }
 
 /* ───────── Step 3: Our Story ───────── */
-function StoryStep({ title, body }: { title: string; body: string }) {
+function StoryStep({ title, body, isES }: { title: string; body: string; isES: boolean }) {
   return (
     <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">Who we are</p>
+      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{isES ? 'Quiénes somos' : 'Who we are'}</p>
       <h1 className="text-2xl font-bold mb-2">{title}</h1>
-      <p className="text-sm text-white/80 mb-5">Quick read — this is the team you&rsquo;ve joined and what we stand for.</p>
+      <p className="text-sm text-white/80 mb-5">
+        {isES
+          ? 'Lectura rápida — este es el equipo al que te uniste y lo que defendemos.'
+          : 'Quick read — this is the team you’ve joined and what we stand for.'}
+      </p>
 
       <div className="bg-white rounded-2xl p-5 text-gray-800 shadow-lg max-h-[60vh] overflow-y-auto">
         <StoryBody body={body} />
@@ -360,30 +409,46 @@ function StoryStep({ title, body }: { title: string; body: string }) {
 }
 
 /* ───────── Step 4: Checklist intro ───────── */
-function ChecklistStep({ firstName }: { firstName: string }) {
+function ChecklistStep({ firstName, isES }: { firstName: string; isES: boolean }) {
   return (
     <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">Final step</p>
-      <h1 className="text-2xl font-bold mb-2">You&rsquo;re in, {firstName} — let&rsquo;s get you moving.</h1>
+      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{isES ? 'Último paso' : 'Final step'}</p>
+      <h1 className="text-2xl font-bold mb-2">
+        {isES
+          ? `Ya estás dentro, ${firstName} — vamos a ponerte en marcha.`
+          : `You’re in, ${firstName} — let’s get you moving.`}
+      </h1>
       <p className="text-sm text-white/80 leading-relaxed mb-5">
-        Restaurants don&rsquo;t have time for slow starts. We built this checklist so you can knock out paperwork, get trained, and start earning real shifts without chasing people down.
+        {isES
+          ? 'En los restaurantes no hay tiempo para arranques lentos. Armamos esta lista para que termines el papeleo, te capacites y empieces a ganar turnos reales sin andar persiguiendo a nadie.'
+          : 'Restaurants don’t have time for slow starts. We built this checklist so you can knock out paperwork, get trained, and start earning real shifts without chasing people down.'}
       </p>
       <p className="text-sm text-white/80 leading-relaxed mb-5">
-        Most of it auto-tracks when you finish. Your manager confirms the rest. Come back anytime in the Onboarding tab.
+        {isES
+          ? 'La mayoría se marca sola cuando terminas. Tu gerente confirma el resto. Vuelve cuando quieras en la pestaña de Onboarding.'
+          : 'Most of it auto-tracks when you finish. Your manager confirms the rest. Come back anytime in the Onboarding tab.'}
       </p>
 
       <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 space-y-3">
         <Bullet>
-          ✅ <strong>Auto-tracks</strong> when you finish things (signing policies, reading Our Story, etc.)
+          {isES
+            ? <>✅ <strong>Se marca solo</strong> cuando terminas cosas (firmar políticas, leer Nuestra Historia, etc.)</>
+            : <>✅ <strong>Auto-tracks</strong> when you finish things (signing policies, reading Our Story, etc.)</>}
         </Bullet>
         <Bullet>
-          🤝 <strong>Dual check</strong> — you mark your part, your manager confirms theirs.
+          {isES
+            ? <>🤝 <strong>Doble check</strong> — tú marcas tu parte, tu gerente confirma la suya.</>
+            : <>🤝 <strong>Dual check</strong> — you mark your part, your manager confirms theirs.</>}
         </Bullet>
         <Bullet>
-          🔗 <strong>One tap</strong> to join Telegram groups, download apps, watch training videos.
+          {isES
+            ? <>🔗 <strong>Un toque</strong> para unirte a los grupos de Telegram, bajar apps y ver videos de capacitación.</>
+            : <>🔗 <strong>One tap</strong> to join Telegram groups, download apps, watch training videos.</>}
         </Bullet>
         <Bullet>
-          🏁 <strong>Always here</strong> — find it again in the Onboarding tab whenever you need it.
+          {isES
+            ? <>🏁 <strong>Siempre aquí</strong> — encuéntrala de nuevo en la pestaña de Onboarding cuando la necesites.</>
+            : <>🏁 <strong>Always here</strong> — find it again in the Onboarding tab whenever you need it.</>}
         </Bullet>
       </div>
     </div>

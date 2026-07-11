@@ -17,6 +17,13 @@ interface WelcomeSplashProps {
 export default function WelcomeSplash({ firstName, restaurantName, onComplete }: WelcomeSplashProps) {
   const [phase, setPhase] = useState<'enter' | 'hold' | 'exit'>('enter');
 
+  // Tap anywhere to skip — the splash should never hold anyone hostage.
+  const skip = () => {
+    if (phase === 'exit') return;
+    setPhase('exit');
+    setTimeout(() => onComplete(), 300);
+  };
+
   useEffect(() => {
     // Phase 1: Fade in (already happening via CSS)
     const holdTimer = setTimeout(() => setPhase('hold'), 100);
@@ -36,6 +43,7 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
 
   return (
     <div
+      onClick={skip}
       className={`fixed inset-0 z-50 bg-[#0F1E3C] flex flex-col items-center justify-center transition-opacity duration-700 ${
         phase === 'enter' ? 'opacity-0' : phase === 'exit' ? 'opacity-0' : 'opacity-100'
       }`}

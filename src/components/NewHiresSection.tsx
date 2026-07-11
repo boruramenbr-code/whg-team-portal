@@ -73,11 +73,17 @@ export default function NewHiresSection({ language }: Props) {
 
   // Newest = first in array (API sorts created_at DESC)
   const featured = newHires[0];
-  const others = newHires.slice(1);
+  // The big spotlight earns its space for the hire's first week, or when an
+  // admin deliberately highlighted a veteran (days_since > 30). After day 7
+  // everyone drops to the compact row so the card stops crowding the daily
+  // operational feed for a month at a time.
+  const showSpotlight = featured.days_since <= 7 || featured.days_since > 30;
+  const others = showSpotlight ? newHires.slice(1) : newHires;
 
   return (
     <section>
-      {/* ── SPOTLIGHT: newest hire ────────────────────────────────────────── */}
+      {/* ── SPOTLIGHT: newest hire (first week only) ─────────────────────── */}
+      {showSpotlight && (
       <div className="rounded-3xl bg-gradient-to-br from-orange-400 via-amber-400 to-yellow-300 p-[3px] shadow-xl shadow-amber-300/40">
         <div className="rounded-[22px] bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 px-6 py-7 relative overflow-hidden">
           {/* Decorative confetti corners */}
@@ -140,12 +146,15 @@ export default function NewHiresSection({ language }: Props) {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── Additional new hires (compact) ────────────────────────────────── */}
       {others.length > 0 && (
-        <div className="mt-3">
+        <div className={showSpotlight ? 'mt-3' : ''}>
           <p className="text-[10px] font-bold text-amber-700/70 uppercase tracking-widest mb-2 ml-1">
-            {isES ? 'También nuevos este mes' : 'Also new this month'}
+            {showSpotlight
+              ? (isES ? 'También nuevos este mes' : 'Also new this month')
+              : (isES ? '🎉 Nuevos este mes — salúdalos' : '🎉 New this month — say hi')}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {others.map((h) => (

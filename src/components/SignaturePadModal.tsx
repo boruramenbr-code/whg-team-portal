@@ -12,7 +12,34 @@ interface Props {
   onSigned: (signatureDataUrl: string) => void;
   /** Called when the user cancels without signing. */
   onCancel: () => void;
+  /** UI language. Defaults to English. */
+  language?: 'en' | 'es';
 }
+
+const STRINGS = {
+  en: {
+    rotateTitle: 'Turn your phone sideways',
+    rotateBody:
+      'Rotating to landscape gives your signature more room. If your rotation is locked, no problem — you can sign upright too.',
+    signUpright: 'Sign upright instead',
+    cancel: 'Cancel',
+    signingAs: 'Signing as',
+    hint: '✍️ Sign with your finger',
+    clear: 'Clear',
+    done: 'Done',
+  },
+  es: {
+    rotateTitle: 'Gira tu teléfono',
+    rotateBody:
+      'Girar el teléfono te da más espacio para firmar. Si tu pantalla está bloqueada, no hay problema — también puedes firmar sin girar.',
+    signUpright: 'Firmar sin girar',
+    cancel: 'Cancelar',
+    signingAs: 'Firmando como',
+    hint: '✍️ Firma con tu dedo',
+    clear: 'Borrar',
+    done: 'Listo',
+  },
+} as const;
 
 /**
  * SignaturePadModal — full-screen finger-signature capture.
@@ -28,7 +55,8 @@ interface Props {
  *
  * Powered by signature_pad — handles touch + mouse + retina + smoothing.
  */
-export default function SignaturePadModal({ title, employeeName, onSigned, onCancel }: Props) {
+export default function SignaturePadModal({ title, employeeName, onSigned, onCancel, language = 'en' }: Props) {
+  const t = STRINGS[language] ?? STRINGS.en;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const padRef = useRef<SignaturePad | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -36,6 +64,10 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
     typeof window !== 'undefined' ? window.innerWidth > window.innerHeight : true
   );
   const [hasSigned, setHasSigned] = useState(false);
+  // Escape hatch for locked-rotation devices (installed PWA is portrait-locked
+  // on Android; iPhone orientation lock is common) — landscape must never be
+  // the only way to sign.
+  const [portraitOverride, setPortraitOverride] = useState(false);
 
   // Detect a small viewport (mobile) so we only show the "turn your phone"
   // prompt where it makes sense. Tablets in landscape and desktops skip it.
@@ -58,7 +90,7 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
 
   // Initialize signature_pad once the canvas is mounted AND we're in a
   // signing-ready state (desktop, OR mobile-landscape).
-  const showCanvas = !isMobile || isLandscape;
+  const showCanvas = !isMobile || isLandscape || portraitOverride;
 
   useEffect(() => {
     if (!showCanvas) return;
@@ -120,22 +152,23 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-0">
-      {/* ── Portrait prompt: "Turn your phone sideways" ── */}
-      {isMobile && !isLandscape && (
+      {/* ── Portrait prompt: rotation suggested, never required ── */}
+      {!showCanvas && (
         <div className="bg-white w-full max-w-sm m-4 rounded-2xl shadow-xl p-6 text-center">
           <div className="text-5xl mb-3">📱↻</div>
-          <h2 className="text-lg font-bold text-[#1B3A6B] mb-2">
-            Turn your phone sideways
-          </h2>
-          <p className="text-sm text-gray-600 leading-relaxed mb-4">
-            Rotate your phone to landscape mode to sign with your finger. We
-            do this so your signature has enough room to be clear and legible.
-          </p>
+          <h2 className="text-lg font-bold text-[#1B3A6B] mb-2">{t.rotateTitle}</h2>
+          <p className="text-sm text-gray-600 leading-relaxed mb-4">{t.rotateBody}</p>
+          <button
+            onClick={() => setPortraitOverride(true)}
+            className="w-full py-3 rounded-lg text-sm font-bold bg-[#1B3A6B] text-white hover:bg-[#2C4F8A] mb-2"
+          >
+            {t.signUpright}
+          </button>
           <button
             onClick={onCancel}
-            className="w-full py-2.5 text-sm text-gray-500 font-semibold hover:text-gray-700"
+            className="w-full py-3 text-sm text-gray-500 font-semibold hover:text-gray-700"
           >
-            Cancel
+            {t.cancel}
           </button>
         </div>
       )}
@@ -147,16 +180,16 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
           <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                Signing as
+                {t.signingAs}
               </p>
               <p className="text-sm font-bold text-[#1B3A6B] truncate">{employeeName}</p>
               <p className="text-xs text-gray-500 truncate">{title}</p>
             </div>
             <button
               onClick={onCancel}
-              className="text-xs text-gray-500 font-semibold hover:text-gray-700 px-2 py-1"
+              className="text-sm text-gray-500 font-semibold hover:text-gray-700 px-4 py-3 -my-1"
             >
-              Cancel
+              {t.cancel}
             </button>
           </div>
 

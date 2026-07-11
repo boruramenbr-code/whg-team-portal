@@ -922,12 +922,23 @@ function CameraOverlay({ onCapture, onClose }: {
     setCapturing(true);
 
     // Crop to just the card cutout region (matches overlay: left 8%, top 28%, width 84%, height 38%)
+    // The video renders with objectFit: 'cover', so only a centered sub-rectangle of the
+    // intrinsic stream is visible on screen. Compute that visible region first, then map
+    // the overlay percentages onto it — otherwise the saved crop drifts off the brackets.
     const vw = video.videoWidth;
     const vh = video.videoHeight;
-    const sx = Math.round(vw * 0.08);
-    const sy = Math.round(vh * 0.28);
-    const sw = Math.round(vw * 0.84);
-    const sh = Math.round(vh * 0.38);
+    const dw = video.clientWidth;
+    const dh = video.clientHeight;
+    // Cover-fit scale: intrinsic pixels per CSS pixel is 1/scale
+    const scale = dw > 0 && dh > 0 ? Math.max(dw / vw, dh / vh) : 1;
+    const visW = dw > 0 && dh > 0 ? dw / scale : vw;
+    const visH = dw > 0 && dh > 0 ? dh / scale : vh;
+    const visX = (vw - visW) / 2;
+    const visY = (vh - visH) / 2;
+    const sx = Math.round(visX + visW * 0.08);
+    const sy = Math.round(visY + visH * 0.28);
+    const sw = Math.round(visW * 0.84);
+    const sh = Math.round(visH * 0.38);
     canvas.width = sw;
     canvas.height = sh;
     const ctx = canvas.getContext('2d');

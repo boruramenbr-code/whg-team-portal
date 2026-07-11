@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Restaurant {
   id: string;
@@ -18,6 +18,36 @@ type StaffStep = 1 | 2 | 3; // 1=restaurant, 2=name, 3=pin
 
 const PIN_MIN = 4;
 const PIN_MAX = 8;
+
+// Remembered last successful staff PIN login (so returning staff skip straight to the PIN pad)
+const LAST_LOGIN_KEY = 'whg_last_login';
+
+interface SavedLogin {
+  restaurantId: string;
+  restaurantName: string;
+  profileId: string;
+  profileName: string;
+}
+
+function readSavedLogin(): SavedLogin | null {
+  try {
+    const raw = localStorage.getItem(LAST_LOGIN_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as SavedLogin;
+    if (saved?.restaurantId && saved?.profileId && saved?.profileName) return saved;
+  } catch {
+    // ignore corrupt/unavailable storage
+  }
+  return null;
+}
+
+function clearSavedLogin() {
+  try {
+    localStorage.removeItem(LAST_LOGIN_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 const RESTAURANT_COLORS: Record<string, string> = {
   'Ichiban Sushi': 'from-red-600 to-red-800',
@@ -125,6 +155,11 @@ export default function LoginPage() {
   const [staffSearch, setStaffSearch] = useState('');
   const [pin, setPin] = useState('');
 
+  // Remembered-login state: true while booted from a saved whg_last_login blob.
+  const [isRemembered, setIsRemembered] = useState(false);
+  // Profile id still awaiting validation against the fetched staff list (staleness check).
+  const rememberedProfileIdRef = useRef<string | null>(null);
+
   // Shared state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -132,6 +167,17 @@ export default function LoginPage() {
   // Manager form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // On mount: if a previous PIN login was remembered, jump straight to the PIN step.
+  useEffect(() => {
+    const saved = readSavedLogin();
+    if (!saved) return;
+    rememberedProfileIdRef.current = saved.profileId;
+    setSelectedRestaurant({ id: saved.restaurantId, name: saved.restaurantName || '' });
+    setSelectedStaff({ id: saved.profileId, full_name: saved.profileName });
+    setIsRemembered(true);
+    setStep(3);
+  }, []);
 
   // Load restaurants on mount
   useEffect(() => {
@@ -153,11 +199,35 @@ export default function LoginPage() {
     fetch(`/api/staff-list?restaurant_id=${selectedRestaurant.id}&t=${Date.now()}`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
-        setStaff(d.staff || []);
+        const list: StaffMember[] = d.staff || [];
+        setStaff(list);
         setStaffLoading(false);
+        // Staleness check: if the remembered person is no longer on this
+        // restaurant's staff list, silently forget them and start fresh.
+        const rememberedId = rememberedProfileIdRef.current;
+        if (rememberedId) {
+          if (list.some((s) => s.id === rememberedId)) {
+            rememberedProfileIdRef.current = null; // validated
+          } else {
+            forgetSavedLogin();
+          }
+        }
       })
       .catch(() => setStaffLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRestaurant]);
+
+  // Clear the remembered login and return to the normal restaurant-grid flow.
+  const forgetSavedLogin = () => {
+    clearSavedLogin();
+    rememberedProfileIdRef.current = null;
+    setIsRemembered(false);
+    setSelectedRestaurant(null);
+    setSelectedStaff(null);
+    setPin('');
+    setError('');
+    setStep(1);
+  };
 
   const handleRestaurantSelect = (r: Restaurant) => {
     setSelectedRestaurant(r);
@@ -208,6 +278,18 @@ export default function LoginPage() {
         setLoading(false);
         return;
       } else {
+        // Remember this login so next visit boots straight to the PIN step.
+        try {
+          const saved: SavedLogin = {
+            restaurantId: selectedRestaurant?.id || '',
+            restaurantName: selectedRestaurant?.name || '',
+            profileId: selectedStaff.id,
+            profileName: selectedStaff.full_name,
+          };
+          localStorage.setItem(LAST_LOGIN_KEY, JSON.stringify(saved));
+        } catch {
+          // storage unavailable — skip remembering
+        }
         window.location.href = '/dashboard';
       }
     } catch {
@@ -247,6 +329,8 @@ export default function LoginPage() {
     setError('');
     setPin('');
     if (step === 3) {
+      setIsRemembered(false);
+      rememberedProfileIdRef.current = null;
       setSelectedStaff(null);
       setStep(2);
     } else if (step === 2) {
@@ -260,6 +344,8 @@ export default function LoginPage() {
     setError('');
     setPin('');
     setStep(1);
+    setIsRemembered(false);
+    rememberedProfileIdRef.current = null;
     setSelectedRestaurant(null);
     setSelectedStaff(null);
     setEmail('');
@@ -431,8 +517,18 @@ export default function LoginPage() {
                     {selectedStaff.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
                   </span>
                 </div>
-                <p className="text-white font-bold text-lg">Hey, {firstName}!</p>
+                <p className="text-white font-bold text-lg">
+                  {isRemembered ? `Welcome back, ${firstName}` : `Hey, ${firstName}!`}
+                </p>
                 <p className="text-white/60 text-xs mt-0.5">{selectedRestaurant?.name}</p>
+                {isRemembered && (
+                  <button
+                    onClick={forgetSavedLogin}
+                    className="text-white/60 hover:text-white underline underline-offset-2 text-sm min-h-[44px] px-3 -mb-2 transition-colors"
+                  >
+                    Not you? Switch person
+                  </button>
+                )}
               </div>
 
               <p className="text-white/70 text-sm text-center mt-4">
