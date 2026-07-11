@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Profile, Restaurant } from '@/lib/types';
+import { CHANGELOG, APP_VERSION, ChangelogEntry } from '@/lib/changelog';
 import MissionControlDashboard from './MissionControlDashboard';
 
 // ── Lazy-loaded admin tabs ────────────────────────────────────
@@ -134,7 +135,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
     { key: 'training', label: 'Training', emoji: '🎬' },
     { key: 'standards', label: 'Standards', emoji: '📖' },
     ...(isAdmin
-      ? [{ key: 'settings' as TopTab, label: 'Settings', emoji: '⚙️', adminOnly: true, comingSoon: true }]
+      ? [{ key: 'settings' as TopTab, label: 'Settings', emoji: '⚙️', adminOnly: true }]
       : []),
   ];
 
@@ -290,10 +291,29 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {/* ── SETTINGS ── */}
         {activeTop === 'settings' && isAdmin && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
-            <div className="max-w-3xl mx-auto px-4 md:px-6 py-12 text-center">
-              <div className="text-4xl mb-3">⚙️</div>
-              <h3 className="text-lg font-bold text-gray-400">Settings</h3>
-              <p className="text-sm text-gray-400 mt-1">Coming soon — restaurant management, notifications, and more.</p>
+            <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-4">
+              <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">Settings</h1>
+
+              {/* About / version history */}
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    <span className="text-base">📦</span> Version History
+                  </h2>
+                  <span className="text-[11px] font-bold text-[#1B3A6B] bg-[#1B3A6B]/10 px-2.5 py-1 rounded-full">
+                    {APP_VERSION}
+                  </span>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {CHANGELOG.map((entry) => (
+                    <ChangelogRow key={entry.version} entry={entry} isCurrent={`v${entry.version}` === APP_VERSION} />
+                  ))}
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400 text-center pt-2">
+                More settings coming — restaurant management, notifications, and more.
+              </p>
             </div>
           </div>
         )}
@@ -333,6 +353,45 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
           })}
         </div>
       </nav>
+    </div>
+  );
+}
+
+/* ───────── Version history row (Settings tab) ─────────
+ * Newest release starts expanded; older ones collapse to a single line
+ * so the history stays scannable as it grows. */
+function ChangelogRow({ entry, isCurrent }: { entry: ChangelogEntry; isCurrent: boolean }) {
+  const [open, setOpen] = useState(isCurrent);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="tap-highlight w-full flex items-center justify-between gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+        aria-expanded={open}
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[#1B3A6B] truncate">
+            v{entry.version}
+            {isCurrent && (
+              <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full align-middle">
+                Current
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-gray-500 truncate">{entry.date} · {entry.title}</p>
+        </div>
+        <span className={`text-gray-400 text-base transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+      {open && (
+        <ul className="px-5 pb-4 space-y-1.5">
+          {entry.notes.map((note, i) => (
+            <li key={i} className="text-xs text-gray-600 leading-relaxed flex items-start gap-2">
+              <span className="text-gray-300 shrink-0 leading-tight">•</span>
+              <span>{note}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { APP_VERSION } from '@/lib/changelog';
 
 interface Restaurant {
   id: string;
@@ -616,7 +617,7 @@ export default function LoginPage() {
       )}
 
       <p className="text-[#7BA7D3]/40 text-xs mt-8 text-center">
-        © {new Date().getFullYear()} Wong Hospitality Group · Baton Rouge, LA
+        © {new Date().getFullYear()} Wong Hospitality Group · Baton Rouge, LA · {APP_VERSION}
       </p>
     </div>
   );
