@@ -23,6 +23,20 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // Same-day second ship gets a ".2" suffix — versions must stay unique
+  // and newest-first.
+  {
+    version: '2026.07.11.2',
+    date: 'July 11, 2026',
+    title: 'Menu Training — Phase A',
+    notes: [
+      'New Menu sub-tab under Training: your restaurant’s dishes with photos, ingredients, allergens, prep notes, and how-to-sell tips',
+      'Restaurant-scoped — staff see only their own restaurant’s menu',
+      'Full Spanish support on every menu card',
+      'Managers: new Menu authoring area under Admin → Training (categories, items, phone-photo uploads)',
+      'Foundation for menu quizzes and the Floor-Ready signal (Phase B, coming next)',
+    ],
+  },
   {
     version: '2026.07.11',
     date: 'July 11, 2026',

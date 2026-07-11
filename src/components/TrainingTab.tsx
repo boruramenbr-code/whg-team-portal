@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import MenuTab from './MenuTab';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -35,6 +36,8 @@ interface Props {
  */
 export default function TrainingTab({ language }: Props) {
   const isES = language === 'es';
+  // Sub-tabs (Menu Training Phase A): Videos | Menu. Quizzes joins in Phase B.
+  const [sub, setSub] = useState<'videos' | 'menu'>('videos');
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState<{ video: Video; seriesTitle: string } | null>(null);
@@ -79,13 +82,39 @@ export default function TrainingTab({ language }: Props) {
         <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">
           {isES ? 'Capacitación' : 'Training'}
         </h1>
-        <p className="text-sm text-gray-600 mt-1 mb-6">
-          {isES
-            ? 'Videos del equipo WHG y de invitados para ayudarte a crecer.'
-            : 'Videos from the WHG team and trusted voices to help you grow.'}
+        <p className="text-sm text-gray-600 mt-1 mb-4">
+          {sub === 'videos'
+            ? (isES
+                ? 'Videos del equipo WHG y de invitados para ayudarte a crecer.'
+                : 'Videos from the WHG team and trusted voices to help you grow.')
+            : (isES
+                ? 'Conoce cada platillo de tu restaurante — foto, ingredientes y alérgenos.'
+                : 'Know every dish at your restaurant — photo, ingredients, and allergens.')}
         </p>
 
-        {loading ? (
+        {/* Sub-tab pills: Videos | Menu (Quizzes arrives with Phase B) */}
+        <div className="flex gap-1.5 mb-5">
+          {([
+            { key: 'videos' as const, label: isES ? '🎬 Videos' : '🎬 Videos' },
+            { key: 'menu' as const, label: isES ? '🍣 Menú' : '🍣 Menu' },
+          ]).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSub(t.key)}
+              className={`tap-highlight px-4 py-2 rounded-full text-xs font-bold transition-colors ${
+                sub === t.key
+                  ? 'bg-[#1B3A6B] text-white shadow-sm'
+                  : 'bg-white/70 text-gray-600 hover:bg-white'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {sub === 'menu' ? (
+          <MenuTab language={language} />
+        ) : loading ? (
           <div className="text-center text-sm text-gray-400 py-12">
             {isES ? 'Cargando…' : 'Loading…'}
           </div>

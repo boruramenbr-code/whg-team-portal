@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import MenuAdminTab from './MenuAdminTab';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -30,6 +31,8 @@ interface Series {
  * inline modal forms, optimistic refetch after each save.
  */
 export default function TrainingAdminTab() {
+  // Sub-tabs (Menu Training Phase A): Videos | Menu authoring.
+  const [sub, setSub] = useState<'videos' | 'menu'>('videos');
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +83,21 @@ export default function TrainingAdminTab() {
     load();
   };
 
+  // Menu authoring gets the whole surface — it renders its own header.
+  if (sub === 'menu') {
+    return (
+      <div>
+        <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
+          <SubTabPills sub={sub} onChange={setSub} />
+        </div>
+        <MenuAdminTab />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
+      <SubTabPills sub={sub} onChange={setSub} />
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-6">
         <div>
@@ -235,6 +251,30 @@ export default function TrainingAdminTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/* ───────── Sub-tab pills: Videos | Menu ───────── */
+function SubTabPills({ sub, onChange }: { sub: 'videos' | 'menu'; onChange: (s: 'videos' | 'menu') => void }) {
+  return (
+    <div className="flex gap-1.5 mb-5">
+      {([
+        { key: 'videos' as const, label: '🎬 Videos' },
+        { key: 'menu' as const, label: '🍣 Menu' },
+      ]).map((t) => (
+        <button
+          key={t.key}
+          onClick={() => onChange(t.key)}
+          className={`tap-highlight px-4 py-2 rounded-full text-xs font-bold transition-colors ${
+            sub === t.key
+              ? 'bg-[#1B3A6B] text-white shadow-sm'
+              : 'bg-white/70 text-gray-600 hover:bg-white'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }
