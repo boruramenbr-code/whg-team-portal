@@ -42,6 +42,9 @@ export default function TrainingTab({ language }: Props) {
   // "My Path" is the landing view — each person's position-based ladder.
   // Videos / Menu / Quizzes are the open library behind it.
   const [sub, setSub] = useState<'path' | 'videos' | 'menu' | 'quizzes'>('path');
+  // Deep-link from a Path module straight into its menu section
+  // (e.g. the fry cook's "Study: Hot Small Plates").
+  const [menuCategoryId, setMenuCategoryId] = useState<string | null>(null);
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState<{ video: Video; seriesTitle: string } | null>(null);
@@ -127,9 +130,15 @@ export default function TrainingTab({ language }: Props) {
         </div>
 
         {sub === 'path' ? (
-          <TrainingPathTab language={language} onGoTo={(s) => setSub(s)} />
+          <TrainingPathTab
+            language={language}
+            onGoTo={(s, refId) => {
+              if (s === 'menu') setMenuCategoryId(refId || null);
+              setSub(s);
+            }}
+          />
         ) : sub === 'menu' ? (
-          <MenuTab language={language} />
+          <MenuTab language={language} initialCategoryId={menuCategoryId} />
         ) : sub === 'quizzes' ? (
           <QuizzesTab language={language} />
         ) : loading ? (

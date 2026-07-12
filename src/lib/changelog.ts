@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.7',
+    date: 'July 12, 2026',
+    title: 'Menu sections as big blocks',
+    notes: [
+      'The Menu tab now opens on big photo blocks — pick your section, study just that section, no more scrolling 149 items',
+      'Path modules open their exact section: a fry cook tapping "Study: Hot Small Plates" lands inside Hot Small Plates, nothing else',
+      'Study mode drills stay inside the section you picked',
+      'Search still covers the whole menu from anywhere',
+    ],
+  },
+  {
     version: '2026.07.12.6',
     date: 'July 12, 2026',
     title: 'Every Ichiban position has a track',

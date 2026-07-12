@@ -40,8 +40,9 @@ interface PathResponse {
 
 interface Props {
   language: 'en' | 'es';
-  /** Jump to a sibling Training sub-tab (videos / menu / quizzes). */
-  onGoTo: (sub: 'videos' | 'menu' | 'quizzes') => void;
+  /** Jump to a sibling Training sub-tab. refId deep-links (e.g. a menu
+   *  module opens directly inside its category). */
+  onGoTo: (sub: 'videos' | 'menu' | 'quizzes', refId?: string | null) => void;
 }
 
 const LEVEL_META: Record<PathTrack['level'], { en: string; es: string }> = {
@@ -208,7 +209,7 @@ function TrackCard({
   label: (en: string, es: string | null | undefined) => string;
   busy: string | null;
   onMarkDone: (m: PathModule) => void;
-  onGoTo: (sub: 'videos' | 'menu' | 'quizzes') => void;
+  onGoTo: (sub: 'videos' | 'menu' | 'quizzes', refId?: string | null) => void;
 }) {
   const complete = track.required_total > 0 && track.required_done === track.required_total;
   const [open, setOpen] = useState(!complete);
@@ -270,7 +271,7 @@ function ModuleRow({
   label: (en: string, es: string | null | undefined) => string;
   busy: string | null;
   onMarkDone: (m: PathModule) => void;
-  onGoTo: (sub: 'videos' | 'menu' | 'quizzes') => void;
+  onGoTo: (sub: 'videos' | 'menu' | 'quizzes', refId?: string | null) => void;
 }) {
   const [showDesc, setShowDesc] = useState(false);
 
@@ -284,8 +285,8 @@ function ModuleRow({
     if (m.done) return null;
     if (m.module_type === 'menu_category') {
       return (
-        <button onClick={() => onGoTo('menu')} className="text-[11px] font-bold text-[#2E86C1] hover:underline flex-shrink-0 px-2 py-2">
-          {isES ? 'Abrir Menú →' : 'Open Menu →'}
+        <button onClick={() => onGoTo('menu', m.ref_id)} className="text-[11px] font-bold text-[#2E86C1] hover:underline flex-shrink-0 px-2 py-2">
+          {isES ? 'Abrir Sección →' : 'Open Section →'}
         </button>
       );
     }

@@ -5,6 +5,9 @@ import { MenuCategory, MenuItem, allergenMeta } from '@/lib/menu-constants';
 
 interface Props {
   language: 'en' | 'es';
+  /** Open directly inside this category (deep-link from a Path module —
+   *  e.g. the fry cook's "Study: Hot Small Plates"). */
+  initialCategoryId?: string | null;
 }
 
 /* ───────── Staff Menu tab (Training → Menu) ─────────
@@ -17,7 +20,7 @@ interface Props {
  * training card (photo, description, ingredients, allergens, prep notes,
  * how-to-sell tip). Phase B hangs quizzes off this same content.
  */
-export default function MenuTab({ language }: Props) {
+export default function MenuTab({ language, initialCategoryId = null }: Props) {
   const isES = language === 'es';
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
@@ -28,6 +31,10 @@ export default function MenuTab({ language }: Props) {
   // Study mode — item cards open masked (photo only) so staff can test
   // themselves before the real photo exam.
   const [studyMode, setStudyMode] = useState(false);
+  // Category-first browsing: null = big category blocks; set = inside one
+  // section only. Keeps a fry cook in Hot Small Plates, not lost in 149 items.
+  const [selectedCatId, setSelectedCatId] = useState<string | null>(initialCategoryId);
+  useEffect(() => { if (initialCategoryId) setSelectedCatId(initialCategoryId); }, [initialCategoryId]);
 
   const load = useCallback(async (rid?: string | null) => {
     setLoading(true);
@@ -56,9 +63,15 @@ export default function MenuTab({ language }: Props) {
         i.name.toLowerCase().includes(q) || (i.name_es || '').toLowerCase().includes(q))
     : null;
 
-  // Study mode "next" — a random different item that has a photo.
+  const selectedCategory = selectedCatId
+    ? categories.find((c) => c.id === selectedCatId) || null
+    : null;
+
+  // Study mode "next" — a random different item that has a photo. Stays
+  // inside the selected section so drills match what you're studying.
   const nextStudyItem = (current: MenuItem): MenuItem | null => {
-    const pool = allItems.filter((i) => i.photo_url && i.id !== current.id);
+    const pool = (selectedCategory ? selectedCategory.items : allItems)
+      .filter((i) => i.photo_url && i.id !== current.id);
     if (pool.length === 0) return null;
     return pool[Math.floor(Math.random() * pool.length)];
   };
@@ -71,7 +84,7 @@ export default function MenuTab({ language }: Props) {
           {restaurants.map((r) => (
             <button
               key={r.id}
-              onClick={() => load(r.id)}
+              onClick={() => { setSelectedCatId(null); load(r.id); }}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                 restaurantId === r.id
                   ? 'bg-[#1B3A6B] text-white shadow-sm'
@@ -161,23 +174,63 @@ export default function MenuTab({ language }: Props) {
             ))}
           </div>
         )
+      ) : selectedCategory ? (
+        /* ── Inside one section — focused study, no 149-item scroll ── */
+        <div>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <button
+              onClick={() => setSelectedCatId(null)}
+              className="tap-highlight flex items-center gap-1.5 text-sm font-semibold text-[#1B3A6B] hover:underline py-2"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+              {isES ? 'Todas las secciones' : 'All sections'}
+            </button>
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+              {selectedCategory.items.length} {isES ? 'platillos' : 'items'}
+            </span>
+          </div>
+          <h2 className="text-lg font-bold text-[#1B3A6B] mb-3">
+            {isES && selectedCategory.name_es ? selectedCategory.name_es : selectedCategory.name}
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {selectedCategory.items.map((item) => (
+              <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} onOpen={() => setActiveItem(item)} />
+            ))}
+          </div>
+        </div>
       ) : (
-        <div className="space-y-6">
-          {categories.filter((c) => c.items.length > 0).map((c) => (
-            <section key={c.id}>
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2.5">
-                {isES && c.name_es ? c.name_es : c.name}
-                <span className="ml-2 text-[10px] font-semibold text-gray-400 normal-case tracking-normal">
-                  {c.items.length}
-                </span>
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {c.items.map((item) => (
-                  <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} onOpen={() => setActiveItem(item)} />
-                ))}
-              </div>
-            </section>
-          ))}
+        /* ── Big category blocks — pick your section first ── */
+        <div className="grid grid-cols-2 gap-3">
+          {categories.filter((c) => c.items.length > 0).map((c) => {
+            const cover = c.items.find((i) => i.photo_url)?.photo_url || null;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCatId(c.id)}
+                className="tap-highlight relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow aspect-[16/10] text-left"
+              >
+                {cover ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] flex items-center justify-center text-4xl opacity-90">
+                    🍽️
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <p className="text-white font-bold text-sm md:text-base leading-tight drop-shadow">
+                    {isES && c.name_es ? c.name_es : c.name}
+                  </p>
+                  <p className="text-white/70 text-[11px] font-semibold mt-0.5">
+                    {c.items.length} {isES ? 'platillos' : 'items'}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 
