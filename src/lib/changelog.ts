@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.4',
+    date: 'July 12, 2026',
+    title: 'My Path — position-based training ladder',
+    notes: [
+      'Training now opens on "My Path" — a personal ladder built for YOUR position: Foundations → Department Core → Position Track → Certifications',
+      'Every position has its own track; Server, Busser, Sushi Chef, and Dish Crew launch fully built at Ichiban',
+      'Hands-on skills (tray carrying, knife work, dish pit flow) complete only with a manager sign-off — done means verified',
+      'Managers: new Progress board under Admin → Training — tap any teammate, see their ladder, sign off skills on the spot',
+      'The Library (Videos · Menu · Quizzes) stays open to everyone — your path decides what’s required, never what you’re allowed to learn',
+    ],
+  },
+  {
     version: '2026.07.12.3',
     date: 'July 12, 2026',
     title: 'Speed pass: instant tab switching',

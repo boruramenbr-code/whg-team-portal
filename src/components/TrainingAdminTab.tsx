@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import MenuAdminTab from './MenuAdminTab';
+import TrainingProgressTab from './TrainingProgressTab';
 import QuizzesAdminTab from './QuizzesAdminTab';
 
-type AdminSub = 'videos' | 'menu' | 'quizzes';
+type AdminSub = 'videos' | 'menu' | 'quizzes' | 'progress';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -104,6 +105,18 @@ export default function TrainingAdminTab() {
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
         <SubTabPills sub={sub} onChange={setSub} />
         <QuizzesAdminTab />
+      </div>
+    );
+  }
+
+  // Progress board — per-person ladders with skill sign-offs.
+  if (sub === 'progress') {
+    return (
+      <div>
+        <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
+          <SubTabPills sub={sub} onChange={setSub} />
+        </div>
+        <TrainingProgressTab />
       </div>
     );
   }
@@ -276,6 +289,7 @@ function SubTabPills({ sub, onChange }: { sub: AdminSub; onChange: (s: AdminSub)
         { key: 'videos' as const, label: '🎬 Videos' },
         { key: 'menu' as const, label: '🍣 Menu' },
         { key: 'quizzes' as const, label: '📝 Quizzes' },
+        { key: 'progress' as const, label: '🧗 Progress' },
       ]).map((t) => (
         <button
           key={t.key}

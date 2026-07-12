@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import MenuTab from './MenuTab';
 import QuizzesTab from './QuizzesTab';
+import TrainingPathTab from './TrainingPathTab';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -38,7 +39,9 @@ interface Props {
 export default function TrainingTab({ language }: Props) {
   const isES = language === 'es';
   // Sub-tabs: Videos | Menu | Quizzes (Phase B live June 2026).
-  const [sub, setSub] = useState<'videos' | 'menu' | 'quizzes'>('videos');
+  // "My Path" is the landing view — each person's position-based ladder.
+  // Videos / Menu / Quizzes are the open library behind it.
+  const [sub, setSub] = useState<'path' | 'videos' | 'menu' | 'quizzes'>('path');
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState<{ video: Video; seriesTitle: string } | null>(null);
@@ -84,7 +87,11 @@ export default function TrainingTab({ language }: Props) {
           {isES ? 'Capacitación' : 'Training'}
         </h1>
         <p className="text-sm text-gray-600 mt-1 mb-4">
-          {sub === 'videos'
+          {sub === 'path'
+            ? (isES
+                ? 'Tu escalera de entrenamiento — construida para tu posición.'
+                : 'Your training ladder — built for your position.')
+            : sub === 'videos'
             ? (isES
                 ? 'Videos del equipo WHG y de invitados para ayudarte a crecer.'
                 : 'Videos from the WHG team and trusted voices to help you grow.')
@@ -97,9 +104,10 @@ export default function TrainingTab({ language }: Props) {
                   : 'Show what you know. Exams get you floor-ready; quizzes keep it sharp.')}
         </p>
 
-        {/* Sub-tab pills: Videos | Menu | Quizzes */}
+        {/* Sub-tab pills: My Path | Videos | Menu | Quizzes */}
         <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {([
+            { key: 'path' as const, label: isES ? '🧗 Mi Camino' : '🧗 My Path' },
             { key: 'videos' as const, label: isES ? '🎬 Videos' : '🎬 Videos' },
             { key: 'menu' as const, label: isES ? '🍣 Menú' : '🍣 Menu' },
             { key: 'quizzes' as const, label: isES ? '📝 Cuestionarios' : '📝 Quizzes' },
@@ -118,7 +126,9 @@ export default function TrainingTab({ language }: Props) {
           ))}
         </div>
 
-        {sub === 'menu' ? (
+        {sub === 'path' ? (
+          <TrainingPathTab language={language} onGoTo={(s) => setSub(s)} />
+        ) : sub === 'menu' ? (
           <MenuTab language={language} />
         ) : sub === 'quizzes' ? (
           <QuizzesTab language={language} />
