@@ -177,6 +177,12 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   const [comingSoon, setComingSoon] = useState<{ title: string; emoji: string; description: string } | null>(null);
   // Tip tracker page — opened from the FOH-only "My Tips" Quick Action card.
   const [showTipTracker, setShowTipTracker] = useState(false);
+  // "Continue training" card — the person's ladder progress + next module.
+  // The single best daily nudge into the training system.
+  const [pathSummary, setPathSummary] = useState<{
+    pct: number; done: number; total: number;
+    nextTitle: string | null; nextTitleEs: string | null;
+  } | null>(null);
   // Story modal gates the welcome modal — first-time users see the brand
   // story before any operational content. Default true (assume not-yet-ack'd);
   // the modal itself fetches /api/our-story and hides immediately if the
@@ -297,6 +303,36 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   useEffect(() => {
     loadPreshift();
   }, [loadPreshift]);
+
+  // Training-path summary for the Continue Training card. Non-fatal if it
+  // fails — the card just doesn't render.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/training/path');
+        if (!r.ok || cancelled) return;
+        const j = await r.json();
+        type M = { required: boolean; done: boolean; available: boolean; title: string; title_es: string | null };
+        type T = { required_total: number; required_done: number; modules: M[] };
+        const tracks: T[] = j.tracks || [];
+        const total = tracks.reduce((n, t) => n + t.required_total, 0);
+        const done = tracks.reduce((n, t) => n + t.required_done, 0);
+        if (total === 0) return;
+        const next = tracks.flatMap((t) => t.modules.filter((m) => m.required && !m.done && m.available))[0] || null;
+        if (!cancelled) {
+          setPathSummary({
+            pct: Math.round((done / total) * 100),
+            done,
+            total,
+            nextTitle: next?.title ?? null,
+            nextTitleEs: next?.title_es ?? null,
+          });
+        }
+      } catch { /* card hidden */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // HomeTab now stays mounted across tab switches (perf), so refresh the
   // operational data (86'd items, specials) whenever the app comes back
@@ -696,6 +732,50 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             </div>
           )}
         </section>
+
+        {/* ── Continue Training — progress + next module, one tap in ── */}
+        {pathSummary && (
+          <button
+            onClick={() => onNavigate('training')}
+            className="w-full text-left rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden bg-gradient-to-r from-[#1B3A6B] to-[#2C4F8A] px-5 py-4"
+          >
+            <div className="flex items-center gap-4">
+              {/* Progress ring */}
+              <div className="relative flex-shrink-0 w-14 h-14">
+                <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
+                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="4" />
+                  <circle
+                    cx="18" cy="18" r="15.5" fill="none" stroke="#FBBF24" strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(pathSummary.pct / 100) * 97.4} 97.4`}
+                  />
+                </svg>
+                <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold">
+                  {pathSummary.pct}%
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                  🧗 {isES ? 'Tu Entrenamiento' : 'Your Training'}
+                </p>
+                {pathSummary.pct === 100 ? (
+                  <p className="text-sm font-bold text-white mt-0.5">
+                    {isES ? '¡Completo! Sigue afilando 🏆' : 'Complete! Keep sharpening 🏆'}
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm font-bold text-white mt-0.5 truncate">
+                      {isES ? 'Siguiente' : 'Up next'}: {isES && pathSummary.nextTitleEs ? pathSummary.nextTitleEs : pathSummary.nextTitle}
+                    </p>
+                    <p className="text-[11px] text-white/60 mt-0.5">
+                      {pathSummary.done}/{pathSummary.total} {isES ? 'completados' : 'done'} · {isES ? 'Continuar →' : 'Continue →'}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </button>
+        )}
 
         {/* ── Welcome New Teammates (below the operational brief) ── */}
         <NewHiresSection language={language} />

@@ -24,6 +24,7 @@ const HandbookReaderTab = dynamic(() => import('./HandbookReaderTab'), { loading
 const OurTeamTab = dynamic(() => import('./OurTeamTab'), { loading: TabLoader, ssr: false });
 const PositionsSection = dynamic(() => import('./PositionsSection'), { loading: TabLoader, ssr: false });
 const OnboardingChecklist = dynamic(() => import('./OnboardingChecklist'), { loading: TabLoader, ssr: false });
+const MenuTab = dynamic(() => import('./MenuTab'), { loading: TabLoader, ssr: false });
 const WelcomeWizard = dynamic(() => import('./WelcomeWizard'), { ssr: false });
 
 interface Props {
@@ -31,12 +32,14 @@ interface Props {
   isManager: boolean;
 }
 
-type TopTabKey = 'home' | 'positions' | 'handbook' | 'training' | 'ourteam';
-// "handbook" key kept for stability — labeled "Onboarding" in the UI.
-// Pre-Shift was demoted from the bottom nav in June 2026 — today's note is
-// still visible on Home, and the dedicated PreshiftTab lives in the admin
-// section. Training took its slot.
+// July 2026 restructure (Randy-approved): nav ordered by daily frequency.
+//   Home | Training | Menu | Handbook | Team
+// "handbook" key kept for stability — now LABELED "Handbook" (was
+// "Onboarding"; veterans just want the book). Positions merged into the
+// Team tab as a sub-view; Menu promoted to the freed slot.
+type TopTabKey = 'home' | 'training' | 'menu' | 'handbook' | 'ourteam';
 type HandbookSubTab = 'checklist' | 'read' | 'policies' | 'ask';
+type TeamSubTab = 'org' | 'positions';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ── */
 const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
@@ -46,10 +49,12 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   ),
-  positions: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" fill={a ? '#1B3A6B' : 'none'} />
-      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" stroke={a ? 'white' : 'currentColor'} fill={a ? 'white' : 'none'} />
+  menu: (a) => (
+    // Crossed fork & knife — reads as "menu" at small sizes
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth={a ? '2.5' : '2'} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+      <path d="M7 2v20" />
+      <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zM21 15v7" />
     </svg>
   ),
   handbook: (a) => (
@@ -122,6 +127,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
   // session only; completing it via the final step calls /api/wizard/complete
   // which stamps wizard_completed_at so it never fires again.
   const [showWizard, setShowWizard] = useState<boolean>(!profile.wizard_completed_at);
+  // Team tab sub-view: org chart | position descriptions (merged July 2026).
+  const [teamSub, setTeamSub] = useState<TeamSubTab>('org');
   // Replay mode — true when user re-launched the wizard via the "Watch intro
   // again" link. Forces every step to render regardless of acknowledgment
   // status so they get the full refresher.
@@ -176,20 +183,21 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const restaurantName = (profile.restaurants as { name?: string } | null)?.name || null;
   const isES = language === 'es';
 
+  // Ordered by daily frequency (July 2026 restructure).
   const topTabs: { key: TopTabKey; label: string; labelEs: string; emoji: string }[] = [
     { key: 'home', label: 'Home', labelEs: 'Inicio', emoji: '🏠' },
-    { key: 'positions', label: 'Positions', labelEs: 'Posiciones', emoji: '🧭' },
-    { key: 'handbook', label: 'Onboarding', labelEs: 'Onboarding', emoji: '📘' },
     { key: 'training', label: 'Training', labelEs: 'Capacitación', emoji: '🎬' },
-    { key: 'ourteam', label: 'Our Team', labelEs: 'Nuestro Equipo', emoji: '👥' },
+    { key: 'menu', label: 'Menu', labelEs: 'Menú', emoji: '🍣' },
+    { key: 'handbook', label: 'Handbook', labelEs: 'Manual', emoji: '📘' },
+    { key: 'ourteam', label: 'Team', labelEs: 'Equipo', emoji: '👥' },
   ];
 
   /* Short labels for bottom nav on mobile */
   const mobileLabels: Record<TopTabKey, { en: string; es: string }> = {
     home: { en: 'Home', es: 'Inicio' },
-    positions: { en: 'Positions', es: 'Posiciones' },
-    handbook: { en: 'Onboarding', es: 'Onboarding' },
     training: { en: 'Training', es: 'Capacitar' },
+    menu: { en: 'Menu', es: 'Menú' },
+    handbook: { en: 'Handbook', es: 'Manual' },
     ourteam: { en: 'Team', es: 'Equipo' },
   };
 
@@ -310,6 +318,33 @@ export default function DashboardClient({ profile, isManager }: Props) {
         </div>
       )}
 
+      {/* Sub-tab bar — Team (org chart | positions) */}
+      {activeTop === 'ourteam' && (
+        <div className="flex items-center gap-2 border-b border-[#D6DEE8]/60 bg-[#C8D4E1] pl-1 pr-1.5 md:px-4 flex-shrink-0">
+          {([
+            { key: 'org' as TeamSubTab, label: isES ? 'Nuestro Equipo' : 'Our Team', emoji: '👥' },
+            { key: 'positions' as TeamSubTab, label: isES ? 'Posiciones' : 'Positions', emoji: '🧭' },
+          ]).map((t) => {
+            const isActive = teamSub === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTeamSub(t.key)}
+                className={`tap-highlight relative flex items-center gap-1.5 px-2.5 md:px-4 py-3 md:py-2 text-[13px] md:text-xs font-semibold whitespace-nowrap transition-colors ${
+                  isActive ? 'text-[#2E86C1]' : 'text-gray-400 hover:text-gray-600'
+                }`}
+              >
+                <span className="hidden md:inline text-sm">{t.emoji}</span>
+                <span>{t.label}</span>
+                {isActive && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2E86C1] rounded-t-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Tab content ──
           Each visited tab stays mounted inside a display-toggled wrapper
           (`contents` when active so layout is unchanged, `hidden` when not).
@@ -330,11 +365,22 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </div>
         )}
 
-        {/* TEAM POSITIONS */}
-        {tabMounted('positions') && (
-          <div className={tabShown('positions') ? 'contents' : 'hidden'}>
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <PositionsSection language={language} />
+        {/* MENU — promoted to the bottom nav (staff study it daily).
+            Also still reachable inside Training for path deep-links. */}
+        {tabMounted('menu') && (
+          <div className={tabShown('menu') ? 'contents' : 'hidden'}>
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] tab-content-enter">
+            <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
+              <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">
+                {isES ? 'Menú' : 'Menu'}
+              </h1>
+              <p className="text-sm text-gray-600 mt-1 mb-4">
+                {isES
+                  ? 'Conoce cada platillo — foto, ingredientes y alérgenos.'
+                  : 'Know every dish — photo, ingredients, and allergens.'}
+              </p>
+              <MenuTab language={language} />
+            </div>
           </div>
           </div>
         )}
@@ -454,17 +500,23 @@ export default function DashboardClient({ profile, isManager }: Props) {
         </div>
         )}
 
-        {/* OUR TEAM */}
+        {/* TEAM — org chart + position descriptions (merged July 2026) */}
         {tabMounted('ourteam') && (
           <div className={tabShown('ourteam') ? 'contents' : 'hidden'}>
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <OurTeamTab
-              restaurantId={profile.restaurant_id}
-              restaurantName={restaurantName}
-              role={profile.role}
-              language={language}
-            />
-          </div>
+          {teamSub === 'org' ? (
+            <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
+              <OurTeamTab
+                restaurantId={profile.restaurant_id}
+                restaurantName={restaurantName}
+                role={profile.role}
+                language={language}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
+              <PositionsSection language={language} />
+            </div>
+          )}
           </div>
         )}
 

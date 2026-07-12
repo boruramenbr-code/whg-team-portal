@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.10',
+    date: 'July 12, 2026',
+    title: 'Navigation restructure (UX revamp Phase 1)',
+    notes: [
+      'Bottom nav reordered by what you actually use: Home · Training · Menu · Handbook · Team',
+      'Menu promoted to its own tab — one tap from anywhere',
+      '"Onboarding" renamed to "Handbook" — clearer for everyone past their first month',
+      'Positions merged into the Team tab (org chart and job descriptions side by side)',
+      'New Continue Training card on Home: your progress ring, your next module, one tap in',
+    ],
+  },
+  {
     version: '2026.07.12.9',
     date: 'July 12, 2026',
     title: 'Explore by Position',
