@@ -63,7 +63,19 @@ function cleanAllergens(input: unknown): string[] {
 const TEXT_FIELDS = [
   'name_es', 'description', 'description_es', 'ingredients', 'ingredients_es',
   'prep_notes', 'prep_notes_es', 'upsell_note', 'upsell_note_es', 'price',
+  'pronunciation',
 ] as const;
+
+/** is_raw: true/false/null. spice_level: 0-3 or null. */
+function cleanTrainingFields(body: Record<string, unknown>, updates: Record<string, unknown>) {
+  if (body.is_raw !== undefined) {
+    updates.is_raw = typeof body.is_raw === 'boolean' ? body.is_raw : null;
+  }
+  if (body.spice_level !== undefined) {
+    const n = Number(body.spice_level);
+    updates.spice_level = Number.isInteger(n) && n >= 0 && n <= 3 ? n : null;
+  }
+}
 
 /**
  * POST   /api/menu/items          Create an item (JSON — photo uploads separately)
@@ -104,6 +116,7 @@ export async function POST(req: NextRequest) {
   for (const f of TEXT_FIELDS) {
     row[f] = typeof body[f] === 'string' && body[f].trim() ? body[f].trim() : null;
   }
+  cleanTrainingFields(body, row);
 
   const { data, error } = await adminClient
     .from('menu_items')
@@ -145,6 +158,7 @@ export async function PATCH(req: NextRequest) {
     }
   }
   if (body.allergens !== undefined) updates.allergens = cleanAllergens(body.allergens);
+  cleanTrainingFields(body, updates);
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
   if (body.active !== undefined) updates.active = !!body.active;
   // Moving an item to another category re-derives restaurant_id so the

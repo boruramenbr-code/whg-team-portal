@@ -22,6 +22,7 @@ export default function MenuAdminTab() {
 
   const [editingCategory, setEditingCategory] = useState<Partial<MenuCategory> | null>(null);
   const [editingItem, setEditingItem] = useState<{ item: Partial<MenuItem>; categoryId: string } | null>(null);
+  const [showPhotoTest, setShowPhotoTest] = useState(false);
 
   const load = useCallback(async (rid?: string | null) => {
     setLoading(true);
@@ -78,13 +79,22 @@ export default function MenuAdminTab() {
             Build the training menu{restaurantName ? ` for ${restaurantName}` : ''}. Staff see only their restaurant&rsquo;s items. Quizzes (Phase B) draft questions from what you enter here.
           </p>
         </div>
-        <button
-          onClick={() => setEditingCategory({ name: '', sort_order: (categories.length + 1) * 100 })}
-          disabled={!restaurantId}
-          className="flex-shrink-0 px-3 py-2 rounded-lg bg-[#1B3A6B] text-white text-xs font-semibold hover:bg-[#15305A] transition-colors disabled:opacity-40"
-        >
-          + New Category
-        </button>
+        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={() => setShowPhotoTest(true)}
+            disabled={!restaurantId}
+            className="px-3 py-2 rounded-lg bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-colors disabled:opacity-40"
+          >
+            📸 Photo Test
+          </button>
+          <button
+            onClick={() => setEditingCategory({ name: '', sort_order: (categories.length + 1) * 100 })}
+            disabled={!restaurantId}
+            className="px-3 py-2 rounded-lg bg-[#1B3A6B] text-white text-xs font-semibold hover:bg-[#15305A] transition-colors disabled:opacity-40"
+          >
+            + New Category
+          </button>
+        </div>
       </div>
 
       {/* Restaurant switcher */}
@@ -239,6 +249,137 @@ export default function MenuAdminTab() {
           onSaved={() => { setEditingItem(null); load(restaurantId); }}
         />
       )}
+
+      {showPhotoTest && restaurantId && (
+        <PhotoTestModal
+          restaurantId={restaurantId}
+          restaurantName={restaurantName}
+          photoCount={categories.reduce((n, c) => n + c.items.filter((i) => i.photo_url).length, 0)}
+          onClose={() => setShowPhotoTest(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ───────── Photo Test generator modal ─────────
+ * One button builds the "name that dish" exam straight from the menu.
+ * Regenerating replaces the live test with fresh random questions;
+ * past attempts stay recorded on the old version. */
+function PhotoTestModal({
+  restaurantId,
+  restaurantName,
+  photoCount,
+  onClose,
+}: {
+  restaurantId: string;
+  restaurantName: string;
+  photoCount: number;
+  onClose: () => void;
+}) {
+  const [count, setCount] = useState('25');
+  const [pass, setPass] = useState('70');
+  const [working, setWorking] = useState(false);
+  const [done, setDone] = useState<{ question_count: number; pass_threshold: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const generate = async () => {
+    setWorking(true);
+    setError(null);
+    const r = await fetch('/api/quizzes/photo-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurant_id: restaurantId,
+        question_count: Number(count) || 25,
+        pass_threshold: Number(pass) || 70,
+      }),
+    });
+    setWorking(false);
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      setError(j.error || 'Failed to generate the test.');
+      return;
+    }
+    const j = await r.json();
+    setDone({ question_count: j.question_count, pass_threshold: j.pass_threshold });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white rounded-t-2xl md:rounded-2xl shadow-2xl">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-bold text-[#1B3A6B]">📸 Menu Photo Test</h2>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl px-2 py-1">✕</button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          {done ? (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-2">🎯</div>
+              <p className="text-sm font-bold text-[#1B3A6B]">Test is live.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {done.question_count} photo questions · pass at {done.pass_threshold}%. Staff will see it under Training → Quizzes as a required exam.
+              </p>
+              <button
+                onClick={onClose}
+                className="mt-4 w-full py-3 rounded-xl bg-[#1B3A6B] text-white text-sm font-bold hover:bg-[#15305A]"
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Builds a &ldquo;name that dish&rdquo; exam from the {restaurantName} menu — each question shows a real photo with four name choices (decoys come from the same category, so it&rsquo;s a real test). Regenerating replaces the current test with fresh random questions; past scores stay recorded.
+              </p>
+              <p className="text-[11px] text-gray-400">{photoCount} items have photos right now.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Questions (5–60)</label>
+                  <input
+                    type="number"
+                    value={count}
+                    onChange={(e) => setCount(e.target.value)}
+                    min={5}
+                    max={60}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Pass at (%)</label>
+                  <input
+                    type="number"
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                    min={0}
+                    max={100}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-medium">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={generate}
+                disabled={working}
+                className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
+                  working
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-amber-500 text-white hover:bg-amber-600'
+                }`}
+              >
+                {working ? 'Building test…' : 'Generate Photo Test'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -380,6 +521,11 @@ function ItemEditor({
   const [upsellEs, setUpsellEs] = useState(initial.upsell_note_es || '');
   const [sortOrder, setSortOrder] = useState<string>(String(initial.sort_order ?? 100));
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || null);
+  const [pronunciation, setPronunciation] = useState(initial.pronunciation || '');
+  // '' = not set, 'raw' | 'cooked'
+  const [rawState, setRawState] = useState<string>(initial.is_raw === true ? 'raw' : initial.is_raw === false ? 'cooked' : '');
+  // '' = not set, '0'-'3'
+  const [spice, setSpice] = useState<string>(initial.spice_level === null || initial.spice_level === undefined ? '' : String(initial.spice_level));
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [savedTick, setSavedTick] = useState(false);
@@ -404,6 +550,9 @@ function ItemEditor({
     prep_notes_es: prepNotesEs,
     upsell_note: upsell,
     upsell_note_es: upsellEs,
+    pronunciation,
+    is_raw: rawState === 'raw' ? true : rawState === 'cooked' ? false : null,
+    spice_level: spice === '' ? null : Number(spice),
     sort_order: Number(sortOrder) || 100,
   });
 
@@ -532,6 +681,38 @@ function ItemEditor({
           <div>
             <label className={labelCls}>Name (Spanish, optional)</label>
             <input type="text" value={nameEs} onChange={(e) => setNameEs(e.target.value)} className={inputCls} />
+          </div>
+
+          {/* Training fields: pronunciation, raw/cooked, spice */}
+          <div>
+            <label className={labelCls}>Pronunciation (optional) — how to say it out loud</label>
+            <input
+              type="text"
+              value={pronunciation}
+              onChange={(e) => setPronunciation(e.target.value)}
+              placeholder="e.g. GYOH-zah"
+              className={inputCls}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Raw or cooked</label>
+              <select value={rawState} onChange={(e) => setRawState(e.target.value)} className={inputCls}>
+                <option value="">Not set</option>
+                <option value="cooked">🔥 Cooked</option>
+                <option value="raw">🍣 Raw</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Spice level</label>
+              <select value={spice} onChange={(e) => setSpice(e.target.value)} className={inputCls}>
+                <option value="">Not set</option>
+                <option value="0">Not spicy</option>
+                <option value="1">🌶️ Mild</option>
+                <option value="2">🌶️🌶️ Medium</option>
+                <option value="3">🌶️🌶️🌶️ Hot</option>
+              </select>
+            </div>
           </div>
 
           {/* Allergens */}

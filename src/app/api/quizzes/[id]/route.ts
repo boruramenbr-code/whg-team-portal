@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const { data: rawQuestions } = await supabase
     .from('quiz_questions')
     .select(`
-      id, quiz_id, question_text, question_text_es, question_type, sort_order,
+      id, quiz_id, question_text, question_text_es, question_type, sort_order, image_url,
       choices:quiz_choices(id, choice_text, choice_text_es, is_correct, sort_order)
     `)
     .eq('quiz_id', quiz.id)
@@ -63,6 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   type RawQuestion = {
     id: string; quiz_id: string; question_text: string; question_text_es: string | null;
     question_type: 'multiple_choice' | 'true_false'; sort_order: number;
+    image_url: string | null;
     choices: RawChoice[] | null;
   };
 
@@ -72,6 +73,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     question_text_es: q.question_text_es,
     question_type: q.question_type,
     sort_order: q.sort_order,
+    image_url: q.image_url,
     choices: (q.choices ?? [])
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((c) => (mode === 'edit'

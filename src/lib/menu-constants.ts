@@ -22,6 +22,12 @@ export interface MenuItem {
   price: string | null;
   photo_url: string | null;
   sort_order: number;
+  /** Phonetic guide for tough names, e.g. "GYOH-zah". */
+  pronunciation: string | null;
+  /** true = raw, false = cooked, null = not entered yet. */
+  is_raw: boolean | null;
+  /** 0-3 chili scale; null = not entered yet. */
+  spice_level: number | null;
 }
 
 export interface MenuCategory {

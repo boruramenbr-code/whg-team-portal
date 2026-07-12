@@ -37,6 +37,8 @@ interface Question {
   question_text_es: string | null;
   question_type: 'multiple_choice' | 'true_false';
   sort_order: number;
+  /** Photo questions (e.g. the Menu Photo Test) show this above the text. */
+  image_url?: string | null;
   choices: Choice[];
 }
 
@@ -308,6 +310,12 @@ function QuizPlayer({
                   <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold mb-1.5">
                     {isES ? 'Pregunta' : 'Question'} {i + 1} / {total}
                   </p>
+                  {q.image_url && (
+                    <div className="mb-3 rounded-xl overflow-hidden bg-black/30">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={q.image_url} alt="" className="w-full max-h-72 object-cover" loading="lazy" />
+                    </div>
+                  )}
                   <p className="text-sm font-semibold text-white mb-4 leading-snug">
                     {label(q.question_text, q.question_text_es)}
                   </p>
@@ -416,6 +424,12 @@ function ResultScreen({
                   {wasCorrect ? (isES ? '✓ Correcto' : '✓ Correct') : (isES ? '✕ Incorrecto' : '✕ Incorrect')}
                 </span>
               </p>
+              {q.image_url && (
+                <div className="mb-3 rounded-xl overflow-hidden bg-black/30">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={q.image_url} alt="" className="w-full max-h-48 object-cover" loading="lazy" />
+                </div>
+              )}
               <p className="text-sm text-white font-semibold mb-3 leading-snug">
                 {label(q.question_text, q.question_text_es)}
               </p>

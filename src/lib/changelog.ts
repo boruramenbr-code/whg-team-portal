@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.2',
+    date: 'July 12, 2026',
+    title: 'Menu study tools + Photo Test',
+    notes: [
+      'Search box on the Menu tab — find any dish in two keystrokes',
+      'Study mode: flip through dishes photo-first, guess the name, reveal the answer, jump to the next one',
+      '📸 Menu Photo Test: one button (Admin → Training → Menu) builds a name-that-dish exam from real menu photos — decoy answers come from the same category, regenerate anytime the menu changes',
+      'New training fields on every item: pronunciation guide, raw/cooked badge, spice meter (0–3 🌶️) — fill in via the item editor',
+    ],
+  },
+  {
     version: '2026.07.12',
     date: 'July 12, 2026',
     title: 'Quizzes live + Ichiban menu loaded',
