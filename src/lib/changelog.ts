@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.6',
+    date: 'July 12, 2026',
+    title: 'Every Ichiban position has a track',
+    notes: [
+      'All 18 remaining Ichiban positions now have a working training track — hosts, to-go, expo, bartenders, shift leaders, sushi helpers, prep/fry/line cooks, kitchen leads, and every management role',
+      'Every track follows the Journey: floor-training shadow shifts first, then core skills with manager sign-off, menu study and the Photo Test where the job demands it',
+      'Expo track requires passing the Menu Photo Test — the window is the last set of eyes before the guest',
+      'These are working drafts — each position gets refined one at a time with Randy',
+    ],
+  },
+  {
     version: '2026.07.12.5',
     date: 'July 12, 2026',
     title: 'The Journey: floor training + ongoing growth',
