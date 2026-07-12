@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.5',
+    date: 'July 12, 2026',
+    title: 'The Journey: floor training + ongoing growth',
+    notes: [
+      'Floor Training added to the start of every pilot track — shadow shifts with a senior teammate, signed off by a manager, before the study work begins',
+      'New "Ongoing Growth" stage for everyone: menu change-up refreshers, sharpen-one-skill-a-month, raise your hand to cross-train — optional forever, never blocks Floor-Ready',
+      'Finishing standard training now says what we mean: growth doesn’t stop here',
+      'Groundwork laid for Advanced → Pro → Leadership tiers (activating after Ichiban’s standard content is complete)',
+    ],
+  },
+  {
     version: '2026.07.12.4',
     date: 'July 12, 2026',
     title: 'My Path — position-based training ladder',

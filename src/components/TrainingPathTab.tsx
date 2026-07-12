@@ -26,7 +26,7 @@ export interface PathTrack {
   description: string | null;
   description_es: string | null;
   emoji: string | null;
-  level: 'foundations' | 'department' | 'position' | 'certification';
+  level: 'foundations' | 'department' | 'position' | 'certification' | 'ongoing';
   modules: PathModule[];
   required_total: number;
   required_done: number;
@@ -49,6 +49,7 @@ const LEVEL_META: Record<PathTrack['level'], { en: string; es: string }> = {
   department: { en: 'Level 2 · Department Core', es: 'Nivel 2 · Núcleo de Departamento' },
   position: { en: 'Level 3 · Your Position', es: 'Nivel 3 · Tu Posición' },
   certification: { en: 'Level 4 · Certifications', es: 'Nivel 4 · Certificaciones' },
+  ongoing: { en: 'Always · Ongoing Growth', es: 'Siempre · Crecimiento Continuo' },
 };
 
 /* ───────── My Path — the staff training ladder ─────────
@@ -143,11 +144,18 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
             </p>
             <p className="text-lg font-bold truncate">
               {allDone
-                ? (isES ? '¡Camino completo! 🏆' : 'Path complete! 🏆')
+                ? (isES ? '¡Entrenamiento estándar completo! 🏆' : 'Standard training complete! 🏆')
                 : nextModule
                   ? `${isES ? 'Siguiente' : 'Up next'}: ${label(nextModule.title, nextModule.title_es)}`
                   : (isES ? 'Sigue así' : 'Keep climbing')}
             </p>
+            {allDone && (
+              <p className="text-[11px] text-white/80 mt-0.5">
+                {isES
+                  ? 'Aquí el crecimiento no termina — sigue afilando, sigue subiendo.'
+                  : 'Growth doesn’t stop here — keep sharpening, keep climbing.'}
+              </p>
+            )}
           </div>
           <div className="flex-shrink-0 text-right">
             <p className="text-2xl font-bold">{overallPct}%</p>

@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
   const mine: TrackRow[] = [];
   for (const t of tracks) {
     if (t.restaurant_id && target.restaurant_id && t.restaurant_id !== target.restaurant_id) continue;
-    if (t.level === 'foundations') { mine.push(t); continue; }
+    if (t.level === 'foundations' || t.level === 'ongoing') { mine.push(t); continue; }
     if (t.level === 'department') { if (audienceMatch(t)) mine.push(t); continue; }
     if (t.level === 'position') {
       if (slug && t.position_slugs.includes(slug)) mine.push(t);
@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  const levelOrder = ['foundations', 'department', 'position', 'certification'];
+  const levelOrder = ['foundations', 'department', 'position', 'certification', 'ongoing'];
   out.sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level) || a.title.localeCompare(b.title));
 
   return NextResponse.json({
