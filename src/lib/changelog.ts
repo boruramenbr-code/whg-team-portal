@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.9',
+    date: 'July 12, 2026',
+    title: 'Explore by Position',
+    notes: [
+      'New 🧭 Positions button on the Menu tab — tap any role and see exactly which menu sections that position studies',
+      'Positions without menu training (bussers, dish crew) say so plainly — their path is floor skills and videos',
+      'Built for growth: eyeing your next position? Browse its sections, then tell a manager',
+      'Busser track is now pure floor skills — menu removed per Randy, training videos take that slot as they’re recorded',
+    ],
+  },
+  {
     version: '2026.07.12.8',
     date: 'July 12, 2026',
     title: 'Menu sections matched to your position',

@@ -10,6 +10,14 @@ interface Props {
   initialCategoryId?: string | null;
 }
 
+interface PositionInfo {
+  slug: string;
+  name: string;
+  emoji: string | null;
+  department: string;
+  category_ids: string[];
+}
+
 /* ───────── Staff Menu tab (Training → Menu) ─────────
  *
  * Restaurant-scoped menu library. Staff see ONLY their restaurant's menu
@@ -35,6 +43,27 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
   // section only. Keeps a fry cook in Hot Small Plates, not lost in 149 items.
   const [selectedCatId, setSelectedCatId] = useState<string | null>(initialCategoryId);
   useEffect(() => { if (initialCategoryId) setSelectedCatId(initialCategoryId); }, [initialCategoryId]);
+
+  // "Explore by Position": browse the sections any role studies —
+  // deliberate cross-training, powered by the tracks (zero upkeep).
+  const [exploreOpen, setExploreOpen] = useState(false);
+  const [exploreSlug, setExploreSlug] = useState<string | null>(null);
+  const [positions, setPositions] = useState<PositionInfo[] | null>(null);
+  const openExplore = async () => {
+    setExploreOpen(true);
+    setSelectedCatId(null);
+    if (positions) return;
+    try {
+      const url = restaurantId
+        ? `/api/menu/positions?restaurant_id=${encodeURIComponent(restaurantId)}`
+        : '/api/menu/positions';
+      const r = await fetch(url);
+      if (r.ok) {
+        const j = await r.json();
+        setPositions(j.positions || []);
+      }
+    } catch { /* button just won't populate — non-fatal */ }
+  };
 
   // "Your Sections": menu categories referenced by this person's training
   // path. The track IS the assignment — refine a position's track and
@@ -108,7 +137,7 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
           {restaurants.map((r) => (
             <button
               key={r.id}
-              onClick={() => { setSelectedCatId(null); load(r.id); }}
+              onClick={() => { setSelectedCatId(null); setExploreOpen(false); setExploreSlug(null); setPositions(null); load(r.id); }}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                 restaurantId === r.id
                   ? 'bg-[#1B3A6B] text-white shadow-sm'
@@ -136,14 +165,26 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
           </div>
           <button
             onClick={() => setStudyMode((v) => !v)}
-            className={`tap-highlight flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+            className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               studyMode
                 ? 'bg-amber-500 text-white shadow-sm'
                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-white/60'
             }`}
             title={isES ? 'Modo estudio: adivina el platillo por la foto' : 'Study mode: guess the dish from the photo'}
           >
-            🎴 {isES ? 'Estudiar' : 'Study'}
+            🎴<span className="hidden sm:inline"> {isES ? 'Estudiar' : 'Study'}</span>
+          </button>
+          <button
+            onClick={() => (exploreOpen || exploreSlug ? (setExploreOpen(false), setExploreSlug(null)) : openExplore())}
+            className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
+              exploreOpen || exploreSlug
+                ? 'bg-[#2E86C1] text-white shadow-sm'
+                : 'bg-white text-gray-600 hover:bg-gray-50 border border-white/60'
+            }`}
+            title={isES ? 'Explorar por posición: qué estudia cada rol' : 'Explore by position: what each role studies'}
+            aria-label={isES ? 'Explorar por posición' : 'Explore by position'}
+          >
+            🧭<span className="hidden sm:inline"> {isES ? 'Posiciones' : 'Positions'}</span>
           </button>
         </div>
       )}
@@ -209,7 +250,9 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 5l-7 7 7 7" />
               </svg>
-              {isES ? 'Todas las secciones' : 'All sections'}
+              {exploreSlug
+                ? (isES ? 'Atrás' : 'Back')
+                : (isES ? 'Todas las secciones' : 'All sections')}
             </button>
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
               {selectedCategory.items.length} {isES ? 'platillos' : 'items'}
@@ -223,6 +266,116 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
               <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} onOpen={() => setActiveItem(item)} />
             ))}
           </div>
+        </div>
+      ) : exploreSlug ? (
+        /* ── One position's assigned sections ── */
+        (() => {
+          const pos = (positions || []).find((p) => p.slug === exploreSlug);
+          const posCats = categories.filter((c) => c.items.length > 0 && pos?.category_ids.includes(c.id));
+          return (
+            <div>
+              <button
+                onClick={() => setExploreSlug(null)}
+                className="tap-highlight flex items-center gap-1.5 text-sm font-semibold text-[#1B3A6B] hover:underline py-2 mb-2"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+                {isES ? 'Todas las posiciones' : 'All positions'}
+              </button>
+              <h2 className="text-lg font-bold text-[#1B3A6B] mb-1">
+                {pos?.emoji ? `${pos.emoji} ` : ''}{isES ? `Lo que estudia un ${pos?.name}` : `What a ${pos?.name} studies`}
+              </h2>
+              {posCats.length === 0 ? (
+                <div className="mt-3 text-center py-10 bg-white/60 rounded-2xl border border-white/40">
+                  <div className="text-3xl mb-2">🧹</div>
+                  <p className="text-sm text-gray-600 font-medium">
+                    {isES ? 'Esta posición no estudia menús.' : 'This position doesn’t study menus.'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {isES
+                      ? 'Su entrenamiento vive en habilidades de piso y videos — míralo en Mi Camino.'
+                      : 'Their training lives in floor skills and videos — see it on My Path.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  {posCats.map((c) => {
+                    const cover = c.items.find((i) => i.photo_url)?.photo_url || null;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCatId(c.id)}
+                        className="tap-highlight relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow aspect-[16/10] text-left"
+                      >
+                        {cover ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] flex items-center justify-center text-4xl opacity-90">🍽️</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <p className="text-white font-bold text-sm md:text-base leading-tight drop-shadow">
+                            {isES && c.name_es ? c.name_es : c.name}
+                          </p>
+                          <p className="text-white/70 text-[11px] font-semibold mt-0.5">
+                            {c.items.length} {isES ? 'platillos' : 'items'}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()
+      ) : exploreOpen ? (
+        /* ── Position picker — deliberate cross-training ── */
+        <div>
+          <h2 className="text-lg font-bold text-[#1B3A6B] mb-1">
+            🧭 {isES ? 'Explorar por Posición' : 'Explore by Position'}
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            {isES
+              ? 'Mira lo que estudia cada rol. ¿Quieres crecer hacia una posición? Empieza aquí — y díselo a un gerente.'
+              : 'See what each role studies. Eyeing your next position? Start here — and tell a manager.'}
+          </p>
+          {positions === null ? (
+            <div className="text-center py-8 text-sm text-gray-400 animate-pulse">
+              {isES ? 'Cargando…' : 'Loading…'}
+            </div>
+          ) : (
+            ['FOH', 'BOH', 'Management'].map((dept) => {
+              const group = positions.filter((p) => p.department === dept);
+              if (group.length === 0) return null;
+              return (
+                <div key={dept} className="mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{dept}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.map((p) => (
+                      <button
+                        key={p.slug}
+                        onClick={() => setExploreSlug(p.slug)}
+                        className="tap-highlight inline-flex items-center gap-1.5 bg-white border border-white/60 shadow-sm rounded-full px-3.5 py-2 text-xs font-semibold text-gray-700 hover:shadow-md transition-shadow"
+                      >
+                        {p.emoji && <span aria-hidden>{p.emoji}</span>}
+                        {p.name}
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                          p.category_ids.length > 0 ? 'bg-[#2E86C1]/10 text-[#2E86C1]' : 'bg-gray-100 text-gray-400'
+                        }`}>
+                          {p.category_ids.length > 0
+                            ? `${p.category_ids.length} ${isES ? 'secc.' : 'sections'}`
+                            : (isES ? 'sin menú' : 'no menu')}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       ) : (
         /* ── Big category blocks — your position's sections lead ── */
