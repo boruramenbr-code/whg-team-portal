@@ -36,6 +36,30 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
   const [selectedCatId, setSelectedCatId] = useState<string | null>(initialCategoryId);
   useEffect(() => { if (initialCategoryId) setSelectedCatId(initialCategoryId); }, [initialCategoryId]);
 
+  // "Your Sections": menu categories referenced by this person's training
+  // path. The track IS the assignment — refine a position's track and
+  // their menu view reorganizes itself. Sections are led-with, never
+  // hidden (Randy's rule: gate requirements, not knowledge).
+  const [myCategoryIds, setMyCategoryIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/training/path');
+        if (!r.ok || cancelled) return;
+        const j = await r.json();
+        const ids = new Set<string>();
+        for (const t of j.tracks || []) {
+          for (const m of t.modules || []) {
+            if (m.module_type === 'menu_category' && m.ref_id) ids.add(m.ref_id);
+          }
+        }
+        if (!cancelled) setMyCategoryIds(ids);
+      } catch { /* non-fatal — falls back to the plain grid */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const load = useCallback(async (rid?: string | null) => {
     setLoading(true);
     try {
@@ -201,15 +225,20 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
           </div>
         </div>
       ) : (
-        /* ── Big category blocks — pick your section first ── */
-        <div className="grid grid-cols-2 gap-3">
-          {categories.filter((c) => c.items.length > 0).map((c) => {
+        /* ── Big category blocks — your position's sections lead ── */
+        (() => {
+          const withItems = categories.filter((c) => c.items.length > 0);
+          const mine = withItems.filter((c) => myCategoryIds.has(c.id));
+          const others = withItems.filter((c) => !myCategoryIds.has(c.id));
+          const renderTile = (c: MenuCategory, isMine: boolean) => {
             const cover = c.items.find((i) => i.photo_url)?.photo_url || null;
             return (
               <button
                 key={c.id}
                 onClick={() => setSelectedCatId(c.id)}
-                className="tap-highlight relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow aspect-[16/10] text-left"
+                className={`tap-highlight relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow aspect-[16/10] text-left ${
+                  isMine ? 'ring-2 ring-amber-400' : ''
+                }`}
               >
                 {cover ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
@@ -220,6 +249,11 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+                {isMine && (
+                  <span className="absolute top-2 right-2 bg-amber-400 text-[#1B3A6B] text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shadow">
+                    🎯 {isES ? 'Tuya' : 'Yours'}
+                  </span>
+                )}
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <p className="text-white font-bold text-sm md:text-base leading-tight drop-shadow">
                     {isES && c.name_es ? c.name_es : c.name}
@@ -230,8 +264,30 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
                 </div>
               </button>
             );
-          })}
-        </div>
+          };
+
+          if (mine.length === 0) {
+            return <div className="grid grid-cols-2 gap-3">{withItems.map((c) => renderTile(c, false))}</div>;
+          }
+          return (
+            <div className="space-y-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-2">
+                  🎯 {isES ? 'Tus Secciones' : 'Your Sections'}
+                </p>
+                <div className="grid grid-cols-2 gap-3">{mine.map((c) => renderTile(c, true))}</div>
+              </div>
+              {others.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                    {isES ? 'Todo lo Demás' : 'Everything Else'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">{others.map((c) => renderTile(c, false))}</div>
+                </div>
+              )}
+            </div>
+          );
+        })()
       )}
 
       {/* Full-screen training card */}

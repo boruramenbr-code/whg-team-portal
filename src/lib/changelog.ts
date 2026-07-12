@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.8',
+    date: 'July 12, 2026',
+    title: 'Menu sections matched to your position',
+    notes: [
+      'The Menu tab now leads with "Your Sections" 🎯 — the menus your position\'s training path assigns you (fry cooks see Hot Small Plates first, sushi chefs see the sushi sections first)',
+      'Everything else stays browsable below — we point you at your sections, we never lock the rest away',
+      'Assignments come straight from your training track, so refining a position automatically reorganizes their menu view',
+    ],
+  },
+  {
     version: '2026.07.12.7',
     date: 'July 12, 2026',
     title: 'Menu sections as big blocks',
