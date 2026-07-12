@@ -189,15 +189,15 @@ function ItemDetail({ item, isES, onClose }: { item: MenuItem; isES: boolean; on
         </div>
 
         <div className="max-w-2xl mx-auto px-5 py-5 space-y-5">
-          {/* Name + price */}
+          {/* Name — price is deliberately quiet: this is a training page,
+              not a menu. It stays only as a reference for servers who get
+              asked at the table. */}
           <div>
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-xl md:text-2xl font-bold text-[#1B3A6B] leading-tight">{name}</h1>
-              {item.price && (
-                <span className="flex-shrink-0 text-base font-bold text-gray-700">{item.price}</span>
-              )}
-            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] leading-tight">{name}</h1>
             {altName && <p className="text-sm text-gray-400 mt-0.5">{altName}</p>}
+            {item.price && (
+              <p className="text-xs text-gray-400 mt-1">{item.price}</p>
+            )}
           </div>
 
           {/* Allergens — the safety-critical block sits right under the name */}
@@ -224,13 +224,14 @@ function ItemDetail({ item, isES, onClose }: { item: MenuItem; isES: boolean; on
             </div>
           )}
 
-          {/* Description */}
+          {/* Description — the core study content, sized to read like a
+              lesson, not a caption. */}
           {description && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
                 {isES ? 'Descripción' : 'What it is'}
               </p>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{description}</p>
+              <p className="text-base md:text-lg font-medium text-gray-900 leading-relaxed whitespace-pre-wrap">{description}</p>
             </div>
           )}
 

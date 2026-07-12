@@ -23,6 +23,17 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2026.07.12',
+    date: 'July 12, 2026',
+    title: 'Quizzes live + Ichiban menu loaded',
+    notes: [
+      'Quiz engine is live: managers build quizzes and exams under Admin → Training; staff take them from the Training tab; unlimited retakes, every attempt recorded',
+      'Ichiban menu fully loaded: 149 items across 8 categories, 114 with photos',
+      'Menu training card: bigger, bolder "What it is" text — built for studying, not skimming',
+      'Price de-emphasized on training cards (small gray reference for servers, out of the way for everyone else)',
+    ],
+  },
   // Same-day second ship gets a ".2" suffix — versions must stay unique
   // and newest-first.
   {
