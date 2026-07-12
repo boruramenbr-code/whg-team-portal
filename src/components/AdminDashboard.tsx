@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Profile, Restaurant } from '@/lib/types';
 import { CHANGELOG, APP_VERSION, ChangelogEntry } from '@/lib/changelog';
@@ -96,6 +96,16 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   const [peopleSub, setPeopleSub] = useState<PeopleSubTab>('staff');
   const [standardsSub, setStandardsSub] = useState<StandardsSubTab>('bible');
   const isAdmin = profile.role === 'admin';
+
+  // Perf: visited tabs stay MOUNTED (hidden, not unmounted) so switching
+  // back is instant — mirrors DashboardClient. A tab renders when it's
+  // active OR already visited.
+  const [visitedTops, setVisitedTops] = useState<Set<TopTab>>(() => new Set<TopTab>(['dashboard']));
+  useEffect(() => {
+    setVisitedTops((prev) => (prev.has(activeTop) ? prev : new Set(prev).add(activeTop)));
+  }, [activeTop]);
+  const tabShown = (k: TopTab) => activeTop === k;
+  const tabMounted = (k: TopTab) => activeTop === k || visitedTops.has(k);
 
   /**
    * Central navigate helper. Accepts legacy destination keys from Mission
@@ -234,58 +244,72 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
           tabs, which left a ~1in band of empty gradient at the bottom on
           mobile (the calc didn't account for the fixed bottom nav). */}
       <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0">
-        {activeTop === 'dashboard' && (
+        {tabMounted('dashboard') && (
+          <div className={tabShown('dashboard') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <MissionControlDashboard onNavigate={navigate} />
           </div>
+          </div>
         )}
 
-        {/* ── PEOPLE ── */}
-        {activeTop === 'people' && peopleSub === 'staff' && (
+        {/* ── PEOPLE — sub-tabs share one keep-mounted wrapper ── */}
+        {tabMounted('people') && (
+        <div className={tabShown('people') ? 'contents' : 'hidden'}>
+        {peopleSub === 'staff' && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <AdminPanel currentUser={profile} restaurants={restaurants} />
           </div>
         )}
-        {activeTop === 'people' && peopleSub === 'onboarding' && (
+        {peopleSub === 'onboarding' && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <OnboardingAdminTab />
           </div>
         )}
-        {activeTop === 'people' && peopleSub === 'barcards' && (
+        {peopleSub === 'barcards' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
           </div>
         )}
-        {activeTop === 'people' && peopleSub === 'payrates' && (
+        {peopleSub === 'payrates' && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <PayRatesTab profile={profile} />
           </div>
         )}
+        </div>
+        )}
 
         {/* ── PRE-SHIFT ── */}
-        {activeTop === 'preshift' && (
+        {tabMounted('preshift') && (
+          <div className={tabShown('preshift') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <PreshiftAdminContent isAdmin={isAdmin} restaurants={restaurants} />
+          </div>
           </div>
         )}
 
         {/* ── TRAINING ── */}
-        {activeTop === 'training' && (
+        {tabMounted('training') && (
+          <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <TrainingAdminTab />
           </div>
+          </div>
         )}
 
-        {/* ── STANDARDS ── */}
-        {activeTop === 'standards' && standardsSub === 'bible' && (
+        {/* ── STANDARDS — sub-tabs share one keep-mounted wrapper ── */}
+        {tabMounted('standards') && (
+        <div className={tabShown('standards') ? 'contents' : 'hidden'}>
+        {standardsSub === 'bible' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <ManagerStandardsTab profile={profile} />
           </div>
         )}
-        {activeTop === 'standards' && standardsSub === 'compliance' && (
+        {standardsSub === 'compliance' && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <ComplianceTab />
           </div>
+        )}
+        </div>
         )}
 
         {/* ── SETTINGS ── */}

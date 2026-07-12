@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { fetchMyBarCard } from '@/lib/my-bar-card';
 
 interface Props {
   language: 'en' | 'es';
@@ -26,8 +27,8 @@ export default function CardingDateWidget({ language }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/my-bar-card', { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
+    // Shared with MyBarCardWidget — one request serves both.
+    fetchMyBarCard()
       .then((data) => {
         if (cancelled) return;
         // Show to anyone who serves alcohol (requires_bar_card=true) OR

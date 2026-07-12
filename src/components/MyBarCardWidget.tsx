@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { fetchMyBarCard } from '@/lib/my-bar-card';
 
 type Status = 'missing' | 'expired' | 'critical' | 'expiring' | 'valid' | 'not_required';
 
@@ -35,13 +36,9 @@ export default function MyBarCardWidget({ language }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch('/api/my-bar-card', { cache: 'no-store' });
-        if (!r.ok) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-        const d: BarCardResponse = await r.json();
-        if (!cancelled) setData(d);
+        // Shared with CardingDateWidget — one request serves both.
+        const d: BarCardResponse | null = await fetchMyBarCard();
+        if (!cancelled && d) setData(d);
       } finally {
         if (!cancelled) setLoading(false);
       }

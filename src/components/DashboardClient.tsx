@@ -86,6 +86,15 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const defaultHandbookSub: HandbookSubTab = (isWelcomeActive || isRecentHire) ? 'checklist' : 'read';
 
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');
+  // Perf: visited tabs stay MOUNTED (hidden, not unmounted) so switching
+  // back is instant — no chunk re-parse, no refetch storm, no image reloads.
+  // A tab renders when it's active OR already visited.
+  const [visitedTops, setVisitedTops] = useState<Set<TopTabKey>>(() => new Set<TopTabKey>(['home']));
+  useEffect(() => {
+    setVisitedTops((prev) => (prev.has(activeTop) ? prev : new Set(prev).add(activeTop)));
+  }, [activeTop]);
+  const tabShown = (k: TopTabKey) => activeTop === k;
+  const tabMounted = (k: TopTabKey) => activeTop === k || visitedTops.has(k);
   const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>(defaultHandbookSub);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
@@ -301,10 +310,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
         </div>
       )}
 
-      {/* ── Tab content ── */}
+      {/* ── Tab content ──
+          Each visited tab stays mounted inside a display-toggled wrapper
+          (`contents` when active so layout is unchanged, `hidden` when not).
+          First visit lazy-loads the chunk; every revisit is instant. */}
       <div className="flex flex-1 overflow-hidden pb-[72px] md:pb-0">
         {/* HOME */}
-        {activeTop === 'home' && (
+        {tabMounted('home') && (
+          <div className={tabShown('home') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
             <HomeTab
               firstName={firstName}
@@ -314,17 +327,23 @@ export default function DashboardClient({ profile, isManager }: Props) {
               onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
             />
           </div>
-        )}
-
-        {/* TEAM POSITIONS */}
-        {activeTop === 'positions' && (
-          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <PositionsSection language={language} />
           </div>
         )}
 
-        {/* ONBOARDING → Checklist */}
-        {activeTop === 'handbook' && activeHandbookSub === 'checklist' && (
+        {/* TEAM POSITIONS */}
+        {tabMounted('positions') && (
+          <div className={tabShown('positions') ? 'contents' : 'hidden'}>
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
+            <PositionsSection language={language} />
+          </div>
+          </div>
+        )}
+
+        {/* ONBOARDING — all sub-tabs live inside one keep-mounted wrapper.
+            Sub-tabs themselves still mount on first open only. */}
+        {tabMounted('handbook') && (
+        <div className={tabShown('handbook') ? 'contents' : 'hidden'}>
+        {activeHandbookSub === 'checklist' && (
           <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] tab-content-enter">
             <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
               <div className="flex items-start justify-between gap-3 mb-1">
@@ -349,14 +368,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
         )}
 
         {/* ONBOARDING → Handbook */}
-        {activeTop === 'handbook' && activeHandbookSub === 'read' && (
+        {activeHandbookSub === 'read' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <HandbookReaderTab language={language} />
           </div>
         )}
 
         {/* HANDBOOK & POLICIES → Policies */}
-        {activeTop === 'handbook' && activeHandbookSub === 'policies' && (
+        {activeHandbookSub === 'policies' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <PoliciesTab
               language={language}
@@ -367,7 +386,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
         )}
 
         {/* HANDBOOK & POLICIES → Ask (chatbot) */}
-        {activeTop === 'handbook' && activeHandbookSub === 'ask' && (
+        {activeHandbookSub === 'ask' && (
           <>
             <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] tab-content-enter">
               <div className="max-w-2xl w-full mx-auto h-full flex flex-col">
@@ -432,8 +451,12 @@ export default function DashboardClient({ profile, isManager }: Props) {
           </>
         )}
 
+        </div>
+        )}
+
         {/* OUR TEAM */}
-        {activeTop === 'ourteam' && (
+        {tabMounted('ourteam') && (
+          <div className={tabShown('ourteam') ? 'contents' : 'hidden'}>
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <OurTeamTab
               restaurantId={profile.restaurant_id}
@@ -442,12 +465,15 @@ export default function DashboardClient({ profile, isManager }: Props) {
               language={language}
             />
           </div>
+          </div>
         )}
 
         {/* TRAINING */}
-        {activeTop === 'training' && (
+        {tabMounted('training') && (
+          <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
             <TrainingTab language={language} />
+          </div>
           </div>
         )}
       </div>

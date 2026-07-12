@@ -157,13 +157,8 @@ const QUICK_ACTIONS: QuickAction[] = [
     requires_category: 'foh',
     action: 'tips',
   },
-  {
-    id: 'anonymous_comment',
-    emoji: '💭',
-    title: 'Anonymous Comment',
-    comingSoon:
-      'A private channel to share feedback, concerns, or suggestions directly with ownership — with no name attached. We’re building this so every voice on the team can be heard, even on the hard stuff.',
-  },
+  // Anonymous Comment removed 2026-07-12 (Randy's call: no coming-soon
+  // placeholders — re-add the entry here when the feature actually ships).
 ];
 
 export default function HomeTab({ firstName, restaurantName, language, onboardingCategory, onNavigate }: Props) {
@@ -301,6 +296,21 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   // Load pre-shift note whenever the restaurant chip changes.
   useEffect(() => {
     loadPreshift();
+  }, [loadPreshift]);
+
+  // HomeTab now stays mounted across tab switches (perf), so refresh the
+  // operational data (86'd items, specials) whenever the app comes back
+  // into view — pocket → open, backgrounded PWA → foreground, etc.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadPreshift();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, [loadPreshift]);
 
   const onSelectRestaurant = (id: string) => {

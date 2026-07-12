@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.12.3',
+    date: 'July 12, 2026',
+    title: 'Speed pass: instant tab switching',
+    notes: [
+      'Tabs you’ve visited stay loaded — switching back is instant instead of rebuilding the page every time (staff and admin sides)',
+      'Home refreshes pre-shift info (86’d items, specials) automatically whenever you re-open the app',
+      'Cut a duplicate behind-the-scenes request on every Home load',
+      'Removed the "Anonymous Comment" coming-soon button — it returns when the feature is real',
+    ],
+  },
+  {
     version: '2026.07.12.2',
     date: 'July 12, 2026',
     title: 'Menu study tools + Photo Test',
