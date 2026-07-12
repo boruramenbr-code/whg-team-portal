@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import MenuAdminTab from './MenuAdminTab';
+import QuizzesAdminTab from './QuizzesAdminTab';
+
+type AdminSub = 'videos' | 'menu' | 'quizzes';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -31,8 +34,8 @@ interface Series {
  * inline modal forms, optimistic refetch after each save.
  */
 export default function TrainingAdminTab() {
-  // Sub-tabs (Menu Training Phase A): Videos | Menu authoring.
-  const [sub, setSub] = useState<'videos' | 'menu'>('videos');
+  // Sub-tabs: Videos | Menu | Quizzes authoring (Phase B live June 2026).
+  const [sub, setSub] = useState<AdminSub>('videos');
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +94,16 @@ export default function TrainingAdminTab() {
           <SubTabPills sub={sub} onChange={setSub} />
         </div>
         <MenuAdminTab />
+      </div>
+    );
+  }
+
+  // Quiz authoring gets the whole surface too — its own header + list.
+  if (sub === 'quizzes') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        <SubTabPills sub={sub} onChange={setSub} />
+        <QuizzesAdminTab />
       </div>
     );
   }
@@ -256,17 +269,18 @@ export default function TrainingAdminTab() {
 }
 
 /* ───────── Sub-tab pills: Videos | Menu ───────── */
-function SubTabPills({ sub, onChange }: { sub: 'videos' | 'menu'; onChange: (s: 'videos' | 'menu') => void }) {
+function SubTabPills({ sub, onChange }: { sub: AdminSub; onChange: (s: AdminSub) => void }) {
   return (
-    <div className="flex gap-1.5 mb-5">
+    <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
       {([
         { key: 'videos' as const, label: '🎬 Videos' },
         { key: 'menu' as const, label: '🍣 Menu' },
+        { key: 'quizzes' as const, label: '📝 Quizzes' },
       ]).map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
-          className={`tap-highlight px-4 py-2 rounded-full text-xs font-bold transition-colors ${
+          className={`tap-highlight flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${
             sub === t.key
               ? 'bg-[#1B3A6B] text-white shadow-sm'
               : 'bg-white/70 text-gray-600 hover:bg-white'
