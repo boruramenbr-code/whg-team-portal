@@ -35,6 +35,8 @@ export interface MenuCategory {
   name: string;
   name_es: string | null;
   sort_order: number;
+  /** true = study section (Fundamentals, Sushi 101…), not sellable food. */
+  is_knowledge?: boolean;
   items: MenuItem[];
 }
 

@@ -419,6 +419,41 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
             );
           };
 
+          // Two bands: study sections up top, sellable food below a clear
+          // divider (Randy's call). Within each band, YOUR sections lead
+          // and wear the gold ring. Restaurants without knowledge sections
+          // (Boru, for now) fall back to the flat Your/Everything split.
+          const knowledge = withItems.filter((c) => c.is_knowledge);
+          const food = withItems.filter((c) => !c.is_knowledge);
+          const mineFirst = (arr: typeof withItems) =>
+            [...arr].sort((a, b) => Number(myCategoryIds.has(b.id)) - Number(myCategoryIds.has(a.id)));
+
+          if (knowledge.length > 0) {
+            return (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B] mb-2">
+                  📚 {isES ? 'Estudio y Conocimiento' : 'Study & Knowledge'}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {mineFirst(knowledge).map((c) => renderTile(c, myCategoryIds.has(c.id)))}
+                </div>
+
+                {/* The separator between learning and the sellable menu */}
+                <div className="flex items-center gap-3 my-6">
+                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B]">
+                    🍽️ {isES ? 'El Menú' : 'The Menu'}
+                  </span>
+                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {mineFirst(food).map((c) => renderTile(c, myCategoryIds.has(c.id)))}
+                </div>
+              </div>
+            );
+          }
+
           if (mine.length === 0) {
             return <div className="grid grid-cols-2 gap-3">{withItems.map((c) => renderTile(c, false))}</div>;
           }

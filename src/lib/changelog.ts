@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15',
+    date: 'July 15, 2026',
+    title: 'Study sections separated + Oh, I Didn’t Know That',
+    notes: [
+      'New menu section: "Oh, I Didn’t Know That" — 14 cards of classic order mix-ups and the exact question that prevents each one (required study for servers, to-go, bartenders, expo)',
+      'The Menu tab now splits into two bands: 📚 Study & Knowledge up top, a clean divider, then 🍽️ The Menu below',
+      'Photo Test now pulls only real dishes — study cards (soy bottles, wasabi tubes) excluded from "name this dish" questions',
+      'Sushi 101 finished with photos on every card, five new deep-dive cards, and its own 10-question Knowledge Check quiz',
+    ],
+  },
+  {
     version: '2026.07.12.10',
     date: 'July 12, 2026',
     title: 'Navigation restructure (UX revamp Phase 1)',

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   const adminClient = getAdminClient();
 
-  const [{ data: restaurant }, { data: items }] = await Promise.all([
+  const [{ data: restaurant }, { data: rawItems }, { data: cats }] = await Promise.all([
     adminClient.from('restaurants').select('id, name').eq('id', restaurantId).single(),
     adminClient
       .from('menu_items')
@@ -80,9 +80,19 @@ export async function POST(req: NextRequest) {
       .eq('restaurant_id', restaurantId)
       .eq('active', true)
       .not('photo_url', 'is', null),
+    adminClient
+      .from('menu_categories')
+      .select('id, is_knowledge')
+      .eq('restaurant_id', restaurantId),
   ]);
 
   if (!restaurant) return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+
+  // Knowledge/study sections (Fundamentals, Sushi 101…) are concepts, not
+  // dishes — a "name this dish" question about a soy bottle would be silly.
+  const knowledgeCatIds = new Set((cats ?? []).filter((c) => c.is_knowledge).map((c) => c.id));
+  const items = (rawItems ?? []).filter((i) => !knowledgeCatIds.has(i.category_id));
+
   if (!items || items.length < 8) {
     return NextResponse.json(
       { error: `Need at least 8 menu items with photos to build a photo test (found ${items?.length ?? 0}).` },
