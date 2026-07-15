@@ -54,6 +54,43 @@ function canWrite(allowed: Set<string> | 'all', restaurantId: string) {
   return allowed === 'all' || allowed.has(restaurantId);
 }
 
+/** Accepts any common YouTube URL shape or a bare 11-char id.
+ *  Mirrors the training-videos parser. */
+function parseYouTubeId(raw: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+  try {
+    const u = new URL(trimmed);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') {
+      const id = u.pathname.replace(/^\//, '').split('/')[0];
+      return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const v = u.searchParams.get('v');
+      if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+      const segments = u.pathname.split('/').filter(Boolean);
+      if (segments.length >= 2 && (segments[0] === 'embed' || segments[0] === 'shorts')) {
+        const id = segments[1];
+        if (/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
+      }
+    }
+  } catch { /* not a URL */ }
+  return null;
+}
+
+/** video_url in the body: '' clears the video; a URL/id sets it; invalid → error. */
+function cleanVideo(body: Record<string, unknown>, updates: Record<string, unknown>): string | null {
+  if (body.video_url === undefined) return null;
+  const raw = typeof body.video_url === 'string' ? body.video_url.trim() : '';
+  if (!raw) { updates.video_youtube_id = null; return null; }
+  const id = parseYouTubeId(raw);
+  if (!id) return 'That doesn’t look like a YouTube link. Paste the full URL from YouTube (or the 11-character video id).';
+  updates.video_youtube_id = id;
+  return null;
+}
+
 function cleanAllergens(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
   return input.filter((a): a is string => typeof a === 'string' && ALLERGEN_KEYS.includes(a));
@@ -117,6 +154,8 @@ export async function POST(req: NextRequest) {
     row[f] = typeof body[f] === 'string' && body[f].trim() ? body[f].trim() : null;
   }
   cleanTrainingFields(body, row);
+  const videoError = cleanVideo(body, row);
+  if (videoError) return NextResponse.json({ error: videoError }, { status: 400 });
 
   const { data, error } = await adminClient
     .from('menu_items')
@@ -159,6 +198,8 @@ export async function PATCH(req: NextRequest) {
   }
   if (body.allergens !== undefined) updates.allergens = cleanAllergens(body.allergens);
   cleanTrainingFields(body, updates);
+  const videoError = cleanVideo(body, updates);
+  if (videoError) return NextResponse.json({ error: videoError }, { status: 400 });
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
   if (body.active !== undefined) updates.active = !!body.active;
   // Moving an item to another category re-derives restaurant_id so the

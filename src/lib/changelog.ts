@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15.2',
+    date: 'July 15, 2026',
+    title: 'Videos on menu items',
+    notes: [
+      'Menu items can now carry a video alongside the photo — paste any YouTube link in the item editor (Admin → Training → Menu)',
+      'The training card plays it right under the photo: how it’s made, how it’s cut, how it plates',
+      'Menu tiles show a ▶ badge when an item has a video',
+      'Same rules as training videos: upload Unlisted, embedding ON, not made-for-kids',
+    ],
+  },
+  {
     version: '2026.07.15',
     date: 'July 15, 2026',
     title: 'Study sections separated + Oh, I Didn’t Know That',

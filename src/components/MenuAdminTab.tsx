@@ -522,6 +522,7 @@ function ItemEditor({
   const [sortOrder, setSortOrder] = useState<string>(String(initial.sort_order ?? 100));
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url || null);
   const [pronunciation, setPronunciation] = useState(initial.pronunciation || '');
+  const [videoUrl, setVideoUrl] = useState(initial.video_youtube_id || '');
   // '' = not set, 'raw' | 'cooked'
   const [rawState, setRawState] = useState<string>(initial.is_raw === true ? 'raw' : initial.is_raw === false ? 'cooked' : '');
   // '' = not set, '0'-'3'
@@ -551,6 +552,7 @@ function ItemEditor({
     upsell_note: upsell,
     upsell_note_es: upsellEs,
     pronunciation,
+    video_url: videoUrl,
     is_raw: rawState === 'raw' ? true : rawState === 'cooked' ? false : null,
     spice_level: spice === '' ? null : Number(spice),
     sort_order: Number(sortOrder) || 100,
@@ -681,6 +683,21 @@ function ItemEditor({
           <div>
             <label className={labelCls}>Name (Spanish, optional)</label>
             <input type="text" value={nameEs} onChange={(e) => setNameEs(e.target.value)} className={inputCls} />
+          </div>
+
+          {/* Video — same YouTube pipeline as training videos */}
+          <div>
+            <label className={labelCls}>Video (optional) — YouTube link</label>
+            <input
+              type="text"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://youtu.be/…  (how it's made, how it's cut)"
+              className={`${inputCls} font-mono text-xs`}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Upload to YouTube as <strong>Unlisted</strong>, with <strong>embedding ON</strong> and <strong>not made-for-kids</strong> — then paste any YouTube link here. Leave blank to remove.
+            </p>
           </div>
 
           {/* Training fields: pronunciation, raw/cooked, spice */}

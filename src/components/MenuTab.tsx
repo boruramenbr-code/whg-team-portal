@@ -517,6 +517,11 @@ function ItemCard({ item, isES, studyMode, onOpen }: { item: MenuItem; isES: boo
             {item.allergens.slice(0, 3).map((a) => allergenMeta(a)?.emoji).join('')}
           </span>
         )}
+        {!studyMode && item.video_youtube_id && (
+          <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            ▶
+          </span>
+        )}
       </div>
       <div className="p-2.5">
         {studyMode ? (
@@ -622,6 +627,24 @@ function ItemDetail({ item, isES, studyMode = false, onNext, onClose }: {
               <p className="text-xs text-gray-400 mt-1">{item.price}</p>
             )}
           </div>
+
+          {/* Video — how it's made / how it's cut */}
+          {item.video_youtube_id && (
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                ▶ {isES ? 'Míralo' : 'Watch'}
+              </p>
+              <div className="aspect-video rounded-xl overflow-hidden bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${item.video_youtube_id}?rel=0`}
+                  title={name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Raw/cooked + spice — the two questions guests actually ask.
               Render only once the data has been entered. */}

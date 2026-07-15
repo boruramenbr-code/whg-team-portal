@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
         ingredients, ingredients_es, allergens,
         prep_notes, prep_notes_es, upsell_note, upsell_note_es,
         price, photo_url, sort_order, active,
-        pronunciation, is_raw, spice_level
+        pronunciation, is_raw, spice_level, video_youtube_id
       )
     `)
     .eq('restaurant_id', restaurantId)
@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
     price: string | null; photo_url: string | null;
     sort_order: number; active: boolean;
     pronunciation: string | null; is_raw: boolean | null; spice_level: number | null;
+    video_youtube_id: string | null;
   };
   type RawCategory = {
     id: string; name: string; name_es: string | null;

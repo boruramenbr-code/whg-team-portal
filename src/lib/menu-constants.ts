@@ -28,6 +28,8 @@ export interface MenuItem {
   is_raw: boolean | null;
   /** 0-3 chili scale; null = not entered yet. */
   spice_level: number | null;
+  /** Optional how-it's-made video (11-char YouTube id). */
+  video_youtube_id: string | null;
 }
 
 export interface MenuCategory {
