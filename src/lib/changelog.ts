@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15.3',
+    date: 'July 15, 2026',
+    title: 'Floor-Ready (Phase C) + brand-wide service standard',
+    notes: [
+      'New brand-wide section: "Service: Beginning to End" — the full WHG service cycle, greet to genuine thank-you, identical at every restaurant, on every FOH path',
+      '🎯 Floor-Ready is live: complete your required path and your Home card turns green',
+      'Managers: the Progress board now shows every person’s progress bar and Floor-Ready status at a glance',
+      'Manager judgment calls: grant (or revoke) Floor-Ready with an override — always recorded with who made the call',
+      'Ichiban quality on the record: the "Is It Fresh?" card now teaches the sushi-grade #1 tuna standard — with class, never trash talk',
+    ],
+  },
+  {
     version: '2026.07.15.2',
     date: 'July 15, 2026',
     title: 'Videos on menu items',

@@ -36,6 +36,11 @@ export interface PathTrack {
 interface PathResponse {
   user: { id: string; full_name: string; onboarding_category: string | null; position_slug: string | null };
   tracks: PathTrack[];
+  floor_ready?: {
+    ready: boolean;
+    via: 'completed' | 'override' | null;
+    override: { granted_by_name: string | null; note: string | null; created_at: string } | null;
+  };
 }
 
 interface Props {
@@ -155,6 +160,13 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
                 {isES
                   ? 'Aquí el crecimiento no termina — sigue afilando, sigue subiendo.'
                   : 'Growth doesn’t stop here — keep sharpening, keep climbing.'}
+              </p>
+            )}
+            {!allDone && data.floor_ready?.via === 'override' && (
+              <p className="text-[11px] text-emerald-200 mt-0.5">
+                🎯 {isES
+                  ? 'Listo para el piso por decisión de tu gerente — termina tu camino de todos modos 💪'
+                  : 'Floor-Ready by your manager’s call — finish your path anyway 💪'}
               </p>
             )}
           </div>

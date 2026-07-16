@@ -198,6 +198,25 @@ export async function GET(req: NextRequest) {
   const levelOrder = ['foundations', 'department', 'position', 'certification', 'ongoing'];
   out.sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level) || a.title.localeCompare(b.title));
 
+  // ── Floor-Ready (Phase C) ──
+  // Ready = every required module across the ladder is done, OR a manager
+  // made the judgment call (override — always recorded with who granted it).
+  const requiredTotal = out.reduce((n, t) => n + t.required_total, 0);
+  const requiredDone = out.reduce((n, t) => n + t.required_done, 0);
+  const completedAll = requiredTotal > 0 && requiredDone === requiredTotal;
+
+  const { data: override } = await adminClient
+    .from('floor_ready_overrides')
+    .select('granted_by, note, created_at')
+    .eq('user_id', targetId)
+    .maybeSingle();
+  let grantedByName: string | null = null;
+  if (override) {
+    const { data: granter } = await adminClient
+      .from('profiles').select('full_name').eq('id', override.granted_by).maybeSingle();
+    grantedByName = granter?.full_name ?? null;
+  }
+
   return NextResponse.json({
     user: {
       id: target.id,
@@ -206,6 +225,13 @@ export async function GET(req: NextRequest) {
       position_slug: slug,
     },
     tracks: out,
+    floor_ready: {
+      ready: completedAll || !!override,
+      via: completedAll ? 'completed' : override ? 'override' : null,
+      override: override
+        ? { granted_by_name: grantedByName, note: override.note, created_at: override.created_at }
+        : null,
+    },
   });
 }
 

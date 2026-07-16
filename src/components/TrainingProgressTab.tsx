@@ -16,6 +16,17 @@ interface StaffRow {
   onboarding_category: string | null;
   role: string;
   restaurant_name: string | null;
+  required_total: number;
+  required_done: number;
+  pct: number;
+  floor_ready: boolean;
+  floor_ready_via: 'completed' | 'override' | null;
+}
+
+interface FloorReadyInfo {
+  ready: boolean;
+  via: 'completed' | 'override' | null;
+  override: { granted_by_name: string | null; note: string | null; created_at: string } | null;
 }
 
 export default function TrainingProgressTab() {
@@ -81,8 +92,28 @@ export default function TrainingProgressTab() {
                 <p className="text-[11px] text-gray-400 truncate">
                   {[s.position_slug?.replace(/_/g, ' '), s.restaurant_name].filter(Boolean).join(' · ') || 'No position set'}
                 </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1 max-w-[140px] bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-full ${s.floor_ready ? 'bg-emerald-500' : 'bg-[#2E86C1]'}`}
+                      style={{ width: `${s.pct}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-400">{s.required_done}/{s.required_total}</span>
+                </div>
               </div>
-              <span className="text-gray-300 flex-shrink-0">›</span>
+              <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                {s.floor_ready ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">
+                    🎯 {s.floor_ready_via === 'override' ? 'Ready ✻' : 'Floor-Ready'}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wide">
+                    {s.pct}%
+                  </span>
+                )}
+                <span className="text-gray-300">›</span>
+              </div>
             </button>
           ))}
         </div>
@@ -94,9 +125,12 @@ export default function TrainingProgressTab() {
 /* ───────── One person's ladder with sign-off controls ───────── */
 function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }) {
   const [tracks, setTracks] = useState<PathTrack[]>([]);
+  const [floorReady, setFloorReady] = useState<FloorReadyInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [overrideNote, setOverrideNote] = useState('');
+  const [overrideBusy, setOverrideBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -107,11 +141,34 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
       }
       const j = await r.json();
       setTracks(j.tracks || []);
+      setFloorReady(j.floor_ready || null);
       setError(null);
     } finally {
       setLoading(false);
     }
   }, [person.id]);
+
+  const toggleOverride = async () => {
+    setOverrideBusy(true);
+    setError(null);
+    try {
+      const isRevoke = floorReady?.via === 'override';
+      const r = await fetch('/api/training/floor-ready', {
+        method: isRevoke ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: person.id, note: overrideNote.trim() || undefined }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setError(j.error || 'Update failed.');
+        return;
+      }
+      setOverrideNote('');
+      await load();
+    } finally {
+      setOverrideBusy(false);
+    }
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -157,6 +214,56 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
           <p className="text-[10px] text-gray-400 uppercase tracking-wide">{totalDone}/{totalReq} required</p>
         </div>
       </div>
+
+      {/* Floor-Ready status + the judgment call (Randy's fairness rule) */}
+      {!loading && (
+        <div className={`mb-4 rounded-2xl border p-4 ${
+          floorReady?.ready ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-800">
+                {floorReady?.ready
+                  ? floorReady.via === 'override'
+                    ? '🎯 Floor-Ready — by manager judgment'
+                    : '🎯 Floor-Ready — path complete'
+                  : 'Not floor-ready yet'}
+              </p>
+              {floorReady?.override && (
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Granted by {floorReady.override.granted_by_name || 'a manager'}
+                  {floorReady.override.note ? ` — “${floorReady.override.note}”` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+          {/* Grant / revoke override — never shown when they earned it outright */}
+          {floorReady?.via !== 'completed' && (
+            <div className="mt-3 flex gap-2">
+              {floorReady?.via !== 'override' && (
+                <input
+                  type="text"
+                  value={overrideNote}
+                  onChange={(e) => setOverrideNote(e.target.value)}
+                  placeholder="Optional note — why the call was made"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-[#1B3A6B]"
+                />
+              )}
+              <button
+                onClick={toggleOverride}
+                disabled={overrideBusy}
+                className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-40 ${
+                  floorReady?.via === 'override'
+                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                }`}
+              >
+                {overrideBusy ? '…' : floorReady?.via === 'override' ? 'Revoke override' : '🎯 Mark Floor-Ready (override)'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-medium">

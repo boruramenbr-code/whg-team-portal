@@ -182,6 +182,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   const [pathSummary, setPathSummary] = useState<{
     pct: number; done: number; total: number;
     nextTitle: string | null; nextTitleEs: string | null;
+    floorReady: boolean;
   } | null>(null);
   // Story modal gates the welcome modal — first-time users see the brand
   // story before any operational content. Default true (assume not-yet-ack'd);
@@ -327,6 +328,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             total,
             nextTitle: next?.title ?? null,
             nextTitleEs: next?.title_es ?? null,
+            floorReady: !!j.floor_ready?.ready,
           });
         }
       } catch { /* card hidden */ }
@@ -737,7 +739,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         {pathSummary && (
           <button
             onClick={() => onNavigate('training')}
-            className="w-full text-left rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden bg-gradient-to-r from-[#1B3A6B] to-[#2C4F8A] px-5 py-4"
+            className={`w-full text-left rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden px-5 py-4 ${
+              pathSummary.floorReady
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600'
+                : 'bg-gradient-to-r from-[#1B3A6B] to-[#2C4F8A]'
+            }`}
           >
             <div className="flex items-center gap-4">
               {/* Progress ring */}
@@ -758,9 +764,9 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
                   🧗 {isES ? 'Tu Entrenamiento' : 'Your Training'}
                 </p>
-                {pathSummary.pct === 100 ? (
+                {pathSummary.floorReady ? (
                   <p className="text-sm font-bold text-white mt-0.5">
-                    {isES ? '¡Completo! Sigue afilando 🏆' : 'Complete! Keep sharpening 🏆'}
+                    🎯 {isES ? '¡Listo para el piso! Sigue afilando' : 'Floor-Ready! Keep sharpening'}
                   </p>
                 ) : (
                   <>
