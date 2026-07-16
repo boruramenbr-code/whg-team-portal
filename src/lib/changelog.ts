@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15.5',
+    date: 'July 15, 2026',
+    title: 'Master switcher on the Team Portal side',
+    notes: [
+      'The owner’s "Viewing:" switcher now appears on the staff-facing side too (admins only) — Home, Menu, Positions, and Team all follow it',
+      'One setting across both sides of the app: pick Boru in admin, the Team Portal side is already on Boru',
+      'See the app exactly as any restaurant’s crew sees it, without logging in as someone else',
+    ],
+  },
+  {
     version: '2026.07.15.4',
     date: 'July 15, 2026',
     title: 'Owner’s restaurant switcher',

@@ -107,6 +107,43 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
 
+  // ── Owner's master restaurant switcher (admins only) ──
+  // Same shared key as the admin side (whg_view_restaurant_id): pick a
+  // restaurant once and BOTH sides of the app follow. Home + Positions
+  // already read the key; Menu + Team take it as a prop; switching
+  // remounts the tab content so everything re-scopes.
+  const isAdminUser = profile.role === 'admin';
+  const [viewRestaurants, setViewRestaurants] = useState<{ id: string; name: string }[]>([]);
+  const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isAdminUser) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/my-locations');
+        if (!r.ok || cancelled) return;
+        const j = await r.json();
+        const locs: { id: string; name: string }[] = j.locations || [];
+        if (cancelled) return;
+        setViewRestaurants(locs);
+        let initial: string | null = null;
+        try {
+          const saved = localStorage.getItem('whg_view_restaurant_id');
+          if (saved && locs.some((l) => l.id === saved)) initial = saved;
+        } catch { /* private mode */ }
+        setViewRestaurantId(initial || profile.restaurant_id || locs[0]?.id || null);
+      } catch { /* bar just doesn't render */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdminUser]);
+  const switchViewRestaurant = (id: string) => {
+    setViewRestaurantId(id);
+    try { localStorage.setItem('whg_view_restaurant_id', id); } catch { /* ignore */ }
+  };
+  const showMasterSwitcher = isAdminUser && viewRestaurants.length > 1;
+  const effectiveRestaurantId = (showMasterSwitcher && viewRestaurantId) || profile.restaurant_id;
+
   // Splash plays once per day, not on every mount — staff who log in every
   // shift shouldn't eat a 3-second ceremony each time. Checked in an effect
   // (not the initializer) to avoid an SSR hydration mismatch; the splash is
@@ -237,6 +274,34 @@ export default function DashboardClient({ profile, isManager }: Props) {
         />
       )}
 
+      {/* ── Owner's master restaurant switcher (admins only) ── */}
+      {showMasterSwitcher && (
+        <div
+          className="flex items-center gap-1.5 px-3 md:px-6 py-2 bg-[#0F1E3C] flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <span className="text-[9px] font-bold uppercase tracking-widest text-white/50 flex-shrink-0 mr-1">
+            {isES ? 'Viendo' : 'Viewing'}
+          </span>
+          {viewRestaurants.map((r) => {
+            const active = viewRestaurantId === r.id;
+            return (
+              <button
+                key={r.id}
+                onClick={() => switchViewRestaurant(r.id)}
+                className={`tap-highlight flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  active
+                    ? 'bg-amber-400 text-[#0F1E3C] shadow-sm'
+                    : 'bg-white/10 text-white/75 hover:bg-white/20'
+                }`}
+              >
+                {r.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── DESKTOP top tab bar (hidden on mobile) ── */}
       <div className="hidden md:flex items-center border-b border-[#D6DEE8] bg-[#D0DAE5] px-4 flex-shrink-0">
         <div className="flex gap-1">
@@ -349,7 +414,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
           Each visited tab stays mounted inside a display-toggled wrapper
           (`contents` when active so layout is unchanged, `hidden` when not).
           First visit lazy-loads the chunk; every revisit is instant. */}
-      <div className="flex flex-1 overflow-hidden pb-[72px] md:pb-0">
+      <div key={viewRestaurantId ?? 'own'} className="flex flex-1 overflow-hidden pb-[72px] md:pb-0">
         {/* HOME */}
         {tabMounted('home') && (
           <div className={tabShown('home') ? 'contents' : 'hidden'}>
@@ -379,7 +444,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                   ? 'Conoce cada platillo — foto, ingredientes y alérgenos.'
                   : 'Know every dish — photo, ingredients, and allergens.'}
               </p>
-              <MenuTab language={language} />
+              <MenuTab language={language} viewRestaurantId={showMasterSwitcher ? viewRestaurantId : null} />
             </div>
           </div>
           </div>
@@ -506,7 +571,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
           {teamSub === 'org' ? (
             <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
               <OurTeamTab
-                restaurantId={profile.restaurant_id}
+                restaurantId={effectiveRestaurantId}
                 restaurantName={restaurantName}
                 role={profile.role}
                 language={language}
@@ -524,7 +589,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {tabMounted('training') && (
           <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <TrainingTab language={language} />
+            <TrainingTab language={language} viewRestaurantId={showMasterSwitcher ? viewRestaurantId : null} />
           </div>
           </div>
         )}

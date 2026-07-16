@@ -25,6 +25,8 @@ interface Series {
 
 interface Props {
   language: 'en' | 'es';
+  /** Owner's master switcher — scopes the Menu sub-tab to this restaurant. */
+  viewRestaurantId?: string | null;
 }
 
 /* ───────── Employee Training Tab ─────────
@@ -36,7 +38,7 @@ interface Props {
  * Phase 1 = browsing + playback. Phase 2 adds inline quizzes.
  * Phase 3 surfaces completion + scores to Mission Control.
  */
-export default function TrainingTab({ language }: Props) {
+export default function TrainingTab({ language, viewRestaurantId = null }: Props) {
   const isES = language === 'es';
   // Sub-tabs: Videos | Menu | Quizzes (Phase B live June 2026).
   // "My Path" is the landing view — each person's position-based ladder.
@@ -138,7 +140,7 @@ export default function TrainingTab({ language }: Props) {
             }}
           />
         ) : sub === 'menu' ? (
-          <MenuTab language={language} initialCategoryId={menuCategoryId} />
+          <MenuTab language={language} initialCategoryId={menuCategoryId} viewRestaurantId={viewRestaurantId} />
         ) : sub === 'quizzes' ? (
           <QuizzesTab language={language} />
         ) : loading ? (

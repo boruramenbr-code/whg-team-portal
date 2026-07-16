@@ -8,6 +8,9 @@ interface Props {
   /** Open directly inside this category (deep-link from a Path module —
    *  e.g. the fry cook's "Study: Hot Small Plates"). */
   initialCategoryId?: string | null;
+  /** Owner's master switcher — scopes the menu to this restaurant and
+   *  hides the local switcher. */
+  viewRestaurantId?: string | null;
 }
 
 interface PositionInfo {
@@ -28,7 +31,7 @@ interface PositionInfo {
  * training card (photo, description, ingredients, allergens, prep notes,
  * how-to-sell tip). Phase B hangs quizzes off this same content.
  */
-export default function MenuTab({ language, initialCategoryId = null }: Props) {
+export default function MenuTab({ language, initialCategoryId = null, viewRestaurantId = null }: Props) {
   const isES = language === 'es';
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
@@ -104,7 +107,8 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Owner's master switcher drives the scope when present.
+  useEffect(() => { load(viewRestaurantId ?? undefined); }, [load, viewRestaurantId]);
 
   const totalItems = categories.reduce((n, c) => n + c.items.length, 0);
   const allItems = categories.flatMap((c) => c.items);
@@ -131,8 +135,8 @@ export default function MenuTab({ language, initialCategoryId = null }: Props) {
 
   return (
     <div>
-      {/* Restaurant switcher — only when the user can see more than one */}
-      {restaurants.length > 1 && (
+      {/* Restaurant switcher — hidden when the master switcher is driving */}
+      {!viewRestaurantId && restaurants.length > 1 && (
         <div className="flex gap-1.5 flex-wrap mb-4">
           {restaurants.map((r) => (
             <button
