@@ -133,6 +133,7 @@ export async function GET() {
       position_slug: p.position_slug,
       onboarding_category: p.onboarding_category,
       role: p.role,
+      restaurant_id: p.restaurant_id,
       restaurant_name: (p.restaurants as unknown as { name: string } | null)?.name || null,
       required_total: total,
       required_done: done,

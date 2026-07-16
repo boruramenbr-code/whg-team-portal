@@ -34,7 +34,7 @@ interface Series {
  * Architecture mirrors HolidaysEditor / OwnerMessageEditor — list view +
  * inline modal forms, optimistic refetch after each save.
  */
-export default function TrainingAdminTab() {
+export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRestaurantId?: string | null } = {}) {
   // Sub-tabs: Videos | Menu | Quizzes authoring (Phase B live June 2026).
   const [sub, setSub] = useState<AdminSub>('videos');
   const [series, setSeries] = useState<Series[]>([]);
@@ -94,7 +94,7 @@ export default function TrainingAdminTab() {
         <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
           <SubTabPills sub={sub} onChange={setSub} />
         </div>
-        <MenuAdminTab />
+        <MenuAdminTab viewRestaurantId={viewRestaurantId} />
       </div>
     );
   }
@@ -116,7 +116,7 @@ export default function TrainingAdminTab() {
         <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
           <SubTabPills sub={sub} onChange={setSub} />
         </div>
-        <TrainingProgressTab />
+        <TrainingProgressTab viewRestaurantId={viewRestaurantId} />
       </div>
     );
   }

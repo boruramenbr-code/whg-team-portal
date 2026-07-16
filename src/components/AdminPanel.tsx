@@ -25,6 +25,8 @@ interface UserLocation {
 interface AdminPanelProps {
   currentUser: Profile;
   restaurants: Restaurant[];
+  /** Owner's global switcher — pre-scopes the staff list to one restaurant. */
+  viewRestaurantId?: string | null;
 }
 
 const ROLE_STYLES: Record<string, string> = {
@@ -84,10 +86,12 @@ function PinInput({
 }
 
 /* ── Main Component ── */
-export default function AdminPanel({ currentUser, restaurants }: AdminPanelProps) {
+export default function AdminPanel({ currentUser, restaurants, viewRestaurantId = null }: AdminPanelProps) {
   const [users, setUsers] = useState<ProfileWithRestaurant[]>([]);
   const [filter, setFilter] = useState<'active' | 'archived'>('active');
-  const [restaurantFilter, setRestaurantFilter] = useState<string>('all');
+  // The owner's global switcher pre-scopes the list; the local dropdown
+  // can still widen back to 'all' if needed.
+  const [restaurantFilter, setRestaurantFilter] = useState<string>(viewRestaurantId || 'all');
   const [loading, setLoading] = useState(true);
 
   // Expanded edit row

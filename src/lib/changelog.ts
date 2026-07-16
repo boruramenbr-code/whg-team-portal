@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15.4',
+    date: 'July 15, 2026',
+    title: 'Owner’s restaurant switcher',
+    notes: [
+      'Admins get one "Viewing:" switcher at the top of the admin area — pick a restaurant once, and Staff, Bar Cards, Menu, Onboarding, and Training Progress all scope to it',
+      'The choice sticks across visits, and every open tab re-scopes instantly on switch',
+      'Per-screen restaurant pickers step aside when the global switcher is driving',
+    ],
+  },
+  {
     version: '2026.07.15.3',
     date: 'July 15, 2026',
     title: 'Floor-Ready (Phase C) + brand-wide service standard',

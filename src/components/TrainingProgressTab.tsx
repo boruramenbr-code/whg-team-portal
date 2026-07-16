@@ -15,6 +15,7 @@ interface StaffRow {
   position_slug: string | null;
   onboarding_category: string | null;
   role: string;
+  restaurant_id: string | null;
   restaurant_name: string | null;
   required_total: number;
   required_done: number;
@@ -29,7 +30,7 @@ interface FloorReadyInfo {
   override: { granted_by_name: string | null; note: string | null; created_at: string } | null;
 }
 
-export default function TrainingProgressTab() {
+export default function TrainingProgressTab({ viewRestaurantId = null }: { viewRestaurantId?: string | null } = {}) {
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<StaffRow | null>(null);
@@ -49,7 +50,8 @@ export default function TrainingProgressTab() {
   }, []);
 
   const q = search.trim().toLowerCase();
-  const filtered = q ? staff.filter((s) => s.full_name.toLowerCase().includes(q)) : staff;
+  const scoped = viewRestaurantId ? staff.filter((s) => s.restaurant_id === viewRestaurantId) : staff;
+  const filtered = q ? scoped.filter((s) => s.full_name.toLowerCase().includes(q)) : scoped;
 
   if (selected) {
     return <PersonPath person={selected} onBack={() => setSelected(null)} />;

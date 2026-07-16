@@ -97,6 +97,27 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   const [standardsSub, setStandardsSub] = useState<StandardsSubTab>('bible');
   const isAdmin = profile.role === 'admin';
 
+  // ── Owner's global restaurant switcher ──
+  // One "Viewing:" control that scopes EVERY admin surface to a single
+  // restaurant. Persists to the shared whg_view_restaurant_id key (which
+  // Mission Control and Onboarding already read), and remounts the tab
+  // content on switch so each surface re-scopes cleanly.
+  const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(null);
+  useEffect(() => {
+    let initial: string | null = null;
+    try {
+      const saved = localStorage.getItem('whg_view_restaurant_id');
+      if (saved && restaurants.some((r) => r.id === saved)) initial = saved;
+    } catch { /* private mode */ }
+    setViewRestaurantId(initial || profile.restaurant_id || restaurants[0]?.id || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const switchViewRestaurant = (id: string) => {
+    setViewRestaurantId(id);
+    try { localStorage.setItem('whg_view_restaurant_id', id); } catch { /* ignore */ }
+  };
+  const showRestaurantSwitcher = isAdmin && restaurants.length > 1;
+
   // Perf: visited tabs stay MOUNTED (hidden, not unmounted) so switching
   // back is instant — mirrors DashboardClient. A tab renders when it's
   // active OR already visited.
@@ -196,6 +217,34 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         </div>
       </div>
 
+      {/* ── Owner's restaurant switcher — scopes every admin surface ── */}
+      {showRestaurantSwitcher && (
+        <div
+          className="flex items-center gap-1.5 px-3 md:px-6 py-2 bg-[#0F1E3C] flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <span className="text-[9px] font-bold uppercase tracking-widest text-white/50 flex-shrink-0 mr-1">
+            Viewing
+          </span>
+          {restaurants.map((r) => {
+            const active = viewRestaurantId === r.id;
+            return (
+              <button
+                key={r.id}
+                onClick={() => switchViewRestaurant(r.id)}
+                className={`tap-highlight flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                  active
+                    ? 'bg-amber-400 text-[#0F1E3C] shadow-sm'
+                    : 'bg-white/10 text-white/75 hover:bg-white/20'
+                }`}
+              >
+                {r.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Sub-tab pill bar (People + Standards only) ── */}
       {(activeTop === 'people' || activeTop === 'standards') && (
         <div className="border-b border-[#D6DEE8]/60 bg-[#C8D4E1] pl-1 pr-1.5 md:px-6 flex-shrink-0">
@@ -243,7 +292,13 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
           `height: calc(100vh - 240px)` magic number on the two scroll-list
           tabs, which left a ~1in band of empty gradient at the bottom on
           mobile (the calc didn't account for the fixed bottom nav). */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0">
+      {/* key: switching the viewed restaurant remounts every open tab so
+          each surface re-scopes (Onboarding re-reads the shared key,
+          Bar Cards re-inits to the new prop, etc.). */}
+      <div
+        key={viewRestaurantId ?? 'boot'}
+        className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0"
+      >
         {tabMounted('dashboard') && (
           <div className={tabShown('dashboard') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
@@ -257,7 +312,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         <div className={tabShown('people') ? 'contents' : 'hidden'}>
         {peopleSub === 'staff' && (
           <div className="flex-1 overflow-y-auto tab-content-enter">
-            <AdminPanel currentUser={profile} restaurants={restaurants} />
+            <AdminPanel currentUser={profile} restaurants={restaurants} viewRestaurantId={showRestaurantSwitcher ? viewRestaurantId : null} />
           </div>
         )}
         {peopleSub === 'onboarding' && (
@@ -267,7 +322,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         )}
         {peopleSub === 'barcards' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <BarCardsTab restaurantId={profile.restaurant_id} role={profile.role} />
+            <BarCardsTab restaurantId={(showRestaurantSwitcher && viewRestaurantId) || profile.restaurant_id} role={profile.role} />
           </div>
         )}
         {peopleSub === 'payrates' && (
@@ -291,7 +346,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {tabMounted('training') && (
           <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
-            <TrainingAdminTab />
+            <TrainingAdminTab viewRestaurantId={showRestaurantSwitcher ? viewRestaurantId : null} />
           </div>
           </div>
         )}

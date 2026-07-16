@@ -13,7 +13,7 @@ import { convertToJpeg } from '@/lib/client-image';
  * Photos run through the bar-cards compression pipeline (heic2any +
  * canvas recompress) so iPhone shots can't blow Vercel's body limit.
  */
-export default function MenuAdminTab() {
+export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaurantId?: string | null } = {}) {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -43,7 +43,9 @@ export default function MenuAdminTab() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Owner's global switcher pre-scopes the view; local pills hide when
+  // the global one is driving.
+  useEffect(() => { load(viewRestaurantId ?? undefined); }, [load, viewRestaurantId]);
 
   const deleteCategory = async (id: string) => {
     if (!confirm('Delete this category? Every item inside it will also be removed. This cannot be undone.')) return;
@@ -97,8 +99,8 @@ export default function MenuAdminTab() {
         </div>
       </div>
 
-      {/* Restaurant switcher */}
-      {restaurants.length > 1 && (
+      {/* Restaurant switcher (hidden when the owner's global switcher drives) */}
+      {!viewRestaurantId && restaurants.length > 1 && (
         <div className="flex gap-1.5 flex-wrap mb-5">
           {restaurants.map((r) => (
             <button
