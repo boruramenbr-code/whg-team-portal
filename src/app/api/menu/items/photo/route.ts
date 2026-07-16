@@ -61,8 +61,13 @@ export async function POST(req: NextRequest) {
     .single();
   if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
-  // Non-admin managers can only touch restaurants they're assigned to.
-  if (profile.role !== 'admin' && item.restaurant_id !== profile.restaurant_id) {
+  // Global (brand-wide) items are admin-edited only; restaurant items
+  // are open to that restaurant's managers.
+  if (item.restaurant_id === null) {
+    if (profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Brand-wide items are edited by admins only' }, { status: 403 });
+    }
+  } else if (profile.role !== 'admin' && item.restaurant_id !== profile.restaurant_id) {
     const { data: extra } = await adminClient
       .from('user_locations')
       .select('restaurant_id')
@@ -81,7 +86,7 @@ export async function POST(req: NextRequest) {
     .replace(/^_+|_+$/g, '')
     .toLowerCase()
     .slice(0, 60) || 'item';
-  const filePath = `${item.restaurant_id}/${Date.now()}-${safeName}.${ext}`;
+  const filePath = `${item.restaurant_id ?? 'global'}/${Date.now()}-${safeName}.${ext}`;
 
   const arrayBuffer = await file.arrayBuffer();
   const { error: uploadError } = await adminClient.storage

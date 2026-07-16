@@ -87,7 +87,9 @@ export async function GET(req: NextRequest) {
         pronunciation, is_raw, spice_level, video_youtube_id
       )
     `)
-    .eq('restaurant_id', restaurantId)
+    // Restaurant's own sections PLUS brand-wide globals (restaurant_id
+    // null — e.g. "Service: Beginning to End", identical everywhere).
+    .or(`restaurant_id.eq.${restaurantId},restaurant_id.is.null`)
     .eq('active', true)
     .order('sort_order', { ascending: true });
 
