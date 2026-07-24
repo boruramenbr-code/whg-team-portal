@@ -86,12 +86,12 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">
+        <h1 className="text-2xl md:text-3xl font-bold text-whg-snow">
           {isES ? 'Capacitación' : 'Training'}
         </h1>
-        <p className="text-sm text-gray-600 mt-1 mb-4">
+        <p className="text-sm text-whg-dim mt-1 mb-4">
           {sub === 'path'
             ? (isES
                 ? 'Tu escalera de entrenamiento — construida para tu posición.'
@@ -127,8 +127,8 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
               onClick={() => setSub(t.key)}
               className={`tap-highlight flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${
                 sub === t.key
-                  ? 'bg-[#1B3A6B] text-white shadow-sm'
-                  : 'bg-white/70 text-gray-600 hover:bg-white'
+                  ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                  : 'bg-white/10 text-whg-dim hover:bg-white/20'
               }`}
             >
               {t.label}
@@ -151,16 +151,16 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
         ) : sub === 'quizzes' ? (
           <QuizzesTab language={language} />
         ) : loading ? (
-          <div className="text-center text-sm text-gray-400 py-12">
+          <div className="text-center text-sm text-whg-dim py-12">
             {isES ? 'Cargando…' : 'Loading…'}
           </div>
         ) : series.length === 0 ? (
-          <div className="text-center py-12 bg-white/60 rounded-2xl border border-white/40">
+          <div className="text-center py-12 bg-whg-card/60 rounded-2xl border border-whg-line">
             <div className="text-4xl mb-3">📺</div>
-            <p className="text-sm text-gray-500 font-medium">
+            <p className="text-sm text-whg-dim font-medium">
               {isES ? 'Aún no hay videos.' : 'No videos yet.'}
             </p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-whg-dim/70 mt-1">
               {isES ? 'Vuelve pronto.' : 'Check back soon.'}
             </p>
           </div>
@@ -171,32 +171,32 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
               return (
                 <div
                   key={s.id}
-                  className="bg-white rounded-2xl border border-white/60 shadow-sm overflow-hidden"
+                  className="bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden"
                 >
                   {/* Series header (tap to toggle) */}
                   <button
                     onClick={() => toggleSeries(s.id)}
-                    className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-gray-50/60 transition-colors"
+                    className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-white/5 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-sm md:text-base font-bold text-[#1B3A6B] truncate">
+                      <h2 className="text-sm md:text-base font-bold text-whg-snow truncate">
                         {s.title}
                       </h2>
                       {s.blurb && (
-                        <p className="text-[11px] md:text-xs text-gray-500 mt-0.5 line-clamp-2">
+                        <p className="text-[11px] md:text-xs text-whg-dim mt-0.5 line-clamp-2">
                           {s.blurb}
                         </p>
                       )}
                     </div>
                     <div className="flex-shrink-0 flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                      <span className="text-[10px] font-bold text-whg-dim/70 uppercase tracking-wide">
                         {s.videos.length} {s.videos.length === 1 ? (isES ? 'video' : 'video') : (isES ? 'videos' : 'videos')}
                       </span>
                       <svg
                         width="16" height="16" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" strokeWidth="2.5"
                         strokeLinecap="round" strokeLinejoin="round"
-                        className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                        className={`text-whg-dim transition-transform ${isOpen ? 'rotate-180' : ''}`}
                       >
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
@@ -205,9 +205,9 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
 
                   {/* Video list */}
                   {isOpen && (
-                    <div className="border-t border-gray-100 divide-y divide-gray-100">
+                    <div className="border-t border-whg-line divide-y divide-whg-line">
                       {s.videos.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-xs text-gray-400">
+                        <div className="px-4 py-6 text-center text-xs text-whg-dim">
                           {isES ? 'Aún no hay videos en esta serie.' : 'No videos in this series yet.'}
                         </div>
                       ) : (
@@ -215,10 +215,10 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
                           <button
                             key={v.id}
                             onClick={() => setActiveVideo({ video: v, seriesTitle: s.title })}
-                            className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
+                            className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
                           >
                             {/* Thumbnail from YouTube */}
-                            <div className="relative flex-shrink-0 w-24 h-14 rounded-lg overflow-hidden bg-gray-200">
+                            <div className="relative flex-shrink-0 w-24 h-14 rounded-lg overflow-hidden bg-whg-card2">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={`https://i.ytimg.com/vi/${v.youtube_id}/mqdefault.jpg`}
@@ -240,11 +240,11 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-gray-800 line-clamp-2">
+                              <p className="text-sm font-semibold text-whg-snow/90 line-clamp-2">
                                 {v.title}
                               </p>
                               {v.description && (
-                                <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-1">
+                                <p className="text-[11px] text-whg-dim mt-0.5 line-clamp-1">
                                   {v.description}
                                 </p>
                               )}

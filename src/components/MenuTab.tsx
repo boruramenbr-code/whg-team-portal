@@ -153,8 +153,8 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
               onClick={() => { setSelectedCatId(null); setExploreOpen(false); setExploreSlug(null); setPositions(null); load(r.id); }}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                 restaurantId === r.id
-                  ? 'bg-[#1B3A6B] text-white shadow-sm'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
+                  ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                  : 'bg-white/10 text-whg-dim hover:bg-white/20'
               }`}
             >
               {r.name}
@@ -175,15 +175,15 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
               placeholder={systemsView
                 ? (isES ? 'Buscar una lección…' : 'Find a lesson…')
                 : (isES ? 'Buscar un platillo…' : 'Find a dish…')}
-              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-white/60 bg-white text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+              className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-whg-line bg-whg-card text-sm text-whg-snow placeholder:text-whg-dim/70 focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20"
             />
           </div>
           {!systemsView && <button
             onClick={() => setStudyMode((v) => !v)}
             className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               studyMode
-                ? 'bg-amber-500 text-white shadow-sm'
-                : 'bg-white text-gray-600 hover:bg-gray-50 border border-white/60'
+                ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                : 'bg-whg-card text-whg-dim hover:bg-whg-card2 border border-whg-line'
             }`}
             title={isES ? 'Modo estudio: adivina el platillo por la foto' : 'Study mode: guess the dish from the photo'}
           >
@@ -193,8 +193,8 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
             onClick={() => (exploreOpen || exploreSlug ? (setExploreOpen(false), setExploreSlug(null)) : openExplore())}
             className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               exploreOpen || exploreSlug
-                ? 'bg-[#2E86C1] text-white shadow-sm'
-                : 'bg-white text-gray-600 hover:bg-gray-50 border border-white/60'
+                ? 'bg-sky-500/25 text-sky-200 border border-sky-400/40 shadow-sm'
+                : 'bg-whg-card text-whg-dim hover:bg-whg-card2 border border-whg-line'
             }`}
             title={isES ? 'Explorar por posición: qué estudia cada rol' : 'Explore by position: what each role studies'}
             aria-label={isES ? 'Explorar por posición' : 'Explore by position'}
@@ -205,7 +205,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
       )}
 
       {studyMode && !loading && (
-        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4">
+        <p className="text-[11px] text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-xl px-3 py-2 mb-4">
           {isES
             ? 'Modo estudio: toca un platillo, di el nombre en voz alta y luego revela la respuesta.'
             : 'Study mode is on — tap a dish, say its name out loud, then reveal the answer.'}
@@ -216,24 +216,24 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
         /* Card-shaped skeleton so the grid doesn't reflow on arrival */
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white/60 rounded-2xl overflow-hidden animate-pulse">
-              <div className="aspect-square bg-gray-200/60" />
+            <div key={i} className="bg-whg-card/60 rounded-2xl overflow-hidden animate-pulse">
+              <div className="aspect-square bg-white/10" />
               <div className="p-3 space-y-2">
-                <div className="h-3 bg-gray-200/60 rounded w-3/4" />
-                <div className="h-2.5 bg-gray-200/60 rounded w-1/3" />
+                <div className="h-3 bg-white/10 rounded w-3/4" />
+                <div className="h-2.5 bg-white/10 rounded w-1/3" />
               </div>
             </div>
           ))}
         </div>
       ) : totalItems === 0 ? (
-        <div className="text-center py-12 bg-white/60 rounded-2xl border border-white/40">
+        <div className="text-center py-12 bg-whg-card/60 rounded-2xl border border-whg-line">
           <div className="text-4xl mb-3">{systemsView ? '🧰' : '🍣'}</div>
-          <p className="text-sm text-gray-500 font-medium">
+          <p className="text-sm text-whg-dim font-medium">
             {systemsView
               ? (isES ? 'Las lecciones de sistemas vienen en camino.' : 'Systems lessons are on the way.')
               : (isES ? 'Tu menú se está construyendo.' : 'Your menu is being built.')}
           </p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-whg-dim/70 mt-1">
             {systemsView
               ? (isES
                   ? 'Aquí aprenderás las herramientas del trabajo — OpenTable, el punto de venta y más.'
@@ -245,11 +245,11 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
         </div>
       ) : searchResults ? (
         searchResults.length === 0 ? (
-          <div className="text-center py-10 bg-white/60 rounded-2xl border border-white/40">
-            <p className="text-sm text-gray-500 font-medium">
+          <div className="text-center py-10 bg-whg-card/60 rounded-2xl border border-whg-line">
+            <p className="text-sm text-whg-dim font-medium">
               {isES ? `Nada para “${search.trim()}”.` : `Nothing for “${search.trim()}”.`}
             </p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-whg-dim/70 mt-1">
               {isES ? 'Revisa la ortografía o busca menos letras.' : 'Check the spelling or try fewer letters.'}
             </p>
           </div>
@@ -266,7 +266,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           <div className="flex items-center justify-between gap-3 mb-3">
             <button
               onClick={() => setSelectedCatId(null)}
-              className="tap-highlight flex items-center gap-1.5 text-sm font-semibold text-[#1B3A6B] hover:underline py-2"
+              className="tap-highlight flex items-center gap-1.5 text-sm font-semibold text-whg-gold hover:underline py-2"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 5l-7 7 7 7" />
@@ -275,14 +275,14 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                 ? (isES ? 'Atrás' : 'Back')
                 : (isES ? 'Todas las secciones' : 'All sections')}
             </button>
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+            <span className="text-[11px] font-bold text-whg-dim uppercase tracking-wide">
               {selectedCategory.items.length}{' '}
               {selectedCategory.zone === 'systems'
                 ? (isES ? 'lecciones' : 'lessons')
                 : (isES ? 'platillos' : 'items')}
             </span>
           </div>
-          <h2 className="text-lg font-bold text-[#1B3A6B] mb-3">
+          <h2 className="text-lg font-bold text-whg-snow mb-3">
             {isES && selectedCategory.name_es ? selectedCategory.name_es : selectedCategory.name}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -300,23 +300,23 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
             <div>
               <button
                 onClick={() => setExploreSlug(null)}
-                className="tap-highlight flex items-center gap-1.5 text-sm font-semibold text-[#1B3A6B] hover:underline py-2 mb-2"
+                className="tap-highlight flex items-center gap-1.5 text-sm font-semibold text-whg-gold hover:underline py-2 mb-2"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M19 12H5M12 5l-7 7 7 7" />
                 </svg>
                 {isES ? 'Todas las posiciones' : 'All positions'}
               </button>
-              <h2 className="text-lg font-bold text-[#1B3A6B] mb-1">
+              <h2 className="text-lg font-bold text-whg-snow mb-1">
                 {pos?.emoji ? `${pos.emoji} ` : ''}{isES ? `Lo que estudia un ${pos?.name}` : `What a ${pos?.name} studies`}
               </h2>
               {posCats.length === 0 ? (
-                <div className="mt-3 text-center py-10 bg-white/60 rounded-2xl border border-white/40">
+                <div className="mt-3 text-center py-10 bg-whg-card/60 rounded-2xl border border-whg-line">
                   <div className="text-3xl mb-2">🧹</div>
-                  <p className="text-sm text-gray-600 font-medium">
+                  <p className="text-sm text-whg-dim font-medium">
                     {isES ? 'Esta posición no estudia menús.' : 'This position doesn’t study menus.'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-whg-dim/70 mt-1">
                     {isES
                       ? 'Su entrenamiento vive en habilidades de piso y videos — míralo en Mi Camino.'
                       : 'Their training lives in floor skills and videos — see it on My Path.'}
@@ -358,10 +358,10 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
       ) : exploreOpen ? (
         /* ── Position picker — deliberate cross-training ── */
         <div>
-          <h2 className="text-lg font-bold text-[#1B3A6B] mb-1">
+          <h2 className="text-lg font-bold text-whg-snow mb-1">
             🧭 {isES ? 'Explorar por Posición' : 'Explore by Position'}
           </h2>
-          <p className="text-xs text-gray-500 mb-4">
+          <p className="text-xs text-whg-dim mb-4">
             {isES
               ? 'Mira lo que estudia cada rol. ¿Quieres crecer hacia una posición? Empieza aquí — y díselo a un gerente.'
               : 'See what each role studies. Eyeing your next position? Start here — and tell a manager.'}
@@ -376,18 +376,18 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
               if (group.length === 0) return null;
               return (
                 <div key={dept} className="mb-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">{dept}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim/70 mb-2">{dept}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {group.map((p) => (
                       <button
                         key={p.slug}
                         onClick={() => setExploreSlug(p.slug)}
-                        className="tap-highlight inline-flex items-center gap-1.5 bg-white border border-white/60 shadow-sm rounded-full px-3.5 py-2 text-xs font-semibold text-gray-700 hover:shadow-md transition-shadow"
+                        className="tap-highlight inline-flex items-center gap-1.5 bg-whg-card border border-whg-line shadow-sm rounded-full px-3.5 py-2 text-xs font-semibold text-whg-snow/90 hover:shadow-md transition-shadow"
                       >
                         {p.emoji && <span aria-hidden>{p.emoji}</span>}
                         {p.name}
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                          p.category_ids.length > 0 ? 'bg-[#2E86C1]/10 text-[#2E86C1]' : 'bg-gray-100 text-gray-400'
+                          p.category_ids.length > 0 ? 'bg-sky-400/15 text-sky-300' : 'bg-white/10 text-whg-dim'
                         }`}>
                           {p.category_ids.length > 0
                             ? `${p.category_ids.length} ${isES ? 'secc.' : 'sections'}`
@@ -414,7 +414,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                 key={c.id}
                 onClick={() => setSelectedCatId(c.id)}
                 className={`tap-highlight relative rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow aspect-[16/10] text-left ${
-                  isMine ? 'ring-2 ring-amber-400' : ''
+                  isMine ? 'ring-2 ring-whg-gold' : ''
                 }`}
               >
                 {cover ? (
@@ -427,7 +427,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                 {isMine && (
-                  <span className="absolute top-2 right-2 bg-amber-400 text-[#1B3A6B] text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shadow">
+                  <span className="absolute top-2 right-2 bg-whg-gold text-whg-goldink text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full shadow">
                     🎯 {isES ? 'Tuya' : 'Yours'}
                   </span>
                 )}
@@ -459,7 +459,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           if (systemsView) {
             return (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B] mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim mb-2">
                   🧰 {isES ? 'Sistemas y Herramientas' : 'Systems & Tools'}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -472,7 +472,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           if (knowledge.length > 0) {
             return (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B] mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim mb-2">
                   📚 {isES ? 'Estudio y Conocimiento' : 'Study & Knowledge'}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -481,11 +481,11 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
 
                 {/* The separator between learning and the sellable menu */}
                 <div className="flex items-center gap-3 my-6">
-                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B]">
+                  <div className="flex-1 h-px bg-whg-line" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-whg-dim">
                     🍽️ {isES ? 'El Menú' : 'The Menu'}
                   </span>
-                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+                  <div className="flex-1 h-px bg-whg-line" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -501,14 +501,14 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           return (
             <div className="space-y-5">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-whg-gold mb-2">
                   🎯 {isES ? 'Tus Secciones' : 'Your Sections'}
                 </p>
                 <div className="grid grid-cols-2 gap-3">{mine.map((c) => renderTile(c, true))}</div>
               </div>
               {others.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim/70 mb-2">
                     {isES ? 'Todo lo Demás' : 'Everything Else'}
                   </p>
                   <div className="grid grid-cols-2 gap-3">{others.map((c) => renderTile(c, false))}</div>
@@ -539,9 +539,9 @@ function ItemCard({ item, isES, studyMode, onOpen }: { item: MenuItem; isES: boo
   return (
     <button
       onClick={onOpen}
-      className="bg-white rounded-2xl border border-white/60 shadow-sm overflow-hidden text-left hover:shadow-md transition-shadow"
+      className="bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden text-left hover:shadow-md transition-shadow"
     >
-      <div className="aspect-square bg-gray-100 relative">
+      <div className="aspect-square bg-whg-card2 relative">
         {item.photo_url ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
@@ -566,16 +566,16 @@ function ItemCard({ item, isES, studyMode, onOpen }: { item: MenuItem; isES: boo
       </div>
       <div className="p-2.5">
         {studyMode ? (
-          <p className="text-xs font-bold text-amber-600 leading-snug">
+          <p className="text-xs font-bold text-whg-gold leading-snug">
             {isES ? '¿Qué es esto?' : 'What is this?'}
           </p>
         ) : (
           <>
-            <p className="text-xs font-bold text-[#1B3A6B] leading-snug line-clamp-2">
+            <p className="text-xs font-bold text-whg-snow leading-snug line-clamp-2">
               {isES && item.name_es ? item.name_es : item.name}
             </p>
             {item.price && (
-              <p className="text-[11px] text-gray-500 mt-0.5">{item.price}</p>
+              <p className="text-[11px] text-whg-dim mt-0.5">{item.price}</p>
             )}
           </>
         )}
@@ -665,7 +665,7 @@ function ItemDetail({ item, isES, studyMode = false, onNext, onClose }: {
             )}
             {altName && <p className="text-sm text-gray-400 mt-0.5">{altName}</p>}
             {item.price && (
-              <p className="text-xs text-gray-400 mt-1">{item.price}</p>
+              <p className="text-xs text-whg-dim/70 mt-1">{item.price}</p>
             )}
           </div>
 

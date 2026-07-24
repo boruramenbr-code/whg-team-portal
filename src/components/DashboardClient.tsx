@@ -438,12 +438,12 @@ export default function DashboardClient({ profile, isManager }: Props) {
             Also still reachable inside Training for path deep-links. */}
         {tabMounted('menu') && (
           <div className={tabShown('menu') ? 'contents' : 'hidden'}>
-          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] tab-content-enter">
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2 tab-content-enter">
             <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
-              <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">
+              <h1 className="text-2xl md:text-3xl font-bold text-whg-snow">
                 {isES ? 'Menú' : 'Menu'}
               </h1>
-              <p className="text-sm text-gray-600 mt-1 mb-4">
+              <p className="text-sm text-whg-dim mt-1 mb-4">
                 {isES
                   ? 'Conoce cada platillo — foto, ingredientes y alérgenos.'
                   : 'Know every dish — photo, ingredients, and allergens.'}

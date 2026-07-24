@@ -103,9 +103,9 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
     return (
       <div className="space-y-3">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white/60 rounded-2xl p-4 animate-pulse">
-            <div className="h-4 bg-gray-200/60 rounded w-1/3 mb-3" />
-            <div className="h-2 bg-gray-200/60 rounded w-full" />
+          <div key={i} className="bg-whg-card/60 rounded-2xl p-4 animate-pulse">
+            <div className="h-4 bg-white/10 rounded w-1/3 mb-3" />
+            <div className="h-2 bg-white/10 rounded w-full" />
           </div>
         ))}
       </div>
@@ -114,12 +114,12 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
 
   if (!data || data.tracks.length === 0) {
     return (
-      <div className="text-center py-12 bg-white/60 rounded-2xl border border-white/40">
+      <div className="text-center py-12 bg-whg-card/60 rounded-2xl border border-whg-line">
         <div className="text-4xl mb-3">🧗</div>
-        <p className="text-sm text-gray-500 font-medium">
+        <p className="text-sm text-whg-dim font-medium">
           {isES ? 'Tu camino de entrenamiento se está construyendo.' : 'Your training path is being built.'}
         </p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-xs text-whg-dim/70 mt-1">
           {isES
             ? 'Mientras tanto, explora los Videos, el Menú y los Cuestionarios.'
             : 'In the meantime, explore Videos, Menu, and Quizzes above.'}
@@ -142,7 +142,7 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
   return (
     <div className="space-y-4">
       {/* Overall header */}
-      <div className={`rounded-2xl p-4 shadow-sm ${allDone ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white' : 'bg-[#1B3A6B] text-white'}`}>
+      <div className={`rounded-2xl p-4 shadow-sm ${allDone ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white' : 'bg-whg-card2 border border-whg-gold/30 text-white'}`}>
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
@@ -176,7 +176,7 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
           </div>
         </div>
         <div className="mt-3 w-full bg-white/20 rounded-full h-2 overflow-hidden">
-          <div className="h-full bg-amber-400 transition-all" style={{ width: `${overallPct}%` }} />
+          <div className="h-full bg-whg-gold transition-all" style={{ width: `${overallPct}%` }} />
         </div>
       </div>
 
@@ -187,7 +187,7 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
         return (
           <div key={t.id}>
             {levelHeader && (
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2 mt-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim mb-2 mt-1">
                 {isES ? LEVEL_META[t.level].es : LEVEL_META[t.level].en}
               </p>
             )}
@@ -203,7 +203,7 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
         );
       })}
 
-      <p className="text-[11px] text-gray-400 text-center pt-1">
+      <p className="text-[11px] text-whg-dim/70 text-center pt-1">
         {isES
           ? 'Todo el contenido sigue abierto en Videos · Menú · Cuestionarios — tu camino solo marca lo requerido para tu posición.'
           : 'Everything stays open under Videos · Menu · Quizzes — your path just marks what’s required for your position.'}
@@ -228,27 +228,27 @@ function TrackCard({
   const empty = track.modules.length === 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-white/60 shadow-sm overflow-hidden">
+    <div className="bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="tap-highlight w-full px-4 py-3 flex items-center gap-3 text-left"
       >
         <span className="text-xl flex-shrink-0" aria-hidden>{track.emoji || '🎯'}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-[#1B3A6B] truncate">{label(track.title, track.title_es)}</p>
+          <p className="text-sm font-bold text-whg-snow truncate">{label(track.title, track.title_es)}</p>
           {empty ? (
-            <p className="text-[11px] text-gray-400 mt-0.5">
+            <p className="text-[11px] text-whg-dim/70 mt-0.5">
               {isES ? 'Contenido en camino.' : 'Content on the way.'}
             </p>
           ) : (
             <div className="flex items-center gap-2 mt-1">
-              <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <div className="flex-1 bg-white/10 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className={`h-full transition-all ${complete ? 'bg-emerald-500' : 'bg-[#2E86C1]'}`}
+                  className={`h-full transition-all ${complete ? 'bg-emerald-500' : 'bg-whg-gold'}`}
                   style={{ width: `${track.pct}%` }}
                 />
               </div>
-              <span className="text-[10px] font-bold text-gray-400 flex-shrink-0">
+              <span className="text-[10px] font-bold text-whg-dim flex-shrink-0">
                 {track.required_done}/{track.required_total}
               </span>
             </div>
@@ -257,14 +257,14 @@ function TrackCard({
         <div className="flex-shrink-0 flex items-center gap-1.5">
           {complete && <span className="text-emerald-500 text-base" aria-hidden>✓</span>}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-            className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}>
+            className={`text-whg-dim transition-transform ${open ? 'rotate-180' : ''}`}>
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
       </button>
 
       {open && !empty && (
-        <div className="border-t border-gray-100 divide-y divide-gray-50">
+        <div className="border-t border-whg-line divide-y divide-whg-line/60">
           {track.modules.map((m) => (
             <ModuleRow key={m.id} m={m} isES={isES} label={label} busy={busy} onMarkDone={onMarkDone} onGoTo={onGoTo} />
           ))}
@@ -297,30 +297,30 @@ function ModuleRow({
     if (m.done) return null;
     if (m.module_type === 'menu_category') {
       return (
-        <button onClick={() => onGoTo('menu', m.ref_id)} className="text-[11px] font-bold text-[#2E86C1] hover:underline flex-shrink-0 px-2 py-2">
+        <button onClick={() => onGoTo('menu', m.ref_id)} className="text-[11px] font-bold text-sky-300 hover:underline flex-shrink-0 px-2 py-2">
           {isES ? 'Abrir Sección →' : 'Open Section →'}
         </button>
       );
     }
     if (m.module_type === 'video_series') {
       return (
-        <button onClick={() => onGoTo('videos')} className="text-[11px] font-bold text-[#2E86C1] hover:underline flex-shrink-0 px-2 py-2">
+        <button onClick={() => onGoTo('videos')} className="text-[11px] font-bold text-sky-300 hover:underline flex-shrink-0 px-2 py-2">
           {isES ? 'Ver Videos →' : 'Watch →'}
         </button>
       );
     }
     if (m.module_type === 'quiz' || m.module_type === 'photo_test') {
       return m.available ? (
-        <button onClick={() => onGoTo('quizzes')} className="text-[11px] font-bold text-amber-600 hover:underline flex-shrink-0 px-2 py-2">
+        <button onClick={() => onGoTo('quizzes')} className="text-[11px] font-bold text-whg-gold hover:underline flex-shrink-0 px-2 py-2">
           {isES ? 'Tomar Examen →' : 'Take Exam →'}
         </button>
       ) : (
-        <span className="text-[10px] text-gray-400 flex-shrink-0">{isES ? 'Examen en camino' : 'Exam coming'}</span>
+        <span className="text-[10px] text-whg-dim/70 flex-shrink-0">{isES ? 'Examen en camino' : 'Exam coming'}</span>
       );
     }
     if (m.completion === 'manager') {
       return (
-        <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-1 flex-shrink-0">
+        <span className="text-[10px] font-semibold text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-full px-2 py-1 flex-shrink-0">
           {isES ? 'Firma de gerente' : 'Manager sign-off'}
         </span>
       );
@@ -337,36 +337,36 @@ function ModuleRow({
             onClick={() => onMarkDone(m)}
             disabled={busy === m.id}
             aria-label={isES ? 'Marcar como hecho' : 'Mark as done'}
-            className="tap-highlight flex-shrink-0 w-7 h-7 rounded-full border-2 border-gray-300 hover:border-emerald-500 transition-colors flex items-center justify-center disabled:opacity-40"
+            className="tap-highlight flex-shrink-0 w-7 h-7 rounded-full border-2 border-whg-line hover:border-emerald-400 transition-colors flex items-center justify-center disabled:opacity-40"
           >
-            {busy === m.id && <span className="w-3 h-3 rounded-full bg-gray-300 animate-pulse" />}
+            {busy === m.id && <span className="w-3 h-3 rounded-full bg-white/30 animate-pulse" />}
           </button>
         ) : (
           <span className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-sm ${
-            m.done ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
+            m.done ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-whg-dim'
           }`} aria-hidden>
             {m.done ? '✓' : typeIcon}
           </span>
         )}
 
         <button onClick={() => setShowDesc((v) => !v)} className="min-w-0 flex-1 text-left">
-          <p className={`text-sm leading-snug ${m.done ? 'text-gray-400 line-through' : 'text-gray-800 font-medium'}`}>
+          <p className={`text-sm leading-snug ${m.done ? 'text-whg-dim/60 line-through' : 'text-whg-snow/90 font-medium'}`}>
             {label(m.title, m.title_es)}
             {!m.required && (
-              <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-gray-400 no-underline">
+              <span className="ml-1.5 text-[9px] font-bold uppercase tracking-wide text-whg-dim/70 no-underline">
                 {isES ? 'opcional' : 'optional'}
               </span>
             )}
           </p>
           {m.done && m.signed_off && (
-            <p className="text-[10px] text-emerald-600">{isES ? '✓ Firmado por gerente' : '✓ Manager signed off'}</p>
+            <p className="text-[10px] text-emerald-300">{isES ? '✓ Firmado por gerente' : '✓ Manager signed off'}</p>
           )}
         </button>
 
         {action}
       </div>
       {showDesc && (m.description || m.description_es) && (
-        <p className="text-xs text-gray-500 leading-relaxed mt-1.5 ml-9">
+        <p className="text-xs text-whg-dim leading-relaxed mt-1.5 ml-9">
           {label(m.description ?? '', m.description_es)}
         </p>
       )}

@@ -101,15 +101,15 @@ export default function QuizzesTab({ language }: Props) {
   const label = (en: string, es: string | null | undefined) => (isES && es ? es : en);
 
   if (loading) {
-    return <div className="text-center text-sm text-gray-400 py-12">{isES ? 'Cargando…' : 'Loading…'}</div>;
+    return <div className="text-center text-sm text-whg-dim py-12">{isES ? 'Cargando…' : 'Loading…'}</div>;
   }
 
   if (quizzes.length === 0) {
     return (
-      <div className="text-center py-12 bg-white/60 rounded-2xl border border-white/40">
+      <div className="text-center py-12 bg-whg-card/60 rounded-2xl border border-whg-line">
         <div className="text-4xl mb-3">📝</div>
-        <p className="text-sm text-gray-500 font-medium">{isES ? 'Aún no hay cuestionarios.' : 'No quizzes yet.'}</p>
-        <p className="text-xs text-gray-400 mt-1">{isES ? 'Tus managers están preparando algunos.' : 'Your managers are putting some together.'}</p>
+        <p className="text-sm text-whg-dim font-medium">{isES ? 'Aún no hay cuestionarios.' : 'No quizzes yet.'}</p>
+        <p className="text-xs text-whg-dim/70 mt-1">{isES ? 'Tus managers están preparando algunos.' : 'Your managers are putting some together.'}</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ export default function QuizzesTab({ language }: Props) {
       <div className="space-y-6">
         {exams.length > 0 && (
           <section>
-            <h2 className="text-[11px] font-bold text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <h2 className="text-[11px] font-bold text-whg-gold uppercase tracking-widest mb-2 flex items-center gap-1.5">
               <span>🎯</span>
               {isES ? 'Exámenes requeridos' : 'Required Exams'}
             </h2>
@@ -136,7 +136,7 @@ export default function QuizzesTab({ language }: Props) {
 
         {optionals.length > 0 && (
           <section>
-            <h2 className="text-[11px] font-bold text-[#2E86C1] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <h2 className="text-[11px] font-bold text-sky-300 uppercase tracking-widest mb-2 flex items-center gap-1.5">
               <span>📝</span>
               {isES ? 'Cuestionarios' : 'Knowledge Checks'}
             </h2>
@@ -173,43 +173,43 @@ function QuizRow({
   return (
     <button
       onClick={onOpen}
-      className="w-full text-left bg-white rounded-2xl border border-white/80 shadow-sm hover:shadow-md transition-shadow px-4 py-3 flex items-center gap-3"
+      className="w-full text-left bg-whg-card rounded-2xl border border-whg-line shadow-sm hover:shadow-md transition-shadow px-4 py-3 flex items-center gap-3"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-[#1B3A6B] truncate">
+        <p className="text-sm font-bold text-whg-snow truncate">
           {label(quiz.title, quiz.title_es)}
         </p>
         {(quiz.description || quiz.description_es) && (
-          <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2">
+          <p className="text-[11px] text-whg-dim mt-0.5 line-clamp-2">
             {label(quiz.description ?? '', quiz.description_es)}
           </p>
         )}
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+          <span className="text-[10px] font-bold text-whg-dim/70 uppercase tracking-wide">
             {quiz.question_count} {isES ? (quiz.question_count === 1 ? 'pregunta' : 'preguntas') : (quiz.question_count === 1 ? 'question' : 'questions')}
           </span>
-          <span className="text-gray-300">·</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+          <span className="text-whg-dim/40">·</span>
+          <span className="text-[10px] font-bold text-whg-dim/70 uppercase tracking-wide">
             {isES ? 'Aprobar' : 'Pass'} {quiz.pass_threshold}%
           </span>
         </div>
       </div>
       <div className="flex-shrink-0 flex flex-col items-end gap-1">
         {quiz.my_passed ? (
-          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">
+          <span className="px-2 py-0.5 rounded-full bg-emerald-400/15 text-emerald-300 text-[10px] font-bold uppercase tracking-wide">
             {isES ? '✓ Aprobado' : '✓ Passed'}
           </span>
         ) : hasScore ? (
-          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-wide">
+          <span className="px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-200 text-[10px] font-bold uppercase tracking-wide">
             {isES ? 'Reintentar' : 'Retry'}
           </span>
         ) : (
-          <span className="px-2 py-0.5 rounded-full bg-[#1B3A6B] text-white text-[10px] font-bold uppercase tracking-wide">
+          <span className="px-2 py-0.5 rounded-full bg-whg-gold text-whg-goldink text-[10px] font-bold uppercase tracking-wide">
             {isES ? 'Empezar' : 'Start'}
           </span>
         )}
         {hasScore && (
-          <span className="text-[10px] text-gray-400">
+          <span className="text-[10px] text-whg-dim/70">
             {isES ? 'Mejor' : 'Best'}: {quiz.my_best_score}%
           </span>
         )}

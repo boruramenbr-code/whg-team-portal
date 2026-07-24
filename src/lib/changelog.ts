@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.24.6',
+    date: 'July 24, 2026',
+    title: 'Midnight look: Training, Menu & Systems',
+    notes: [
+      'The whole Training area — My Path, Videos, Menu, Systems, and Quizzes — now wears the Midnight Navy & Gold look. Food photos and lesson tiles really shine on the dark background',
+      'Dish cards and quiz screens stay bright when you open them — reading ingredients, allergens, and test questions deserves maximum clarity',
+      'Handbook and Team switch over next',
+    ],
+  },
+  {
     version: '2026.07.24.5',
     date: 'July 24, 2026',
     title: 'A new look: Midnight Navy & Gold',
