@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.24.2',
+    date: 'July 24, 2026',
+    title: 'Track Builder + OpenTable & POS training',
+    notes: [
+      'New 🛠 Builder tab under Admin → Training (owner/admin only): create a training block once — a menu section, video series, quiz, or skill — and checkbox every position that should have it. No more one-track-at-a-time editing',
+      'Two new study sections live now: “OpenTable & Table Management” (FOH management) and “POS Basics” (FOH management, servers, bartenders, and hosts) — assigned to the right Ichiban paths automatically',
+      'Blocks can be edited or removed from any track later; removing a block also clears staff completion records for it, and the Builder warns you first',
+    ],
+  },
+  {
     version: '2026.07.24',
     date: 'July 24, 2026',
     title: 'Tip Tracker visible to admins',

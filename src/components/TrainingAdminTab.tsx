@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import MenuAdminTab from './MenuAdminTab';
 import TrainingProgressTab from './TrainingProgressTab';
+import TrackBuilderTab from './TrackBuilderTab';
 import QuizzesAdminTab from './QuizzesAdminTab';
 
-type AdminSub = 'videos' | 'menu' | 'quizzes' | 'progress';
+type AdminSub = 'videos' | 'menu' | 'quizzes' | 'progress' | 'builder';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -34,7 +35,7 @@ interface Series {
  * Architecture mirrors HolidaysEditor / OwnerMessageEditor — list view +
  * inline modal forms, optimistic refetch after each save.
  */
-export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRestaurantId?: string | null } = {}) {
+export default function TrainingAdminTab({ viewRestaurantId = null, isAdmin = false }: { viewRestaurantId?: string | null; isAdmin?: boolean } = {}) {
   // Sub-tabs: Videos | Menu | Quizzes authoring (Phase B live June 2026).
   const [sub, setSub] = useState<AdminSub>('videos');
   const [series, setSeries] = useState<Series[]>([]);
@@ -92,7 +93,7 @@ export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRest
     return (
       <div>
         <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
-          <SubTabPills sub={sub} onChange={setSub} />
+          <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
         </div>
         <MenuAdminTab viewRestaurantId={viewRestaurantId} />
       </div>
@@ -103,8 +104,18 @@ export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRest
   if (sub === 'quizzes') {
     return (
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
-        <SubTabPills sub={sub} onChange={setSub} />
+        <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
         <QuizzesAdminTab />
+      </div>
+    );
+  }
+
+  // Track Builder — create a block once, point positions at it (admin).
+  if (sub === 'builder') {
+    return (
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
+        <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
+        <TrackBuilderTab />
       </div>
     );
   }
@@ -114,7 +125,7 @@ export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRest
     return (
       <div>
         <div className="max-w-4xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
-          <SubTabPills sub={sub} onChange={setSub} />
+          <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
         </div>
         <TrainingProgressTab viewRestaurantId={viewRestaurantId} />
       </div>
@@ -123,7 +134,7 @@ export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRest
 
   return (
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8">
-      <SubTabPills sub={sub} onChange={setSub} />
+      <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-6">
         <div>
@@ -282,7 +293,7 @@ export default function TrainingAdminTab({ viewRestaurantId = null }: { viewRest
 }
 
 /* ───────── Sub-tab pills: Videos | Menu ───────── */
-function SubTabPills({ sub, onChange }: { sub: AdminSub; onChange: (s: AdminSub) => void }) {
+function SubTabPills({ sub, onChange, showBuilder = false }: { sub: AdminSub; onChange: (s: AdminSub) => void; showBuilder?: boolean }) {
   return (
     <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
       {([
@@ -290,6 +301,7 @@ function SubTabPills({ sub, onChange }: { sub: AdminSub; onChange: (s: AdminSub)
         { key: 'menu' as const, label: '🍣 Menu' },
         { key: 'quizzes' as const, label: '📝 Quizzes' },
         { key: 'progress' as const, label: '🧗 Progress' },
+        ...(showBuilder ? [{ key: 'builder' as const, label: '🛠 Builder' }] : []),
       ]).map((t) => (
         <button
           key={t.key}

@@ -346,7 +346,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {tabMounted('training') && (
           <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
-            <TrainingAdminTab viewRestaurantId={showRestaurantSwitcher ? viewRestaurantId : null} />
+            <TrainingAdminTab viewRestaurantId={showRestaurantSwitcher ? viewRestaurantId : null} isAdmin={isAdmin} />
           </div>
           </div>
         )}
