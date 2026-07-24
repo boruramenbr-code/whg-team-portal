@@ -37,6 +37,17 @@ body {
   animation: tabFadeIn 0.2s ease-out;
 }
 
+/* Bottom sheet entrance (ui/Sheet) — slides up on phones, gentle
+   fade-scale when it renders as a centered dialog on md+. */
+@keyframes sheetUp {
+  from { opacity: 0.6; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-sheet-up {
+  animation: sheetUp 0.22s ease-out;
+}
+
 /* Smooth transitions for interactive elements */
 .tap-highlight {
   -webkit-tap-highlight-color: transparent;

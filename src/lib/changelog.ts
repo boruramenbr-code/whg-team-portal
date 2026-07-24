@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.24.4',
+    date: 'July 24, 2026',
+    title: 'Design foundation (under the hood)',
+    notes: [
+      'Laid the groundwork for the portal’s visual refresh: one shared kit of buttons, cards, filters, and pop-ups that every screen will move to, one at a time',
+      'Nothing looks different yet — screens migrate gradually so nobody has to relearn where anything lives',
+    ],
+  },
+  {
     version: '2026.07.24.3',
     date: 'July 24, 2026',
     title: 'Systems & Tools gets its own home',
