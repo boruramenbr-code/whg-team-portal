@@ -43,7 +43,7 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
   // Sub-tabs: Videos | Menu | Quizzes (Phase B live June 2026).
   // "My Path" is the landing view — each person's position-based ladder.
   // Videos / Menu / Quizzes are the open library behind it.
-  const [sub, setSub] = useState<'path' | 'videos' | 'menu' | 'quizzes'>('path');
+  const [sub, setSub] = useState<'path' | 'videos' | 'menu' | 'systems' | 'quizzes'>('path');
   // Deep-link from a Path module straight into its menu section
   // (e.g. the fry cook's "Study: Hot Small Plates").
   const [menuCategoryId, setMenuCategoryId] = useState<string | null>(null);
@@ -104,6 +104,10 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
               ? (isES
                   ? 'Conoce cada platillo de tu restaurante — foto, ingredientes y alérgenos.'
                   : 'Know every dish at your restaurant — photo, ingredients, and allergens.')
+              : sub === 'systems'
+              ? (isES
+                  ? 'Las herramientas del trabajo — OpenTable, Toast, 7shifts y más, una sección por sistema.'
+                  : 'The tools of the job — OpenTable, Toast, 7shifts, and more, one section per system.')
               : (isES
                   ? 'Demuestra lo que sabes. Los exámenes te ponen en piso; los cuestionarios refuerzan lo aprendido.'
                   : 'Show what you know. Exams get you floor-ready; quizzes keep it sharp.')}
@@ -115,6 +119,7 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
             { key: 'path' as const, label: isES ? '🧗 Mi Camino' : '🧗 My Path' },
             { key: 'videos' as const, label: isES ? '🎬 Videos' : '🎬 Videos' },
             { key: 'menu' as const, label: isES ? '🍣 Menú' : '🍣 Menu' },
+            { key: 'systems' as const, label: isES ? '🧰 Sistemas' : '🧰 Systems' },
             { key: 'quizzes' as const, label: isES ? '📝 Cuestionarios' : '📝 Quizzes' },
           ]).map((t) => (
             <button
@@ -141,6 +146,8 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
           />
         ) : sub === 'menu' ? (
           <MenuTab language={language} initialCategoryId={menuCategoryId} viewRestaurantId={viewRestaurantId} />
+        ) : sub === 'systems' ? (
+          <MenuTab language={language} viewRestaurantId={viewRestaurantId} zone="systems" />
         ) : sub === 'quizzes' ? (
           <QuizzesTab language={language} />
         ) : loading ? (

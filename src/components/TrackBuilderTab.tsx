@@ -35,7 +35,7 @@ interface BuilderTrack {
 interface BuilderData {
   tracks: BuilderTrack[];
   refs: {
-    categories: { id: string; name: string; restaurant_id: string | null; is_knowledge: boolean }[];
+    categories: { id: string; name: string; restaurant_id: string | null; is_knowledge: boolean; zone?: string }[];
     series: { id: string; title: string }[];
     quizzes: { id: string; title: string; kind: string; restaurant_id: string | null }[];
   };
@@ -312,7 +312,7 @@ function BlockModal({
               <select value={refId} onChange={(e) => onRefChange(e.target.value)} className={inputCls}>
                 <option value="">Pick the content…</option>
                 {moduleType === 'menu_category' && data.refs.categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.is_knowledge ? '📚' : '🍽️'} {c.name} · {restName(c.restaurant_id)}</option>
+                  <option key={c.id} value={c.id}>{c.zone === 'systems' ? '🧰' : c.is_knowledge ? '📚' : '🍽️'} {c.name} · {restName(c.restaurant_id)}</option>
                 ))}
                 {moduleType === 'video_series' && data.refs.series.map((s) => (
                   <option key={s.id} value={s.id}>🎬 {s.title}</option>

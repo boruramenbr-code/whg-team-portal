@@ -37,7 +37,7 @@ export async function GET() {
   ] = await Promise.all([
     adminClient.from('training_tracks').select('id, title, level, applies_to, position_slugs, restaurant_id, sort_order').eq('active', true).order('sort_order'),
     adminClient.from('track_modules').select('*').eq('active', true).order('sort_order'),
-    adminClient.from('menu_categories').select('id, name, restaurant_id, is_knowledge').eq('active', true).order('sort_order'),
+    adminClient.from('menu_categories').select('id, name, restaurant_id, is_knowledge, zone').eq('active', true).order('sort_order'),
     adminClient.from('training_series').select('id, title').eq('active', true).order('sort_order'),
     adminClient.from('quizzes').select('id, title, kind, restaurant_id').eq('active', true).order('created_at', { ascending: false }),
     adminClient.from('restaurants').select('id, name'),

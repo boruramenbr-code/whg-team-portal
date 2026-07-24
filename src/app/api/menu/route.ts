@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('menu_categories')
     .select(`
-      id, name, name_es, sort_order, active, is_knowledge,
+      id, name, name_es, sort_order, active, is_knowledge, zone,
       items:menu_items(
         id, name, name_es, description, description_es,
         ingredients, ingredients_es, allergens,
@@ -110,7 +110,8 @@ export async function GET(req: NextRequest) {
   };
   type RawCategory = {
     id: string; name: string; name_es: string | null;
-    sort_order: number; active: boolean; is_knowledge: boolean; items: RawItem[] | null;
+    sort_order: number; active: boolean; is_knowledge: boolean;
+    zone: 'menu' | 'systems'; items: RawItem[] | null;
   };
 
   // Sort embedded items client-side (PostgREST embedded ordering is
@@ -121,6 +122,7 @@ export async function GET(req: NextRequest) {
     name_es: c.name_es,
     sort_order: c.sort_order,
     is_knowledge: c.is_knowledge,
+    zone: c.zone,
     items: (c.items ?? [])
       .filter((i) => i.active)
       .sort((a, b) => a.sort_order - b.sort_order)

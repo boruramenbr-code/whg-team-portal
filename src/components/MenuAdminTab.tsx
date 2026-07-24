@@ -133,8 +133,8 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
           <p className="text-xs text-gray-400 mt-1">Start with a category — Rolls, Ramen, Apps — then add items with photos.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {categories.map((c) => (
+        (() => {
+          const renderCategory = (c: (typeof categories)[number]) => (
             <div key={c.id} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               {/* Category header */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-start justify-between gap-3">
@@ -230,8 +230,28 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
                 </button>
               </div>
             </div>
-          ))}
-        </div>
+          );
+          // Menu sections first; Systems & Tools (OpenTable, Toast POS,
+          // 7shifts…) live below their own divider — they're brand-wide
+          // and render under Training → 🧰 Systems, not on the Menu tab.
+          const menuCats = categories.filter((c) => c.zone !== 'systems');
+          const systemsCats = categories.filter((c) => c.zone === 'systems');
+          return (
+            <div className="space-y-4">
+              {menuCats.map(renderCategory)}
+              {systemsCats.length > 0 && (
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B]">
+                    🧰 Systems &amp; Tools — all restaurants
+                  </span>
+                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+                </div>
+              )}
+              {systemsCats.map(renderCategory)}
+            </div>
+          );
+        })()
       )}
 
       {editingCategory && restaurantId && (

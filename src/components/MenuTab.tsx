@@ -11,6 +11,10 @@ interface Props {
   /** Owner's master switcher — scopes the menu to this restaurant and
    *  hides the local switcher. */
   viewRestaurantId?: string | null;
+  /** 'menu' (default) = food + knowledge bands. 'systems' = the 🧰
+   *  Systems & Tools library (OpenTable, Toast POS, 7shifts…) — one
+   *  whole section per tool, rendered under Training → Systems. */
+  zone?: 'menu' | 'systems';
 }
 
 interface PositionInfo {
@@ -31,8 +35,9 @@ interface PositionInfo {
  * training card (photo, description, ingredients, allergens, prep notes,
  * how-to-sell tip). Phase B hangs quizzes off this same content.
  */
-export default function MenuTab({ language, initialCategoryId = null, viewRestaurantId = null }: Props) {
+export default function MenuTab({ language, initialCategoryId = null, viewRestaurantId = null, zone = 'menu' }: Props) {
   const isES = language === 'es';
+  const systemsView = zone === 'systems';
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -110,8 +115,12 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
   // Owner's master switcher drives the scope when present.
   useEffect(() => { load(viewRestaurantId ?? undefined); }, [load, viewRestaurantId]);
 
-  const totalItems = categories.reduce((n, c) => n + c.items.length, 0);
-  const allItems = categories.flatMap((c) => c.items);
+  // Each zone only sees its own sections — the Menu tab never shows
+  // tool training, and Systems never shows food. Deep-links still work
+  // across zones because selectedCategory looks up the FULL list.
+  const zoneCats = categories.filter((c) => (c.zone === 'systems') === systemsView);
+  const totalItems = zoneCats.reduce((n, c) => n + c.items.length, 0);
+  const allItems = zoneCats.flatMap((c) => c.items);
 
   // Search filters across every category; results render as one flat grid.
   const q = search.trim().toLowerCase();
@@ -163,11 +172,13 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={isES ? 'Buscar un platillo…' : 'Find a dish…'}
+              placeholder={systemsView
+                ? (isES ? 'Buscar una lección…' : 'Find a lesson…')
+                : (isES ? 'Buscar un platillo…' : 'Find a dish…')}
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-white/60 bg-white text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
             />
           </div>
-          <button
+          {!systemsView && <button
             onClick={() => setStudyMode((v) => !v)}
             className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               studyMode
@@ -177,8 +188,8 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
             title={isES ? 'Modo estudio: adivina el platillo por la foto' : 'Study mode: guess the dish from the photo'}
           >
             🎴<span className="hidden sm:inline"> {isES ? 'Estudiar' : 'Study'}</span>
-          </button>
-          <button
+          </button>}
+          {!systemsView && <button
             onClick={() => (exploreOpen || exploreSlug ? (setExploreOpen(false), setExploreSlug(null)) : openExplore())}
             className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               exploreOpen || exploreSlug
@@ -189,7 +200,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
             aria-label={isES ? 'Explorar por posición' : 'Explore by position'}
           >
             🧭<span className="hidden sm:inline"> {isES ? 'Posiciones' : 'Positions'}</span>
-          </button>
+          </button>}
         </div>
       )}
 
@@ -216,14 +227,20 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
         </div>
       ) : totalItems === 0 ? (
         <div className="text-center py-12 bg-white/60 rounded-2xl border border-white/40">
-          <div className="text-4xl mb-3">🍣</div>
+          <div className="text-4xl mb-3">{systemsView ? '🧰' : '🍣'}</div>
           <p className="text-sm text-gray-500 font-medium">
-            {isES ? 'Tu menú se está construyendo.' : 'Your menu is being built.'}
+            {systemsView
+              ? (isES ? 'Las lecciones de sistemas vienen en camino.' : 'Systems lessons are on the way.')
+              : (isES ? 'Tu menú se está construyendo.' : 'Your menu is being built.')}
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            {isES
-              ? 'Pronto verás aquí cada platillo con foto, ingredientes y alérgenos.'
-              : 'Soon you’ll see every dish here with photos, ingredients, and allergens.'}
+            {systemsView
+              ? (isES
+                  ? 'Aquí aprenderás las herramientas del trabajo — OpenTable, el punto de venta y más.'
+                  : 'This is where you’ll learn the tools of the job — OpenTable, the POS, and more.')
+              : (isES
+                  ? 'Pronto verás aquí cada platillo con foto, ingredientes y alérgenos.'
+                  : 'Soon you’ll see every dish here with photos, ingredients, and allergens.')}
           </p>
         </div>
       ) : searchResults ? (
@@ -259,7 +276,10 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                 : (isES ? 'Todas las secciones' : 'All sections')}
             </button>
             <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
-              {selectedCategory.items.length} {isES ? 'platillos' : 'items'}
+              {selectedCategory.items.length}{' '}
+              {selectedCategory.zone === 'systems'
+                ? (isES ? 'lecciones' : 'lessons')
+                : (isES ? 'platillos' : 'items')}
             </span>
           </div>
           <h2 className="text-lg font-bold text-[#1B3A6B] mb-3">
@@ -384,7 +404,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
       ) : (
         /* ── Big category blocks — your position's sections lead ── */
         (() => {
-          const withItems = categories.filter((c) => c.items.length > 0);
+          const withItems = zoneCats.filter((c) => c.items.length > 0);
           const mine = withItems.filter((c) => myCategoryIds.has(c.id));
           const others = withItems.filter((c) => !myCategoryIds.has(c.id));
           const renderTile = (c: MenuCategory, isMine: boolean) => {
@@ -402,7 +422,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                   <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] flex items-center justify-center text-4xl opacity-90">
-                    🍽️
+                    {systemsView ? '🧰' : '🍽️'}
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
@@ -416,7 +436,8 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                     {isES && c.name_es ? c.name_es : c.name}
                   </p>
                   <p className="text-white/70 text-[11px] font-semibold mt-0.5">
-                    {c.items.length} {isES ? 'platillos' : 'items'}
+                    {c.items.length}{' '}
+                    {systemsView ? (isES ? 'lecciones' : 'lessons') : (isES ? 'platillos' : 'items')}
                   </p>
                 </div>
               </button>
@@ -431,6 +452,22 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           const food = withItems.filter((c) => !c.is_knowledge);
           const mineFirst = (arr: typeof withItems) =>
             [...arr].sort((a, b) => Number(myCategoryIds.has(b.id)) - Number(myCategoryIds.has(a.id)));
+
+          // Systems zone: one flat band — each tool is its own whole
+          // section (OpenTable, Toast POS, 7shifts…). Your position's
+          // tools lead and wear the gold ring.
+          if (systemsView) {
+            return (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B] mb-2">
+                  🧰 {isES ? 'Sistemas y Herramientas' : 'Systems & Tools'}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {mineFirst(withItems).map((c) => renderTile(c, myCategoryIds.has(c.id)))}
+                </div>
+              </div>
+            );
+          }
 
           if (knowledge.length > 0) {
             return (

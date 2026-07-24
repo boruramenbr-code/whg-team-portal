@@ -39,6 +39,9 @@ export interface MenuCategory {
   sort_order: number;
   /** true = study section (Fundamentals, Sushi 101…), not sellable food. */
   is_knowledge?: boolean;
+  /** 'menu' (default) renders on the Menu tab; 'systems' renders under
+   *  Training → 🧰 Systems (OpenTable, Toast POS, 7shifts…). */
+  zone?: 'menu' | 'systems';
   items: MenuItem[];
 }
 

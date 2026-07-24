@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.24.3',
+    date: 'July 24, 2026',
+    title: 'Systems & Tools gets its own home',
+    notes: [
+      'New 🧰 Systems sub-tab under Training: software and tool training now lives in its own library, out of the menu — one whole section per system',
+      'OpenTable and Table Management are now separate sections (each is a big topic on its own), and POS Basics is now Toast POS',
+      '7shifts (scheduling) and Paychex Flex (payroll) sections added as starters — each opens with an intro card and will grow lesson by lesson',
+      'In the menu editor, Systems & Tools sections sit below their own divider so the food menu stays clean',
+    ],
+  },
+  {
     version: '2026.07.24.2',
     date: 'July 24, 2026',
     title: 'Track Builder + OpenTable & POS training',
