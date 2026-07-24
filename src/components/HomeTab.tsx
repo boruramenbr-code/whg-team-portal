@@ -10,6 +10,7 @@ import CardingDateWidget from './CardingDateWidget';
 import TipTrackerPage from './TipTrackerPage';
 import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 import { getDailyMindset } from '@/lib/daily-mindset';
+import { getWeeklyInspiration } from '@/lib/weekly-inspiration';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -822,8 +823,10 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           </section>
         )}
 
-        {/* ── Owner's Message (pinned, if any) ── */}
-        {ownerMessages.length > 0 && (
+        {/* ── Owner's Message — a real post always wins; otherwise the
+            week's standing inspiration holds the card (rotates every
+            7 days, cycles forever, written in Randy's voice). ── */}
+        {ownerMessages.length > 0 ? (
           <div className="space-y-2">
             {ownerMessages.map((m) => (
               <div
@@ -841,6 +844,19 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 </div>
               </div>
             ))}
+          </div>
+        ) : !loading && (
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/60 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm">
+            <span className="text-xl mt-0.5">💙</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
+                {isES ? 'Mensaje del Dueño' : "Owner's Message"}
+              </p>
+              <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
+                {isES ? getWeeklyInspiration().es : getWeeklyInspiration().en}
+              </p>
+              <p className="text-[10px] text-indigo-400 mt-1.5">— Randy</p>
+            </div>
           </div>
         )}
 

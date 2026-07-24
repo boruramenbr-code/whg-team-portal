@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15.7',
+    date: 'July 15, 2026',
+    title: 'Weekly Owner’s Inspiration',
+    notes: [
+      'The Owner’s Message card never sits empty: 28 standing notes from Randy rotate weekly — gratitude, growth, standards, and taking care of each other',
+      'A real Owner’s Message always takes over the card; when it expires, the weekly rotation resumes automatically',
+      'Same note all week, English and Spanish, cycles year-round',
+    ],
+  },
+  {
     version: '2026.07.15.6',
     date: 'July 15, 2026',
     title: 'Daily Mindset + faster pre-shift posting',
