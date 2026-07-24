@@ -99,6 +99,8 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [existingNote, setExistingNote] = useState<PreshiftNote | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [copyMsg, setCopyMsg] = useState('');
 
   const shiftDate = getLocalDate(shiftDay === 'today' ? 0 : 1);
   const friendlyDate = formatFriendlyDate(shiftDate);
@@ -138,6 +140,42 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
   useEffect(() => {
     loadNote();
   }, [loadNote]);
+
+  // "Copy previous day" — most days the 86 list and focus are 70% the
+  // same. Editing beats composing from a blank form. Copied items lose
+  // their ids so they get re-tagged with THIS manager's initials on save.
+  const handleCopyPrevious = async () => {
+    const hasTyped =
+      fohMessage.trim() || bohMessage.trim() ||
+      [...specials, ...eightySixed, ...focusItems].some((i) => i.text.trim());
+    if (hasTyped && !confirm('Replace what’s here with the previous day’s note?')) return;
+
+    setCopying(true);
+    setCopyMsg('');
+    try {
+      const prevDate = getLocalDate(shiftDay === 'today' ? -1 : 0);
+      const params = new URLSearchParams({ date: prevDate, t: String(Date.now()) });
+      if (isAdmin && selectedRestaurantId) params.set('restaurant_id', selectedRestaurantId);
+      const r = await fetch(`/api/preshift-notes?${params.toString()}`, { cache: 'no-store' });
+      const d = await r.json();
+      if (!d.note) {
+        setCopyMsg(`Nothing was posted for ${formatFriendlyDate(prevDate)}.`);
+        return;
+      }
+      const strip = (items: TaggedItem[] | null | undefined) =>
+        (items || []).filter((i) => i.text.trim()).map((i) => ({ text: i.text, by: null }));
+      setFohMessage(d.note.foh_message || '');
+      setBohMessage(d.note.boh_message || '');
+      setSpecials(strip(d.note.specials).length ? strip(d.note.specials) : [emptyItem()]);
+      setEightySixed(strip(d.note.eighty_sixed).length ? strip(d.note.eighty_sixed) : [emptyItem()]);
+      setFocusItems(strip(d.note.focus_items).length ? strip(d.note.focus_items) : [emptyItem()]);
+      setCopyMsg(`Copied from ${formatFriendlyDate(prevDate)} — edit and post.`);
+    } catch {
+      setCopyMsg('Couldn’t load the previous note. Try again.');
+    } finally {
+      setCopying(false);
+    }
+  };
 
   const updateItemText = (
     setter: React.Dispatch<React.SetStateAction<TaggedItem[]>>,
@@ -300,8 +338,9 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
         </div>
       </div>
 
-      {/* Today / Tomorrow toggle */}
+      {/* Today / Tomorrow toggle + copy-previous */}
       <div className="px-5 pt-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-xs font-semibold">
           <button
             onClick={() => setShiftDay('today')}
@@ -324,6 +363,17 @@ export default function PreshiftEditor({ restaurants, isAdmin }: Props) {
             Tomorrow
           </button>
         </div>
+        <button
+          onClick={handleCopyPrevious}
+          disabled={copying || loading}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1B3A6B] bg-blue-50 hover:bg-blue-100 border border-blue-100 transition-colors disabled:opacity-50"
+        >
+          {copying ? 'Copying…' : '📋 Copy previous day'}
+        </button>
+        </div>
+        {copyMsg && (
+          <p className="text-[11px] text-[#2E86C1] font-medium mt-1.5">{copyMsg}</p>
+        )}
         <p className="text-[11px] text-gray-500 mt-1.5">
           Editing note for <span className="font-semibold text-gray-700">{friendlyDate}</span>
           {shiftDay === 'tomorrow' && (

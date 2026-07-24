@@ -9,6 +9,7 @@ import MyBarCardWidget from './MyBarCardWidget';
 import CardingDateWidget from './CardingDateWidget';
 import TipTrackerPage from './TipTrackerPage';
 import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
+import { getDailyMindset } from '@/lib/daily-mindset';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -361,7 +362,17 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   const hasFocus = (note?.focus_items?.length ?? 0) > 0;
   const hasFohMessage = !!note?.foh_message?.trim();
   const hasBohMessage = !!note?.boh_message?.trim();
-  const hasAnyContent = hasSpecials || has86 || hasFocus || hasFohMessage || hasBohMessage;
+
+  // Daily Mindset — the house voice fills any gap managers leave, so the
+  // brief never reads as "nobody's steering today." Same lines for
+  // everyone, rotating daily. Marked with a chip so it's clearly not
+  // manager content.
+  const mindset = getDailyMindset();
+  const MindsetChip = () => (
+    <span className="text-[8px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full normal-case">
+      💡 {isES ? 'mentalidad del día' : 'daily mindset'}
+    </span>
+  );
 
   const logo = getRestaurantLogo(restaurantName);
 
@@ -559,7 +570,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             <div className="bg-white rounded-2xl border border-white/80 p-6 text-center shadow-sm">
               <div className="text-gray-400 text-sm animate-pulse">Loading...</div>
             </div>
-          ) : hasAnyContent ? (
+          ) : (
             <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
               {/* Today's holiday banner (top of card) */}
               {activeHolidays.length > 0 && (
@@ -597,31 +608,35 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               )}
 
               <div className="px-5 py-4 space-y-3">
-                {/* FOH message */}
-                {hasFohMessage && (
-                  <div>
-                    <p className="text-[10px] font-bold text-sky-700 uppercase tracking-wide mb-1 flex items-center gap-1">
-                      <span>🍽️</span>
-                      {isES ? 'Mensaje FOH' : 'FOH Message'}
-                    </p>
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {note!.foh_message}
-                    </p>
-                  </div>
-                )}
+                {/* FOH message — Daily Mindset fills the gap */}
+                <div>
+                  <p className="text-[10px] font-bold text-sky-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                    <span>🍽️</span>
+                    {isES ? 'Mensaje FOH' : 'FOH Message'}
+                    {!hasFohMessage && <MindsetChip />}
+                  </p>
+                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${hasFohMessage ? 'text-gray-700' : 'text-gray-600 italic'}`}>
+                    {hasFohMessage ? note!.foh_message : (isES ? mindset.foh.es : mindset.foh.en)}
+                  </p>
+                  {!hasFohMessage && mindset.foh.credit && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">— {mindset.foh.credit}</p>
+                  )}
+                </div>
 
-                {/* BOH message */}
-                {hasBohMessage && (
-                  <div>
-                    <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wide mb-1 flex items-center gap-1">
-                      <span>🔥</span>
-                      {isES ? 'Mensaje BOH' : 'BOH Message'}
-                    </p>
-                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {note!.boh_message}
-                    </p>
-                  </div>
-                )}
+                {/* BOH message — Daily Mindset fills the gap */}
+                <div>
+                  <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                    <span>🔥</span>
+                    {isES ? 'Mensaje BOH' : 'BOH Message'}
+                    {!hasBohMessage && <MindsetChip />}
+                  </p>
+                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${hasBohMessage ? 'text-gray-700' : 'text-gray-600 italic'}`}>
+                    {hasBohMessage ? note!.boh_message : (isES ? mindset.boh.es : mindset.boh.en)}
+                  </p>
+                  {!hasBohMessage && mindset.boh.credit && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">— {mindset.boh.credit}</p>
+                  )}
+                </div>
 
                 {/* Specials */}
                 {hasSpecials && (
@@ -661,12 +676,13 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                   </div>
                 )}
 
-                {/* Focus Items */}
-                {hasFocus && (
-                  <div>
-                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-                      <span>🎯</span> {isES ? 'Enfoque' : 'Focus'}
-                    </p>
+                {/* Focus Items — Daily Mindset fills the gap */}
+                <div>
+                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                    <span>🎯</span> {isES ? 'Enfoque' : 'Focus'}
+                    {!hasFocus && <MindsetChip />}
+                  </p>
+                  {hasFocus ? (
                     <div className="space-y-1">
                       {note!.focus_items.map((item, i) => (
                         <p key={item.id || i} className="text-sm text-gray-700 flex items-start gap-2">
@@ -675,62 +691,27 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                         </p>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-gray-600 italic flex items-start gap-2">
+                      <span className="text-blue-400 mt-0.5">•</span>
+                      <span>{isES ? mindset.focus.es : mindset.focus.en}</span>
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Timestamp */}
-              <div className="px-5 py-2 bg-gray-50 border-t border-gray-100">
-                <span className="text-[10px] text-gray-400">
-                  {isES ? 'Actualizado' : 'Updated'}{' '}
-                  {new Date(note!.updated_at || note!.created_at).toLocaleTimeString([], {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
-              {/* Today's holiday banner — shows even when no notes posted */}
-              {activeHolidays.length > 0 && (
-                <div className="border-b border-gray-100">
-                  {activeHolidays.map((h) => {
-                    const style = getHolidayStyle(h.type);
-                    const today = new Date();
-                    const dateLabel = today.toLocaleDateString(isES ? 'es-MX' : undefined, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    });
-                    const name = isES && h.name_es ? h.name_es : h.name;
-                    const notes = isES && h.notes_es ? h.notes_es : h.notes;
-                    return (
-                      <div
-                        key={h.id}
-                        className={`px-4 py-2 ${style.bgClass}`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <span aria-hidden>{style.emoji}</span>
-                          <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
-                          <span className={style.subTextClass}>·</span>
-                          <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
-                        </div>
-                        {notes && (
-                          <p className={`text-[11px] ${style.subTextClass} mt-0.5 leading-snug pl-6`}>
-                            {notes}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+              {/* Timestamp — only when a manager actually posted */}
+              {note && (
+                <div className="px-5 py-2 bg-gray-50 border-t border-gray-100">
+                  <span className="text-[10px] text-gray-400">
+                    {isES ? 'Actualizado' : 'Updated'}{' '}
+                    {new Date(note.updated_at || note.created_at).toLocaleTimeString([], {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </span>
                 </div>
               )}
-              <p className="text-gray-500 text-sm p-6 text-center">
-                {isES
-                  ? 'No hay notas pre-turno todavía. Revisa antes de tu turno.'
-                  : 'No pre-shift notes yet. Check back before your shift.'}
-              </p>
             </div>
           )}
         </section>

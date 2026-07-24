@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.15.6',
+    date: 'July 15, 2026',
+    title: 'Daily Mindset + faster pre-shift posting',
+    notes: [
+      'The pre-shift brief never shows up empty again: any gap managers leave (FOH, BOH, or Focus) fills with a rotating Daily Mindset line — hospitality and craft principles inspired by Preston Lee’s 30% Rule and Mike Bausch’s Unsliced, clearly marked as the house voice',
+      'Same line for everyone all day, in English and Spanish',
+      'Managers: new "📋 Copy previous day" button in the pre-shift editor — pre-fills yesterday’s note so you edit instead of retype (items re-tag with your initials)',
+      'Reminder: the Tomorrow toggle drafts the next day’s note and posts it automatically at midnight — closing managers, that one’s for you',
+    ],
+  },
+  {
     version: '2026.07.15.5',
     date: 'July 15, 2026',
     title: 'Master switcher on the Team Portal side',
