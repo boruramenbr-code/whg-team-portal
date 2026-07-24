@@ -56,6 +56,8 @@ interface Props {
   language: 'en' | 'es';
   /** Drives FOH-only quick actions like tip tracker. */
   onboardingCategory: 'foh' | 'boh' | 'mgmt' | null;
+  /** Admins see category-scoped quick actions too (to demo/verify them). */
+  isAdmin?: boolean;
   onNavigate: (tab: string) => void;
 }
 
@@ -163,7 +165,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   // placeholders — re-add the entry here when the feature actually ships).
 ];
 
-export default function HomeTab({ firstName, restaurantName, language, onboardingCategory, onNavigate }: Props) {
+export default function HomeTab({ firstName, restaurantName, language, onboardingCategory, isAdmin = false, onNavigate }: Props) {
   const [note, setNote] = useState<PreshiftNote | null>(null);
   const [ownerMessages, setOwnerMessages] = useState<OwnerMessage[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
@@ -473,7 +475,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             FOH-only actions (like My Tips) are hidden from BOH/MGMT. ── */}
         {(() => {
           const visible = QUICK_ACTIONS.filter((a) =>
-            !a.requires_category || a.requires_category === onboardingCategory
+            !a.requires_category || a.requires_category === onboardingCategory || isAdmin
           );
           if (visible.length === 0) return null;
           return (

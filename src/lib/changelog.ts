@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.24',
+    date: 'July 24, 2026',
+    title: 'Tip Tracker visible to admins',
+    notes: [
+      'Admins now see the 💰 My Tips quick action on Home (it was FOH-only, which hid it from ownership) — so you can demo the tracker to your servers',
+      'Nothing changed for staff: FOH sees it, BOH doesn’t, and every person’s tips stay private to them — no admin can see anyone else’s entries, by design',
+    ],
+  },
+  {
     version: '2026.07.15.7',
     date: 'July 15, 2026',
     title: 'Weekly Owner’s Inspiration',

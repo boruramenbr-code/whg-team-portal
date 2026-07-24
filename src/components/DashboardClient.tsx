@@ -424,6 +424,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
               restaurantName={restaurantName}
               language={language}
               onboardingCategory={profile.onboarding_category ?? null}
+              isAdmin={isAdminUser}
               onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
             />
           </div>
