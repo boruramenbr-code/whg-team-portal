@@ -372,7 +372,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   // manager content.
   const mindset = getDailyMindset();
   const MindsetChip = () => (
-    <span className="text-[8px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-full normal-case">
+    <span className="text-[8px] font-bold uppercase tracking-wider bg-indigo-400/15 text-indigo-300 px-1.5 py-0.5 rounded-full normal-case">
       💡 {isES ? 'mentalidad del día' : 'daily mindset'}
     </span>
   );
@@ -393,7 +393,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   })();
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       {/* Our Story onboarding modal — one-time read. Renders first; gates the
           Welcome modal so cultural content lands before operational content. */}
       {showStoryModal && (
@@ -440,35 +440,39 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8 space-y-6">
 
         {/* ── Hero greeting ── */}
-        <div className="relative text-center pb-2 bg-white/50 rounded-2xl py-6 -mx-1 px-1">
+        <div className="relative text-center pb-2 bg-whg-card/60 border border-whg-line rounded-2xl py-6 -mx-1 px-1">
           {/* Info icon — re-opens welcome note */}
           <button
             onClick={() => setReopenWelcome(true)}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/60 hover:bg-white text-[#1B3A6B] text-base font-bold transition-colors flex items-center justify-center shadow-sm"
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-whg-snow text-base font-bold transition-colors flex items-center justify-center"
             title={isES ? 'Sobre esta app' : 'About this app'}
             aria-label={isES ? 'Sobre esta app' : 'About this app'}
           >
             ℹ️
           </button>
-          {logo ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={logo}
-              alt={restaurantName || 'Restaurant'}
-              className="mx-auto mb-3 h-12 md:h-16 w-auto object-contain"
-            />
-          ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src="/logos/whg.png"
-              alt="WHG"
-              className="mx-auto mb-3 h-12 md:h-16 w-auto object-contain rounded-lg"
-            />
-          )}
-          <h1 className="text-xl md:text-2xl font-bold text-[#1B3A6B]">
+          {/* Logos are black-on-transparent — they sit on a soft light
+              plate so they stay visible on the midnight canvas. */}
+          <div className="mx-auto mb-3 inline-block bg-white/90 rounded-xl px-4 py-2">
+            {logo ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={logo}
+                alt={restaurantName || 'Restaurant'}
+                className="h-10 md:h-14 w-auto object-contain"
+              />
+            ) : (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src="/logos/whg.png"
+                alt="WHG"
+                className="h-10 md:h-14 w-auto object-contain rounded-lg"
+              />
+            )}
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold text-whg-snow">
             {greeting}, {firstName}
           </h1>
-          <p className="text-sm text-gray-400 mt-1">{todayLabel}</p>
+          <p className="text-sm text-whg-dim mt-1">{todayLabel}</p>
         </div>
 
         {/* ── Quick Actions — filtered to actions the user qualifies for.
@@ -498,17 +502,17 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                       }}
                       className={`flex-shrink-0 rounded-2xl shadow-sm hover:shadow-md transition-shadow border px-4 py-3 flex items-center gap-2.5 min-w-[180px] text-left ${
                         isLive
-                          ? 'bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] border-[#1B3A6B] text-white'
-                          : 'bg-white border-gray-200'
+                          ? 'bg-whg-card2 border-whg-gold/40'
+                          : 'bg-whg-card border-whg-line'
                       }`}
                     >
                       <span className="text-2xl" aria-hidden>{a.emoji}</span>
                       <div className="flex-1 min-w-0">
-                        <div className={`text-xs font-bold truncate ${isLive ? 'text-white' : 'text-[#1B3A6B]'}`}>
+                        <div className="text-xs font-bold truncate text-whg-snow">
                           {a.title}
                         </div>
                         <div className={`text-[10px] uppercase tracking-widest font-semibold ${
-                          isLive ? 'text-amber-300' : 'text-gray-400'
+                          isLive ? 'text-whg-gold' : 'text-whg-dim'
                         }`}>
                           {isLive ? 'Open →' : 'Soon'}
                         </div>
@@ -526,11 +530,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             without scrolling past celebration content. ── */}
         <section>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <h2 className="text-sm font-bold text-whg-dim uppercase tracking-wide flex items-center gap-2">
               <span className="text-base">📋</span>
               {isES ? 'Notas del Turno de Hoy' : "Today's Pre-Shift"}
               {activeRestaurantName && availableRestaurants.length > 1 && (
-                <span className="text-[10px] font-semibold text-gray-500 normal-case tracking-normal">
+                <span className="text-[10px] font-semibold text-whg-dim normal-case tracking-normal">
                   · {activeRestaurantName}
                 </span>
               )}
@@ -542,8 +546,8 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
 
           {/* Restaurant switcher — admin & multi-location only */}
           {availableRestaurants.length > 1 && (
-            <div className="bg-white rounded-2xl shadow-sm p-3 mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+            <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-3 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim mb-2">
                 {isES ? 'Viendo Como' : 'Viewing As'}
               </p>
               <div className="flex gap-1.5 flex-wrap">
@@ -553,15 +557,15 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                     onClick={() => onSelectRestaurant(r.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                       activeRestaurantId === r.id
-                        ? 'bg-[#1B3A6B] text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                        : 'bg-white/10 text-whg-dim hover:bg-white/20'
                     }`}
                   >
                     {r.name}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-400 italic mt-2 leading-relaxed">
+              <p className="text-[10px] text-whg-dim/70 italic mt-2 leading-relaxed">
                 {isES
                   ? 'Una nota por restaurante por día. La nota se actualiza al editarla; siempre muestra hoy.'
                   : 'One note per restaurant per day. Posting updates the day’s note; this view always shows today.'}
@@ -570,14 +574,14 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           )}
 
           {loading ? (
-            <div className="bg-white rounded-2xl border border-white/80 p-6 text-center shadow-sm">
-              <div className="text-gray-400 text-sm animate-pulse">Loading...</div>
+            <div className="bg-whg-card rounded-2xl border border-whg-line p-6 text-center shadow-sm">
+              <div className="text-whg-dim text-sm animate-pulse">Loading...</div>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
+            <div className="bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden">
               {/* Today's holiday banner (top of card) */}
               {activeHolidays.length > 0 && (
-                <div className="border-b border-gray-100">
+                <div className="border-b border-whg-line">
                   {activeHolidays.map((h) => {
                     const style = getHolidayStyle(h.type);
                     const today = new Date();
@@ -613,45 +617,45 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               <div className="px-5 py-4 space-y-3">
                 {/* FOH message — Daily Mindset fills the gap */}
                 <div>
-                  <p className="text-[10px] font-bold text-sky-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                  <p className="text-[10px] font-bold text-sky-300 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span>🍽️</span>
                     {isES ? 'Mensaje FOH' : 'FOH Message'}
                     {!hasFohMessage && <MindsetChip />}
                   </p>
-                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${hasFohMessage ? 'text-gray-700' : 'text-gray-600 italic'}`}>
+                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${hasFohMessage ? 'text-whg-snow/90' : 'text-whg-dim italic'}`}>
                     {hasFohMessage ? note!.foh_message : (isES ? mindset.foh.es : mindset.foh.en)}
                   </p>
                   {!hasFohMessage && mindset.foh.credit && (
-                    <p className="text-[10px] text-gray-400 mt-0.5">— {mindset.foh.credit}</p>
+                    <p className="text-[10px] text-whg-dim/70 mt-0.5">— {mindset.foh.credit}</p>
                   )}
                 </div>
 
                 {/* BOH message — Daily Mindset fills the gap */}
                 <div>
-                  <p className="text-[10px] font-bold text-orange-700 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+                  <p className="text-[10px] font-bold text-orange-300 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                     <span>🔥</span>
                     {isES ? 'Mensaje BOH' : 'BOH Message'}
                     {!hasBohMessage && <MindsetChip />}
                   </p>
-                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${hasBohMessage ? 'text-gray-700' : 'text-gray-600 italic'}`}>
+                  <p className={`text-sm leading-relaxed whitespace-pre-wrap ${hasBohMessage ? 'text-whg-snow/90' : 'text-whg-dim italic'}`}>
                     {hasBohMessage ? note!.boh_message : (isES ? mindset.boh.es : mindset.boh.en)}
                   </p>
                   {!hasBohMessage && mindset.boh.credit && (
-                    <p className="text-[10px] text-gray-400 mt-0.5">— {mindset.boh.credit}</p>
+                    <p className="text-[10px] text-whg-dim/70 mt-0.5">— {mindset.boh.credit}</p>
                   )}
                 </div>
 
                 {/* Specials */}
                 {hasSpecials && (
                   <div>
-                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <p className="text-[10px] font-bold text-amber-300 uppercase tracking-wide mb-1.5 flex items-center gap-1">
                       <span>⭐</span> {isES ? 'Especiales' : 'Specials'}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {note!.specials.map((item, i) => (
                         <span
                           key={item.id || i}
-                          className="bg-amber-50 border border-amber-200/80 text-amber-800 text-xs px-2.5 py-1 rounded-lg"
+                          className="bg-amber-400/10 border border-amber-400/30 text-amber-200 text-xs px-2.5 py-1 rounded-lg"
                         >
                           {item.text}
                         </span>
@@ -663,14 +667,14 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 {/* 86'd */}
                 {has86 && (
                   <div>
-                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <p className="text-[10px] font-bold text-red-300 uppercase tracking-wide mb-1.5 flex items-center gap-1">
                       <span>🚫</span> 86&apos;d
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {note!.eighty_sixed.map((item, i) => (
                         <span
                           key={item.id || i}
-                          className="bg-red-50 border border-red-200/80 text-red-700 text-xs px-2.5 py-1 rounded-lg font-medium"
+                          className="bg-red-400/10 border border-red-400/30 text-red-300 text-xs px-2.5 py-1 rounded-lg font-medium"
                         >
                           {item.text}
                         </span>
@@ -681,21 +685,21 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
 
                 {/* Focus Items — Daily Mindset fills the gap */}
                 <div>
-                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                  <p className="text-[10px] font-bold text-blue-300 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
                     <span>🎯</span> {isES ? 'Enfoque' : 'Focus'}
                     {!hasFocus && <MindsetChip />}
                   </p>
                   {hasFocus ? (
                     <div className="space-y-1">
                       {note!.focus_items.map((item, i) => (
-                        <p key={item.id || i} className="text-sm text-gray-700 flex items-start gap-2">
-                          <span className="text-blue-400 mt-0.5">•</span>
+                        <p key={item.id || i} className="text-sm text-whg-snow/90 flex items-start gap-2">
+                          <span className="text-blue-300 mt-0.5">•</span>
                           <span>{item.text}</span>
                         </p>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-600 italic flex items-start gap-2">
+                    <p className="text-sm text-whg-dim italic flex items-start gap-2">
                       <span className="text-blue-400 mt-0.5">•</span>
                       <span>{isES ? mindset.focus.es : mindset.focus.en}</span>
                     </p>
@@ -705,8 +709,8 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
 
               {/* Timestamp — only when a manager actually posted */}
               {note && (
-                <div className="px-5 py-2 bg-gray-50 border-t border-gray-100">
-                  <span className="text-[10px] text-gray-400">
+                <div className="px-5 py-2 bg-white/5 border-t border-whg-line">
+                  <span className="text-[10px] text-whg-dim">
                     {isES ? 'Actualizado' : 'Updated'}{' '}
                     {new Date(note.updated_at || note.created_at).toLocaleTimeString([], {
                       hour: 'numeric',
@@ -777,13 +781,13 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             don't see a dead spot. */}
         {latestTraining && (
           <section>
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-2 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-whg-dim uppercase tracking-wide mb-2 flex items-center gap-2">
               <span className="text-base">🎬</span>
               {isES ? 'Capacitación Nueva' : 'New Training'}
             </h2>
             <button
               onClick={() => onNavigate('training')}
-              className="group w-full text-left bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+              className="group w-full text-left bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="flex flex-col sm:flex-row">
                 {/* Thumbnail — uses YouTube's hqdefault for a sharper feel */}
@@ -810,13 +814,13 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 </div>
                 {/* Text */}
                 <div className="flex-1 min-w-0 px-4 py-3 flex flex-col justify-center">
-                  <p className="text-[10px] font-bold text-[#2E86C1] uppercase tracking-widest mb-1 truncate">
+                  <p className="text-[10px] font-bold text-sky-300 uppercase tracking-widest mb-1 truncate">
                     {latestTraining.series_title}
                   </p>
-                  <p className="text-sm font-semibold text-[#1B3A6B] leading-snug line-clamp-2">
+                  <p className="text-sm font-semibold text-whg-snow leading-snug line-clamp-2">
                     {latestTraining.title}
                   </p>
-                  <p className="text-[11px] font-semibold text-amber-600 mt-2">
+                  <p className="text-[11px] font-semibold text-whg-gold mt-2">
                     {isES ? 'Ver ahora →' : 'Watch now →'}
                   </p>
                 </div>
@@ -833,14 +837,14 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             {ownerMessages.map((m) => (
               <div
                 key={m.id}
-                className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/60 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm"
+                className="bg-indigo-400/10 border border-indigo-400/25 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm"
               >
                 <span className="text-xl mt-0.5">💙</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
+                  <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">
                     {isES ? 'Mensaje del Dueño' : "Owner's Message"}
                   </p>
-                  <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-indigo-100 leading-relaxed whitespace-pre-wrap">
                     {m.message}
                   </p>
                 </div>
@@ -848,16 +852,16 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             ))}
           </div>
         ) : !loading && (
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/60 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm">
+          <div className="bg-indigo-400/10 border border-indigo-400/25 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm">
             <span className="text-xl mt-0.5">💙</span>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">
+              <p className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest mb-1">
                 {isES ? 'Mensaje del Dueño' : "Owner's Message"}
               </p>
-              <p className="text-sm text-indigo-900 leading-relaxed whitespace-pre-wrap">
+              <p className="text-sm text-indigo-100 leading-relaxed whitespace-pre-wrap">
                 {isES ? getWeeklyInspiration().es : getWeeklyInspiration().en}
               </p>
-              <p className="text-[10px] text-indigo-400 mt-1.5">— Randy</p>
+              <p className="text-[10px] text-indigo-300/70 mt-1.5">— Randy</p>
             </div>
           </div>
         )}
@@ -871,12 +875,12 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         {/* ── Upcoming Birthdays ── */}
         {birthdays.length > 0 && (
           <section>
-            <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-whg-dim uppercase tracking-wide mb-3 flex items-center gap-2">
               <span className="text-base">🎂</span>
               {isES ? 'Cumpleaños Próximos' : 'Upcoming Birthdays'}
             </h2>
-            <div className="bg-white rounded-2xl border border-white/80 shadow-sm overflow-hidden">
-              <div className="divide-y divide-gray-100">
+            <div className="bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden">
+              <div className="divide-y divide-whg-line">
                 {birthdays.map((b) => {
                   const isToday = b.days_until === 0;
                   const isPast = b.days_until < 0;
@@ -889,24 +893,24 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                     <div
                       key={b.id}
                       className={`px-4 py-3 flex items-center gap-3 ${
-                        isToday ? 'bg-amber-50' : isPast ? 'bg-gray-50/60' : ''
+                        isToday ? 'bg-amber-400/10' : isPast ? 'bg-white/5' : ''
                       }`}
                     >
                       {/* Date badge */}
                       <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex flex-col items-center justify-center ${
                         isToday
-                          ? 'bg-amber-100 border border-amber-200'
+                          ? 'bg-amber-400/15 border border-amber-400/30'
                           : isPast
-                          ? 'bg-gray-100 border border-gray-200 opacity-70'
-                          : 'bg-gray-50 border border-gray-100'
+                          ? 'bg-white/5 border border-whg-line opacity-70'
+                          : 'bg-white/5 border border-whg-line'
                       }`}>
                         <span className={`text-[10px] font-bold uppercase leading-none ${
-                          isToday ? 'text-amber-600' : isPast ? 'text-gray-400' : 'text-gray-400'
+                          isToday ? 'text-amber-300' : isPast ? 'text-whg-dim/60' : 'text-whg-dim'
                         }`}>
                           {monthNames[b.birth_month - 1]}
                         </span>
                         <span className={`text-base font-bold leading-tight ${
-                          isToday ? 'text-amber-700' : isPast ? 'text-gray-500' : 'text-gray-600'
+                          isToday ? 'text-amber-200' : isPast ? 'text-whg-dim' : 'text-whg-snow/80'
                         }`}>
                           {b.birth_day}
                         </span>
@@ -915,37 +919,37 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                       {/* Name + restaurant */}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-semibold truncate ${
-                          isPast ? 'text-gray-500' : 'text-[#1B3A6B]'
+                          isPast ? 'text-whg-dim' : 'text-whg-snow'
                         }`}>
                           {b.full_name}
                           {isToday && <span className="ml-1.5">🎉</span>}
                           {isPast && <span className="ml-1.5 text-xs">🎂</span>}
                         </p>
                         {b.restaurant_name && (
-                          <p className="text-[11px] text-gray-400 truncate">{b.restaurant_name}</p>
+                          <p className="text-[11px] text-whg-dim/70 truncate">{b.restaurant_name}</p>
                         )}
                       </div>
 
                       {/* Days until / since */}
                       <div className="flex-shrink-0 text-right">
                         {isToday ? (
-                          <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
+                          <span className="text-xs font-bold text-amber-200 bg-amber-400/15 px-2.5 py-1 rounded-full">
                             {isES ? '¡Hoy!' : 'Today!'}
                           </span>
                         ) : b.days_until === 1 ? (
-                          <span className="text-xs font-semibold text-amber-600">
+                          <span className="text-xs font-semibold text-amber-300">
                             {isES ? 'Mañana' : 'Tomorrow'}
                           </span>
                         ) : isYesterday ? (
-                          <span className="text-xs font-medium text-gray-500">
+                          <span className="text-xs font-medium text-whg-dim">
                             {isES ? 'Ayer' : 'Yesterday'}
                           </span>
                         ) : isPast ? (
-                          <span className="text-xs font-medium text-gray-400">
+                          <span className="text-xs font-medium text-whg-dim/70">
                             {isES ? `hace ${Math.abs(b.days_until)} días` : `${Math.abs(b.days_until)} days ago`}
                           </span>
                         ) : (
-                          <span className="text-xs font-medium text-gray-400">
+                          <span className="text-xs font-medium text-whg-dim/70">
                             {isES ? `en ${b.days_until} días` : `in ${b.days_until} days`}
                           </span>
                         )}
@@ -963,7 +967,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
 
         {/* ── Tab Guide ── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-whg-dim uppercase tracking-wide mb-3 flex items-center gap-2">
             <span className="text-base">🧭</span>
             {isES ? 'Explora el Portal' : 'Explore the Portal'}
           </h2>
@@ -972,13 +976,13 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               <button
                 key={tab.key}
                 onClick={() => onNavigate(tab.key)}
-                className="bg-white rounded-2xl border border-white/80 shadow-sm p-4 text-left hover:shadow-md hover:scale-[1.02] transition-all group"
+                className="bg-whg-card rounded-2xl border border-whg-line shadow-sm p-4 text-left hover:shadow-md hover:scale-[1.02] transition-all group"
               >
                 <div className="text-2xl mb-2">{tab.emoji}</div>
-                <p className="text-sm font-bold text-[#1B3A6B] group-hover:text-[#2E86C1] transition-colors">
+                <p className="text-sm font-bold text-whg-snow group-hover:text-whg-gold transition-colors">
                   {isES ? tab.titleEs : tab.title}
                 </p>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                <p className="text-xs text-whg-dim mt-1 leading-relaxed">
                   {isES ? tab.descriptionEs : tab.description}
                 </p>
               </button>

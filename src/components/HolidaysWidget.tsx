@@ -87,7 +87,7 @@ export default function HolidaysWidget({ language }: Props) {
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+        <h2 className="text-sm font-bold text-whg-dim uppercase tracking-wide flex items-center gap-2">
           <span className="text-base">📅</span>
           {isES ? 'Días Importantes y Eventos' : 'Upcoming Holidays and Events'}
         </h2>
@@ -96,7 +96,7 @@ export default function HolidaysWidget({ language }: Props) {
       {/* ── Section: Happening Today ── */}
       {todayHolidays.length > 0 && (
         <>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-amber-700 flex items-center gap-1.5 mb-2 mt-1">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-amber-300 flex items-center gap-1.5 mb-2 mt-1">
             <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             {isES ? 'Sucediendo Hoy' : 'Happening Today'}
           </h3>
@@ -111,7 +111,7 @@ export default function HolidaysWidget({ language }: Props) {
       {/* ── Section: Coming Up ── */}
       {upcomingHolidays.length > 0 && (
         <>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 flex items-center gap-1.5 mb-2">
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-whg-dim flex items-center gap-1.5 mb-2">
             <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />
             {isES ? 'Próximamente' : 'Coming Up'}
           </h3>

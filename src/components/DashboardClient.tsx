@@ -41,41 +41,44 @@ type TopTabKey = 'home' | 'training' | 'menu' | 'handbook' | 'ourteam';
 type HandbookSubTab = 'checklist' | 'read' | 'policies' | 'ask';
 type TeamSubTab = 'org' | 'positions';
 
-/* ── SVG icons for bottom nav (inline, no dependency) ── */
+/* ── SVG icons for bottom nav (inline, no dependency) ──
+ * Active = gold on the midnight nav (one accent, used only for "you
+ * are here" + primary actions — the Midnight Navy & Gold scheme). */
+const NAV_GOLD = '#D9A94E';
 const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
   home: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#1B3A6B' : 'none'} stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? NAV_GOLD : 'none'} stroke={a ? NAV_GOLD : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
   ),
   menu: (a) => (
     // Crossed fork & knife — reads as "menu" at small sizes
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth={a ? '2.5' : '2'} strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? NAV_GOLD : 'currentColor'} strokeWidth={a ? '2.5' : '2'} strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
       <path d="M7 2v20" />
       <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zM21 15v7" />
     </svg>
   ),
   handbook: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? '#1B3A6B' : 'none'} stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? NAV_GOLD : 'none'} stroke={a ? NAV_GOLD : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </svg>
   ),
   ourteam: (a) => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? NAV_GOLD : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" fill={a ? '#1B3A6B' : 'none'} />
+      <circle cx="9" cy="7" r="4" fill={a ? NAV_GOLD : 'none'} />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   ),
   training: (a) => (
     // Play-button-in-rectangle — reads as "video" at small sizes
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? '#1B3A6B' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2" fill={a ? '#1B3A6B' : 'none'} />
-      <polygon points="10 8 16 12 10 16" fill={a ? 'white' : 'none'} stroke={a ? 'white' : 'currentColor'} />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={a ? NAV_GOLD : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" fill={a ? NAV_GOLD : 'none'} />
+      <polygon points="10 8 16 12 10 16" fill={a ? '#0D1522' : 'none'} stroke={a ? '#0D1522' : 'currentColor'} />
     </svg>
   ),
 };
@@ -277,7 +280,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
       {/* ── Owner's master restaurant switcher (admins only) ── */}
       {showMasterSwitcher && (
         <div
-          className="flex items-center gap-1.5 px-3 md:px-6 py-2 bg-[#0F1E3C] flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+          className="flex items-center gap-1.5 px-3 md:px-6 py-2 bg-whg-night border-b border-whg-line flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <span className="text-[9px] font-bold uppercase tracking-widest text-white/50 flex-shrink-0 mr-1">
@@ -291,7 +294,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 onClick={() => switchViewRestaurant(r.id)}
                 className={`tap-highlight flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
                   active
-                    ? 'bg-amber-400 text-[#0F1E3C] shadow-sm'
+                    ? 'bg-whg-gold text-whg-goldink shadow-sm'
                     : 'bg-white/10 text-white/75 hover:bg-white/20'
                 }`}
               >
@@ -303,7 +306,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
       )}
 
       {/* ── DESKTOP top tab bar (hidden on mobile) ── */}
-      <div className="hidden md:flex items-center border-b border-[#D6DEE8] bg-[#D0DAE5] px-4 flex-shrink-0">
+      <div className="hidden md:flex items-center border-b border-whg-line bg-whg-night px-4 flex-shrink-0">
         <div className="flex gap-1">
           {topTabs.map((t) => {
             const isActive = activeTop === t.key;
@@ -313,14 +316,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 onClick={() => setActiveTop(t.key)}
                 className={`relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold transition-colors ${
                   isActive
-                    ? 'text-[#1B3A6B]'
-                    : 'text-gray-400 hover:text-gray-600'
+                    ? 'text-whg-gold'
+                    : 'text-whg-dim hover:text-whg-snow'
                 }`}
               >
                 <span>{t.emoji}</span>
                 <span>{isES ? t.labelEs : t.label}</span>
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1B3A6B] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-whg-gold rounded-t-full" />
                 )}
               </button>
             );
@@ -330,7 +333,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
       {/* Sub-tab bar — Onboarding (visible on both mobile + desktop) */}
       {activeTop === 'handbook' && (
-        <div className="flex items-center justify-between gap-2 border-b border-[#D6DEE8]/60 bg-[#C8D4E1] pl-1 pr-1.5 md:px-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2 border-b border-whg-line bg-whg-night pl-1 pr-1.5 md:px-4 flex-shrink-0">
           {/* Scrollable sub-tab row — emoji hidden on mobile, shown on desktop */}
           <div
             className="flex gap-0 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden"
@@ -344,27 +347,27 @@ export default function DashboardClient({ profile, isManager }: Props) {
                   onClick={() => setActiveHandbookSub(t.key)}
                   className={`tap-highlight relative flex items-center gap-1.5 px-2.5 md:px-4 py-3 md:py-2 text-[13px] md:text-xs font-semibold whitespace-nowrap transition-colors ${
                     isActive
-                      ? 'text-[#2E86C1]'
-                      : 'text-gray-400 hover:text-gray-600'
+                      ? 'text-whg-gold'
+                      : 'text-whg-dim hover:text-whg-snow'
                   }`}
                 >
                   <span className="hidden md:inline text-sm">{t.emoji}</span>
                   <span>{isES ? t.labelEs : t.label}</span>
                   {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2E86C1] rounded-t-full" />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-whg-gold rounded-t-full" />
                   )}
                 </button>
               );
             })}
           </div>
           {/* Language toggle — compact on mobile */}
-          <div className="flex-shrink-0 flex items-center gap-0.5 bg-white/60 rounded-full p-0.5 border border-gray-200/60">
+          <div className="flex-shrink-0 flex items-center gap-0.5 bg-white/10 rounded-full p-0.5 border border-white/10">
             <button
               onClick={() => setLanguage('en')}
               className={`tap-highlight px-3 py-2 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
                 language === 'en'
-                  ? 'bg-[#1B3A6B] text-white'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-whg-gold text-whg-goldink'
+                  : 'text-whg-dim hover:text-whg-snow'
               }`}
             >
               EN
@@ -373,8 +376,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
               onClick={() => setLanguage('es')}
               className={`tap-highlight px-3 py-2 md:px-2 md:py-0.5 rounded-full text-xs md:text-[10px] font-bold transition-colors ${
                 language === 'es'
-                  ? 'bg-[#1B3A6B] text-white'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-whg-gold text-whg-goldink'
+                  : 'text-whg-dim hover:text-whg-snow'
               }`}
             >
               ES
@@ -385,7 +388,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
       {/* Sub-tab bar — Team (org chart | positions) */}
       {activeTop === 'ourteam' && (
-        <div className="flex items-center gap-2 border-b border-[#D6DEE8]/60 bg-[#C8D4E1] pl-1 pr-1.5 md:px-4 flex-shrink-0">
+        <div className="flex items-center gap-2 border-b border-whg-line bg-whg-night pl-1 pr-1.5 md:px-4 flex-shrink-0">
           {([
             { key: 'org' as TeamSubTab, label: isES ? 'Nuestro Equipo' : 'Our Team', emoji: '👥' },
             { key: 'positions' as TeamSubTab, label: isES ? 'Posiciones' : 'Positions', emoji: '🧭' },
@@ -396,13 +399,13 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 key={t.key}
                 onClick={() => setTeamSub(t.key)}
                 className={`tap-highlight relative flex items-center gap-1.5 px-2.5 md:px-4 py-3 md:py-2 text-[13px] md:text-xs font-semibold whitespace-nowrap transition-colors ${
-                  isActive ? 'text-[#2E86C1]' : 'text-gray-400 hover:text-gray-600'
+                  isActive ? 'text-whg-gold' : 'text-whg-dim hover:text-whg-snow'
                 }`}
               >
                 <span className="hidden md:inline text-sm">{t.emoji}</span>
                 <span>{t.label}</span>
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2E86C1] rounded-t-full" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-whg-gold rounded-t-full" />
                 )}
               </button>
             );
@@ -597,7 +600,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
       </div>
 
       {/* ── MOBILE bottom navigation bar (hidden on desktop) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#0B1220] border-t border-whg-line shadow-[0_-2px_10px_rgba(0,0,0,0.35)]">
         <div className="flex items-center justify-around px-1 pt-1.5 pb-safe">
           {topTabs.map((t) => {
             const isActive = activeTop === t.key;
@@ -607,16 +610,16 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 key={t.key}
                 onClick={() => setActiveTop(t.key)}
                 className={`tap-highlight flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg min-w-[52px] transition-colors ${
-                  isActive ? 'text-[#1B3A6B]' : 'text-gray-500'
+                  isActive ? 'text-whg-gold' : 'text-whg-dim'
                 }`}
               >
                 <div className="relative">
                   {NavIcons[t.key](isActive)}
                   {isActive && (
-                    <span className="nav-dot-enter absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1B3A6B]" />
+                    <span className="nav-dot-enter absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-whg-gold" />
                   )}
                 </div>
-                <span className={`text-[10px] font-semibold leading-tight ${isActive ? 'text-[#1B3A6B]' : 'text-gray-600'}`}>
+                <span className={`text-[10px] font-semibold leading-tight ${isActive ? 'text-whg-gold' : 'text-whg-dim'}`}>
                   {label}
                 </span>
               </button>

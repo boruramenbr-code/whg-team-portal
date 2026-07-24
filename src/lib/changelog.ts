@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.07.24.5',
+    date: 'July 24, 2026',
+    title: 'A new look: Midnight Navy & Gold',
+    notes: [
+      'The Home screen and navigation wear the portal’s new colors — deep navy that’s easy on the eyes in a dim dining room, with gold marking where you are and what’s yours',
+      'Everything is exactly where it was — same cards, same order, same taps. Only the paint changed',
+      'The other screens switch over one at a time in the coming updates, so expect a mix of light and dark for a few days',
+    ],
+  },
+  {
     version: '2026.07.24.4',
     date: 'July 24, 2026',
     title: 'Design foundation (under the hood)',
