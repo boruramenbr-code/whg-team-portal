@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.07',
+    date: 'August 7, 2026',
+    title: 'Manager Training',
+    notes: [
+      'A new Manager Training band sits at the top of Training → Videos — visible only to management. Staff never see it',
+      'When creating or editing a video series, managers now choose the audience: 👥 Whole team or 🔒 Managers only',
+      'The first Manager Training series is ready and waiting for its videos',
+    ],
+  },
+  {
     version: '2026.07.24.6',
     date: 'July 24, 2026',
     title: 'Midnight look: Training, Menu & Systems',

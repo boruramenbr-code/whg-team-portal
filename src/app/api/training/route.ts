@@ -27,10 +27,21 @@ export async function GET() {
   // Adoption tracker: stamp last_seen_at — same pattern as other read routes.
   pingLastSeen(user.id);
 
+  // Manager-only series (audience = 'mgmt') are visible to management
+  // roles and the mgmt onboarding category only.
+  const { data: me } = await supabase
+    .from('profiles')
+    .select('role, onboarding_category')
+    .eq('id', user.id)
+    .single();
+  const isMgmt =
+    ['admin', 'manager', 'assistant_manager'].includes(me?.role ?? '') ||
+    me?.onboarding_category === 'mgmt';
+
   const { data, error } = await supabase
     .from('training_series')
     .select(`
-      id, title, blurb, sort_order,
+      id, title, blurb, sort_order, audience,
       videos:training_videos(id, title, description, youtube_id, duration, sort_order, active)
     `)
     .eq('active', true)
@@ -47,6 +58,7 @@ export async function GET() {
     title: string;
     blurb: string | null;
     sort_order: number;
+    audience: 'all' | 'mgmt';
     videos: {
       id: string; title: string; description: string | null;
       youtube_id: string; duration: string | null;
@@ -54,11 +66,14 @@ export async function GET() {
     }[] | null;
   };
 
-  const series = ((data ?? []) as RawSeries[]).map((s) => ({
+  const series = ((data ?? []) as RawSeries[])
+    .filter((s) => s.audience !== 'mgmt' || isMgmt)
+    .map((s) => ({
     id: s.id,
     title: s.title,
     blurb: s.blurb,
     sort_order: s.sort_order,
+    audience: s.audience,
     videos: (s.videos ?? [])
       .filter((v) => v.active)
       .sort((a, b) => a.sort_order - b.sort_order)

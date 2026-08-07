@@ -23,6 +23,8 @@ interface Series {
   title: string;
   blurb: string | null;
   sort_order: number;
+  /** 'mgmt' = management only; 'all' = whole team (default). */
+  audience?: 'all' | 'mgmt';
   videos: Video[];
 }
 
@@ -174,6 +176,11 @@ export default function TrainingAdminTab({ viewRestaurantId = null, isAdmin = fa
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h2 className="text-sm md:text-base font-bold text-[#1B3A6B] truncate">{s.title}</h2>
+                    {s.audience === 'mgmt' && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        🔒 Managers
+                      </span>
+                    )}
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest flex-shrink-0">
                       #{s.sort_order}
                     </span>
@@ -333,6 +340,7 @@ function SeriesEditor({
   const [title, setTitle] = useState(initial.title || '');
   const [blurb, setBlurb] = useState(initial.blurb || '');
   const [sortOrder, setSortOrder] = useState<string>(String(initial.sort_order ?? 100));
+  const [audience, setAudience] = useState<'all' | 'mgmt'>(initial.audience ?? 'all');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -352,6 +360,7 @@ function SeriesEditor({
         title: title.trim(),
         blurb: blurb.trim() || null,
         sort_order: Number(sortOrder) || 100,
+        audience,
       }),
     });
     setSaving(false);
@@ -391,6 +400,34 @@ function SeriesEditor({
               rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
             />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Who sees this series?</label>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                onClick={() => setAudience('all')}
+                className={`px-3.5 py-2 rounded-full text-xs font-bold transition-colors ${
+                  audience === 'all' ? 'bg-[#1B3A6B] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                👥 Whole team
+              </button>
+              <button
+                type="button"
+                onClick={() => setAudience('mgmt')}
+                className={`px-3.5 py-2 rounded-full text-xs font-bold transition-colors ${
+                  audience === 'mgmt' ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                🔒 Managers only
+              </button>
+            </div>
+            {audience === 'mgmt' && (
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                Only management sees this series — staff never know it exists.
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">

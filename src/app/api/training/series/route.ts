@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
 
   const body = await req.json();
-  const { title, blurb, sort_order } = body;
+  const { title, blurb, sort_order, audience } = body;
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 });
   }
@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       title: title.trim(),
       blurb: blurb?.trim() || null,
       sort_order: typeof sort_order === 'number' ? sort_order : 100,
+      audience: audience === 'mgmt' ? 'mgmt' : 'all',
     })
     .select()
     .single();
@@ -77,6 +78,7 @@ export async function PATCH(req: NextRequest) {
   if (body.blurb !== undefined) updates.blurb = body.blurb?.trim() || null;
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
   if (body.active !== undefined) updates.active = !!body.active;
+  if (body.audience !== undefined) updates.audience = body.audience === 'mgmt' ? 'mgmt' : 'all';
 
   const adminClient = getAdminClient();
   const { error } = await adminClient

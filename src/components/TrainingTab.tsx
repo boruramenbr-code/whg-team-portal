@@ -20,6 +20,8 @@ interface Series {
   title: string;
   blurb: string | null;
   sort_order: number;
+  /** 'mgmt' series only reach management — the API already filters. */
+  audience?: 'all' | 'mgmt';
   videos: Video[];
 }
 
@@ -165,8 +167,12 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {series.map((s) => {
+          (() => {
+            // Managers see their own band first — the API only sends
+            // 'mgmt' series to management, so this renders for them alone.
+            const mgmtSeries = series.filter((s) => s.audience === 'mgmt');
+            const teamSeries = series.filter((s) => s.audience !== 'mgmt');
+            const renderSeries = (s: Series) => {
               const isOpen = openSeries.has(s.id);
               return (
                 <div
@@ -256,8 +262,26 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
                   )}
                 </div>
               );
-            })}
-          </div>
+            };
+            return (
+              <div className="space-y-4">
+                {mgmtSeries.length > 0 && (
+                  <>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-whg-gold">
+                      🔒 {isES ? 'Capacitación de Gerentes' : 'Manager Training'}
+                    </p>
+                    {mgmtSeries.map(renderSeries)}
+                    {teamSeries.length > 0 && (
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim pt-2">
+                        {isES ? 'Biblioteca del Equipo' : 'Team Library'}
+                      </p>
+                    )}
+                  </>
+                )}
+                {teamSeries.map(renderSeries)}
+              </div>
+            );
+          })()
         )}
       </div>
 
