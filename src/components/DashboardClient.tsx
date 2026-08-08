@@ -25,6 +25,7 @@ const OurTeamTab = dynamic(() => import('./OurTeamTab'), { loading: TabLoader, s
 const PositionsSection = dynamic(() => import('./PositionsSection'), { loading: TabLoader, ssr: false });
 const OnboardingChecklist = dynamic(() => import('./OnboardingChecklist'), { loading: TabLoader, ssr: false });
 const MenuTab = dynamic(() => import('./MenuTab'), { loading: TabLoader, ssr: false });
+const MemoriesTab = dynamic(() => import('./MemoriesTab'), { loading: TabLoader, ssr: false });
 const WelcomeWizard = dynamic(() => import('./WelcomeWizard'), { ssr: false });
 
 interface Props {
@@ -39,7 +40,7 @@ interface Props {
 // Team tab as a sub-view; Menu promoted to the freed slot.
 type TopTabKey = 'home' | 'training' | 'menu' | 'handbook' | 'ourteam';
 type HandbookSubTab = 'checklist' | 'read' | 'policies' | 'ask';
-type TeamSubTab = 'org' | 'positions';
+type TeamSubTab = 'org' | 'positions' | 'memories';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ──
  * Active = gold on the midnight nav (one accent, used only for "you
@@ -392,6 +393,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
           {([
             { key: 'org' as TeamSubTab, label: isES ? 'Nuestro Equipo' : 'Our Team', emoji: '👥' },
             { key: 'positions' as TeamSubTab, label: isES ? 'Posiciones' : 'Positions', emoji: '🧭' },
+            { key: 'memories' as TeamSubTab, label: isES ? 'Recuerdos' : 'Memories', emoji: '🎞' },
           ]).map((t) => {
             const isActive = teamSub === t.key;
             return (
@@ -580,6 +582,10 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 role={profile.role}
                 language={language}
               />
+            </div>
+          ) : teamSub === 'memories' ? (
+            <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
+              <MemoriesTab language={language} />
             </div>
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">

@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.07.2',
+    date: 'August 7, 2026',
+    title: '🎞 Memories — the WHG photo wall',
+    notes: [
+      'New Memories section under Team: a photo and video collage of the history, games, events, and fun we’ve had — at every restaurant',
+      'Everyone can browse every restaurant’s wall. You land on your own; one tap visits the others. Brand-wide WHG moments show everywhere',
+      'Managers post the photos — got pictures from an event? Send them to a manager. And if you’re in a photo you’d rather not have up, tell a manager and it comes down, no questions',
+    ],
+  },
+  {
     version: '2026.08.07',
     date: 'August 7, 2026',
     title: 'Manager Training',
