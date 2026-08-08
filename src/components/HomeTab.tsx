@@ -107,6 +107,13 @@ const TAB_GUIDE = [
   },
 ];
 
+/** Home-card preview of the 🎞 Memories wall. */
+interface MemoryPreview {
+  id: string;
+  photo_url: string | null;
+  video_youtube_id: string | null;
+}
+
 /* ───────── Birthday types ───────── */
 interface Birthday {
   id: string;
@@ -174,6 +181,8 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   // videos uploaded yet → card hides itself. Refreshed alongside the
   // owner/birthday/holiday batch.
   const [latestTraining, setLatestTraining] = useState<LatestTrainingVideo | null>(null);
+  // Latest wall photos for the Memories card — hides itself when empty.
+  const [memoriesPreview, setMemoriesPreview] = useState<MemoryPreview[]>([]);
   const [loading, setLoading] = useState(true);
   // Toggle to force-reopen the welcome note when user taps the ℹ️ icon
   const [reopenWelcome, setReopenWelcome] = useState(false);
@@ -258,11 +267,12 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       // (60s) do their job — no cache-busters or no-store needed. Manager
       // edits will still show within a minute, which is fine for these
       // slow-changing surfaces (owner messages, birthdays, holidays).
-      const [ownerRes, bdayRes, holidaysRes, trainingRes] = await Promise.all([
+      const [ownerRes, bdayRes, holidaysRes, trainingRes, memoriesRes] = await Promise.all([
         fetch('/api/owner-messages?audience=staff'),
         fetch('/api/birthdays'),
         fetch('/api/holidays'),
         fetch('/api/training/latest'),
+        fetch('/api/memories?limit=6'),
       ]);
       if (ownerRes.ok) {
         const ownerData = await ownerRes.json();
@@ -290,6 +300,10 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       if (trainingRes.ok) {
         const trainingData = await trainingRes.json();
         setLatestTraining(trainingData.video || null);
+      }
+      if (memoriesRes.ok) {
+        const memoriesData = await memoriesRes.json();
+        setMemoriesPreview(memoriesData.memories || []);
       }
     } catch {
       // ignore
@@ -864,6 +878,46 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               <p className="text-[10px] text-indigo-300/70 mt-1.5">— Randy</p>
             </div>
           </div>
+        )}
+
+        {/* ── 🎞 Memories preview — latest wall photos; tap → Team → Memories.
+            Hides itself until the wall has content. ── */}
+        {memoriesPreview.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-whg-dim uppercase tracking-wide mb-2 flex items-center gap-2">
+              <span className="text-base">🎞</span>
+              {isES ? 'Recuerdos' : 'Memories'}
+            </h2>
+            <button
+              onClick={() => onNavigate('memories')}
+              className="w-full text-left bg-whg-card rounded-2xl border border-whg-line shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="grid grid-cols-3 gap-0.5">
+                {memoriesPreview.slice(0, 6).map((m) => (
+                  <div key={m.id} className="relative aspect-square bg-whg-card2 overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={m.photo_url || `https://i.ytimg.com/vi/${m.video_youtube_id}/mqdefault.jpg`}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    {m.video_youtube_id && (
+                      <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-bold px-1 py-0.5 rounded-full">▶</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="px-4 py-2.5 flex items-center justify-between">
+                <p className="text-[11px] text-whg-dim">
+                  {isES ? 'La historia y la diversión de la familia WHG' : 'The history and good times of the WHG family'}
+                </p>
+                <p className="text-[11px] font-bold text-whg-gold flex-shrink-0">
+                  {isES ? 'Ver el muro →' : 'See the wall →'}
+                </p>
+              </div>
+            </button>
+          </section>
         )}
 
         {/* ── Age-verification cutoff (only renders for staff who serve alcohol) ── */}

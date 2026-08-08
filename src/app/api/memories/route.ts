@@ -19,10 +19,13 @@ function getAdminClient() {
  * employee (Randy's call: culture is open across the brand). The
  * client groups by restaurant chip; restaurant_id null = brand-wide.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  // ?limit= keeps the Home-card preview fetch light (default: full wall).
+  const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || 600, 1), 600);
 
   const { data: me } = await supabase
     .from('profiles').select('role, restaurant_id, status').eq('id', user.id).single();
@@ -37,7 +40,7 @@ export async function GET() {
       .select('id, restaurant_id, photo_url, video_youtube_id, caption, caption_es, taken_label, created_at')
       .eq('active', true)
       .order('created_at', { ascending: false })
-      .limit(600),
+      .limit(limit),
     adminClient.from('restaurants').select('id, name').order('name'),
   ]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

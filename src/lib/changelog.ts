@@ -28,6 +28,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: 'August 7, 2026',
     title: '🎞 Memories — the WHG photo wall',
     notes: [
+      'Home gets a Memories card showing the latest photos from the wall — tap it to jump straight to the collage',
       'New Memories section under Team: a photo and video collage of the history, games, events, and fun we’ve had — at every restaurant',
       'Everyone can browse every restaurant’s wall. You land on your own; one tap visits the others. Brand-wide WHG moments show everywhere',
       'Managers post the photos — got pictures from an event? Send them to a manager. And if you’re in a photo you’d rather not have up, tell a manager and it comes down, no questions',

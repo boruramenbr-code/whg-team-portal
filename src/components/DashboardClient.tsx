@@ -430,7 +430,15 @@ export default function DashboardClient({ profile, isManager }: Props) {
               language={language}
               onboardingCategory={profile.onboarding_category ?? null}
               isAdmin={isAdminUser}
-              onNavigate={(tab) => setActiveTop(tab as TopTabKey)}
+              onNavigate={(tab) => {
+                // 'memories' deep-links into Team → 🎞 Memories.
+                if (tab === 'memories') {
+                  setTeamSub('memories');
+                  setActiveTop('ourteam');
+                } else {
+                  setActiveTop(tab as TopTabKey);
+                }
+              }}
             />
           </div>
           </div>
