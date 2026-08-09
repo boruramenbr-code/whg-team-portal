@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.08',
+    date: 'August 8, 2026',
+    title: 'Memories: Coming Soon walls',
+    notes: [
+      'Shokudo and Central Hub now show a ✨ Coming Soon sign on their Memories walls — their chapters start when the doors open',
+      'The sign disappears on its own the moment the first photo is posted',
+    ],
+  },
+  {
     version: '2026.08.07.2',
     date: 'August 7, 2026',
     title: '🎞 Memories — the WHG photo wall',

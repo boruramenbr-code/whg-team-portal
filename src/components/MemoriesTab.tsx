@@ -57,6 +57,15 @@ export default function MemoriesTab({ language }: Props) {
   // Brand-wide moments (restaurant_id null) belong to every wall.
   const wall = memories.filter((m) => m.restaurant_id === chip || m.restaurant_id === null);
 
+  // Locations that haven't opened yet get a Coming Soon sign instead of
+  // the plain empty state — it dissolves on its own the moment their
+  // first photo lands. Trim this list as places open (harmless if you
+  // don't: a wall with photos never shows the sign).
+  const UPCOMING = ['shokudo', 'central hub'];
+  const chipRestaurant = restaurants.find((r) => r.id === chip) || null;
+  const isUpcomingWall =
+    !!chipRestaurant && UPCOMING.includes(chipRestaurant.name.toLowerCase().trim());
+
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
@@ -95,6 +104,8 @@ export default function MemoriesTab({ language }: Props) {
                 }`}
               >
                 {r.name}
+                {UPCOMING.includes(r.name.toLowerCase().trim()) &&
+                  !memories.some((m) => m.restaurant_id === r.id) && ' ✨'}
               </button>
             ))}
           </div>
@@ -112,6 +123,22 @@ export default function MemoriesTab({ language }: Props) {
             {[160, 220, 140, 200, 170, 190].map((h, i) => (
               <div key={i} className="break-inside-avoid rounded-2xl bg-whg-card/60 animate-pulse" style={{ height: h }} />
             ))}
+          </div>
+        ) : wall.length === 0 && isUpcomingWall ? (
+          /* Not-yet-open location — hype sign until the first photo */
+          <div className="text-center py-16 bg-whg-card/60 rounded-2xl border border-whg-gold/30 relative overflow-hidden">
+            <div className="absolute top-3 left-4 text-lg opacity-40 select-none" aria-hidden>✨</div>
+            <div className="absolute bottom-3 right-4 text-lg opacity-40 select-none" aria-hidden>✨</div>
+            <div className="text-5xl mb-3" aria-hidden>🏗️</div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-whg-gold mb-1.5">
+              {isES ? 'Próximamente' : 'Coming Soon'}
+            </p>
+            <p className="text-lg font-bold text-whg-snow">{chipRestaurant?.name}</p>
+            <p className="text-xs text-whg-dim mt-2 max-w-xs mx-auto leading-relaxed">
+              {isES
+                ? 'Este capítulo de la familia WHG aún no comienza. La primera foto aparecerá aquí cuando abramos las puertas — y tú podrías estar en ella.'
+                : 'This chapter of the WHG family hasn’t started yet. The first photo lands here when the doors open — and you might be in it.'}
+            </p>
           </div>
         ) : wall.length === 0 ? (
           <div className="text-center py-14 bg-whg-card/60 rounded-2xl border border-whg-line">
