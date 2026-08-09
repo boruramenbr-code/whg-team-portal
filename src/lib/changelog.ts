@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.09',
+    date: 'August 9, 2026',
+    title: 'Memories card shows your restaurant',
+    notes: [
+      'The Home Memories card now previews YOUR restaurant’s photos — Ichiban sees Ichiban, Boru sees Boru (brand-wide WHG moments show for everyone)',
+      'The full wall under Team → Memories stays open to every restaurant, exactly as before',
+    ],
+  },
+  {
     version: '2026.08.08',
     date: 'August 8, 2026',
     title: 'Memories: Coming Soon walls',

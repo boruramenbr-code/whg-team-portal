@@ -26,6 +26,11 @@ export async function GET(req: NextRequest) {
 
   // ?limit= keeps the Home-card preview fetch light (default: full wall).
   const limit = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || 600, 1), 600);
+  // Home-card scoping: ?restaurant_id=X shows that wall; ?scope=own shows
+  // the caller's own restaurant. Brand-wide (null) rides along either way.
+  // No scope → the full cross-restaurant wall (the Memories page).
+  const ridParam = req.nextUrl.searchParams.get('restaurant_id');
+  const scopeOwn = req.nextUrl.searchParams.get('scope') === 'own';
 
   const { data: me } = await supabase
     .from('profiles').select('role, restaurant_id, status').eq('id', user.id).single();
@@ -34,13 +39,16 @@ export async function GET(req: NextRequest) {
   }
 
   const adminClient = getAdminClient();
+  const scopeRid = ridParam || (scopeOwn ? me.restaurant_id : null);
+  let memoriesQuery = adminClient
+    .from('memories')
+    .select('id, restaurant_id, photo_url, video_youtube_id, caption, caption_es, taken_label, created_at')
+    .eq('active', true);
+  if (scopeRid) {
+    memoriesQuery = memoriesQuery.or(`restaurant_id.eq.${scopeRid},restaurant_id.is.null`);
+  }
   const [{ data: memories, error }, { data: restaurants }] = await Promise.all([
-    adminClient
-      .from('memories')
-      .select('id, restaurant_id, photo_url, video_youtube_id, caption, caption_es, taken_label, created_at')
-      .eq('active', true)
-      .order('created_at', { ascending: false })
-      .limit(limit),
+    memoriesQuery.order('created_at', { ascending: false }).limit(limit),
     adminClient.from('restaurants').select('id, name').order('name'),
   ]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

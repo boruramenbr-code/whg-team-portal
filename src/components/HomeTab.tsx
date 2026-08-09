@@ -267,12 +267,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       // (60s) do their job — no cache-busters or no-store needed. Manager
       // edits will still show within a minute, which is fine for these
       // slow-changing surfaces (owner messages, birthdays, holidays).
-      const [ownerRes, bdayRes, holidaysRes, trainingRes, memoriesRes] = await Promise.all([
+      const [ownerRes, bdayRes, holidaysRes, trainingRes] = await Promise.all([
         fetch('/api/owner-messages?audience=staff'),
         fetch('/api/birthdays'),
         fetch('/api/holidays'),
         fetch('/api/training/latest'),
-        fetch('/api/memories?limit=6'),
       ]);
       if (ownerRes.ok) {
         const ownerData = await ownerRes.json();
@@ -301,10 +300,6 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         const trainingData = await trainingRes.json();
         setLatestTraining(trainingData.video || null);
       }
-      if (memoriesRes.ok) {
-        const memoriesData = await memoriesRes.json();
-        setMemoriesPreview(memoriesData.memories || []);
-      }
     } catch {
       // ignore
     } finally {
@@ -322,6 +317,26 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   useEffect(() => {
     loadPreshift();
   }, [loadPreshift]);
+
+  // Memories preview follows the restaurant chip too: staff see THEIR
+  // restaurant's photos (scope=own resolves it server-side); admins on
+  // a chip see that restaurant's. Brand-wide WHG moments always ride
+  // along. The full cross-restaurant wall lives under Team → Memories.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const url = viewRestaurantId
+          ? `/api/memories?limit=6&restaurant_id=${encodeURIComponent(viewRestaurantId)}`
+          : '/api/memories?limit=6&scope=own';
+        const r = await fetch(url);
+        if (!r.ok || cancelled) return;
+        const j = await r.json();
+        if (!cancelled) setMemoriesPreview(j.memories || []);
+      } catch { /* card just hides */ }
+    })();
+    return () => { cancelled = true; };
+  }, [viewRestaurantId]);
 
   // Training-path summary for the Continue Training card. Non-fatal if it
   // fails — the card just doesn't render.
