@@ -9,6 +9,8 @@ interface Memory {
   restaurant_id: string | null;
   photo_url: string | null;
   video_youtube_id: string | null;
+  /** Directly-uploaded video file (public bucket URL). */
+  video_url: string | null;
   caption: string | null;
   caption_es: string | null;
   taken_label: string | null;
@@ -165,6 +167,15 @@ export default function MemoriesTab({ language }: Props) {
                   {m.photo_url ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={m.photo_url} alt={m.caption || ''} className="w-full h-auto" loading="lazy" />
+                  ) : m.video_url ? (
+                    /* #t=0.1 nudges browsers into painting the first frame */
+                    <video
+                      src={`${m.video_url}#t=0.1`}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="w-full h-auto pointer-events-none"
+                    />
                   ) : (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
@@ -174,7 +185,7 @@ export default function MemoriesTab({ language }: Props) {
                       loading="lazy"
                     />
                   )}
-                  {m.video_youtube_id && (
+                  {(m.video_youtube_id || m.video_url) && (
                     <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">▶</span>
                   )}
                   {m.restaurant_id === null && (
@@ -267,7 +278,15 @@ function MemoryViewer({
         )}
       </div>
       <div className="flex-1 flex items-center justify-center px-3 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        {m.video_youtube_id ? (
+        {m.video_url ? (
+          <video
+            src={m.video_url}
+            controls
+            autoPlay
+            playsInline
+            className="max-w-full max-h-full rounded-lg"
+          />
+        ) : m.video_youtube_id ? (
           <div className="w-full max-w-3xl aspect-video bg-black rounded-xl overflow-hidden">
             <iframe
               src={`https://www.youtube.com/embed/${m.video_youtube_id}?rel=0&autoplay=1`}
@@ -309,6 +328,7 @@ function UploadModal({
   onSaved: () => void;
 }) {
   const [files, setFiles] = useState<File[]>([]);
+  const [videoFiles, setVideoFiles] = useState<File[]>([]);
   const [videoUrl, setVideoUrl] = useState('');
   const [restaurantId, setRestaurantId] = useState<string>(defaultRestaurantId ?? '');
   const [caption, setCaption] = useState('');
@@ -317,6 +337,9 @@ function UploadModal({
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const videoInput = useRef<HTMLInputElement>(null);
+
+  const MAX_VIDEO_MB = 100;
 
   const extractYouTubeId = (url: string): string | null => {
     const match = url.match(/(?:youtu\.be\/|v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
@@ -329,8 +352,15 @@ function UploadModal({
       setError(isES ? 'Ese enlace de YouTube no se ve bien.' : 'That YouTube link doesn’t look right.');
       return;
     }
-    if (files.length === 0 && !videoId) {
-      setError(isES ? 'Elige fotos o pega un enlace de YouTube.' : 'Pick photos or paste a YouTube link.');
+    if (files.length === 0 && videoFiles.length === 0 && !videoId) {
+      setError(isES ? 'Elige fotos, videos o pega un enlace de YouTube.' : 'Pick photos, videos, or paste a YouTube link.');
+      return;
+    }
+    const tooBig = videoFiles.find((v) => v.size > MAX_VIDEO_MB * 1024 * 1024);
+    if (tooBig) {
+      setError(isES
+        ? `"${tooBig.name}" pasa de ${MAX_VIDEO_MB}MB — recórtalo o compártelo por YouTube.`
+        : `"${tooBig.name}" is over ${MAX_VIDEO_MB}MB — trim it down or share it via YouTube.`);
       return;
     }
     setSaving(true);
@@ -351,6 +381,35 @@ function UploadModal({
           throw new Error(j.error || 'Upload failed.');
         }
         done++;
+      }
+      // Video files upload STRAIGHT to storage via signed URLs (they're
+      // too big for the API route), then a finalize call records them.
+      let vdone = 0;
+      for (const v of videoFiles) {
+        setProgress(`🎬 ${vdone + 1}/${videoFiles.length}`);
+        const ext = (v.name.split('.').pop() || 'mp4').toLowerCase() === 'mov' ? 'mov' : 'mp4';
+        const signRes = await fetch('/api/memories/video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'sign', ext }),
+        });
+        if (!signRes.ok) throw new Error('Could not start the video upload.');
+        const { path, token } = await signRes.json();
+        const putRes = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/upload/sign/memories/${path}?token=${encodeURIComponent(token)}`,
+          { method: 'PUT', headers: { 'Content-Type': ext === 'mov' ? 'video/quicktime' : 'video/mp4' }, body: v }
+        );
+        if (!putRes.ok) throw new Error(`Video upload failed (${putRes.status}).`);
+        const finRes = await fetch('/api/memories/video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'finalize', path, restaurant_id: restaurantId, caption, taken_label: takenLabel }),
+        });
+        if (!finRes.ok) {
+          const j = await finRes.json().catch(() => ({}));
+          throw new Error(j.error || 'Could not save the video.');
+        }
+        vdone++;
       }
       if (videoId) {
         const form = new FormData();
@@ -404,6 +463,29 @@ function UploadModal({
               {files.length > 0
                 ? `📸 ${files.length} ${isES ? 'seleccionadas' : 'selected'}`
                 : `📸 ${isES ? 'Elegir fotos' : 'Choose photos'}`}
+            </button>
+          </div>
+
+          {/* Videos — straight from the camera roll */}
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+              {isES ? `Videos (hasta ${MAX_VIDEO_MB}MB cada uno)` : `Videos (up to ${MAX_VIDEO_MB}MB each)`}
+            </label>
+            <input
+              ref={videoInput}
+              type="file"
+              accept="video/mp4,video/quicktime"
+              multiple
+              onChange={(e) => setVideoFiles(Array.from(e.target.files || []))}
+              className="hidden"
+            />
+            <button
+              onClick={() => videoInput.current?.click()}
+              className="w-full py-4 border-2 border-dashed border-gray-300 hover:border-[#1B3A6B]/40 rounded-xl text-sm font-semibold text-[#1B3A6B] transition-colors"
+            >
+              {videoFiles.length > 0
+                ? `🎬 ${videoFiles.length} ${isES ? 'seleccionados' : 'selected'}`
+                : `🎬 ${isES ? 'Elegir videos' : 'Choose videos'}`}
             </button>
           </div>
 
@@ -490,9 +572,9 @@ function UploadModal({
 
           <button
             onClick={save}
-            disabled={saving || (files.length === 0 && !videoUrl.trim())}
+            disabled={saving || (files.length === 0 && videoFiles.length === 0 && !videoUrl.trim())}
             className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
-              saving || (files.length === 0 && !videoUrl.trim())
+              saving || (files.length === 0 && videoFiles.length === 0 && !videoUrl.trim())
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-[#1B3A6B] text-white hover:bg-[#15305A]'
             }`}

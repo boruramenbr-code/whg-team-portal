@@ -112,6 +112,7 @@ interface MemoryPreview {
   id: string;
   photo_url: string | null;
   video_youtube_id: string | null;
+  video_url?: string | null;
 }
 
 /* ───────── Birthday types ───────── */
@@ -910,14 +911,24 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               <div className="grid grid-cols-3 gap-0.5">
                 {memoriesPreview.slice(0, 6).map((m) => (
                   <div key={m.id} className="relative aspect-square bg-whg-card2 overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={m.photo_url || `https://i.ytimg.com/vi/${m.video_youtube_id}/mqdefault.jpg`}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    {m.video_youtube_id && (
+                    {m.video_url ? (
+                      <video
+                        src={`${m.video_url}#t=0.1`}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover pointer-events-none"
+                      />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={m.photo_url || `https://i.ytimg.com/vi/${m.video_youtube_id}/mqdefault.jpg`}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    )}
+                    {(m.video_youtube_id || m.video_url) && (
                       <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-bold px-1 py-0.5 rounded-full">▶</span>
                     )}
                   </div>

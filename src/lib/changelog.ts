@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.09.2',
+    date: 'August 9, 2026',
+    title: 'Memories: video upload',
+    notes: [
+      'Videos now go straight on the Memories wall — managers pick them from the camera roll in the same Add Photos form, up to 100MB each',
+      'Video tiles show a ▶ badge and play full-screen with sound; YouTube links still work too',
+    ],
+  },
+  {
     version: '2026.08.09',
     date: 'August 9, 2026',
     title: 'Memories card shows your restaurant',
