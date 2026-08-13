@@ -929,7 +929,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                       />
                     )}
                     {(m.video_youtube_id || m.video_url) && (
-                      <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-bold px-1 py-0.5 rounded-full">▶</span>
+                      <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/55 ring-2 ring-white/90 flex items-center justify-center shadow-md">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="white" className="ml-0.5">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                      </span>
                     )}
                   </div>
                 ))}

@@ -253,7 +253,11 @@ export default function MemoriesTab({ language }: Props) {
                     />
                   )}
                   {(m.video_youtube_id || m.video_url) && (
-                    <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">▶</span>
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/55 backdrop-blur-[2px] ring-2 ring-white/90 flex items-center justify-center shadow-lg">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="white" className="ml-0.5">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    </span>
                   )}
                   {m.restaurant_id === null && (
                     <span className="absolute top-1.5 right-1.5 bg-whg-gold/90 text-whg-goldink text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full">

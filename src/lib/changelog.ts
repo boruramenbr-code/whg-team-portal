@@ -24,6 +24,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.09.4',
+    date: 'August 9, 2026',
+    title: 'Bigger play button on Memories videos',
+    notes: [
+      'Videos on the Memories wall and the Home card now wear a clear centered play button — no more guessing which tiles are videos',
+    ],
+  },
+  {
     version: '2026.08.09.3',
     date: 'August 9, 2026',
     title: '⭐ Events front the Memories wall',
