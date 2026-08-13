@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.08.09.3',
+    date: 'August 9, 2026',
+    title: '⭐ Events front the Memories wall',
+    notes: [
+      'Big moments — company parties, crawfish boils, grand openings — now get gold event cards in an Events row at the top of the wall',
+      'Company-wide events show on every restaurant’s wall; single-restaurant events front their own',
+      'When posting, managers tick “⭐ Feature as an event” — long compilations work best as YouTube links (no length limit)',
+    ],
+  },
+  {
     version: '2026.08.09.2',
     date: 'August 9, 2026',
     title: 'Memories: video upload',

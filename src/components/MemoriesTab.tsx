@@ -14,6 +14,8 @@ interface Memory {
   caption: string | null;
   caption_es: string | null;
   taken_label: string | null;
+  /** Event card — fronts the wall in the ⭐ Events row. */
+  featured: boolean;
   created_at: string;
 }
 
@@ -57,7 +59,10 @@ export default function MemoriesTab({ language }: Props) {
   useEffect(() => { load(); }, [load]);
 
   // Brand-wide moments (restaurant_id null) belong to every wall.
-  const wall = memories.filter((m) => m.restaurant_id === chip || m.restaurant_id === null);
+  const onWall = memories.filter((m) => m.restaurant_id === chip || m.restaurant_id === null);
+  // Events front the wall; the collage carries everything else.
+  const events = onWall.filter((m) => m.featured);
+  const wall = onWall.filter((m) => !m.featured);
 
   // Locations that haven't opened yet get a Coming Soon sign instead of
   // the plain empty state — it dissolves on its own the moment their
@@ -120,13 +125,75 @@ export default function MemoriesTab({ language }: Props) {
             : 'Spot yourself in a photo you’d rather not have up? Tell a manager — it comes down, no questions.'}
         </p>
 
+        {/* ⭐ Events — the front row: company gatherings and big moments,
+            gold-trimmed cinematic cards. Brand-wide events front every
+            restaurant's wall. */}
+        {!loading && events.length > 0 && (
+          <div className="mb-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-whg-gold mb-2">
+              ⭐ {isES ? 'Eventos' : 'Events'}
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+              {events.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setViewer(m)}
+                  className="tap-highlight relative flex-shrink-0 w-72 aspect-video rounded-2xl overflow-hidden border border-whg-gold/40 shadow-md text-left bg-whg-card2"
+                >
+                  {m.photo_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={m.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                  ) : m.video_url ? (
+                    <video
+                      src={`${m.video_url}#t=0.1`}
+                      preload="metadata"
+                      muted
+                      playsInline
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={`https://i.ytimg.com/vi/${m.video_youtube_id}/hqdefault.jpg`}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  {(m.video_youtube_id || m.video_url) && (
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-md">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#1B3A6B">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                    </span>
+                  )}
+                  {m.restaurant_id === null && (
+                    <span className="absolute top-2 right-2 bg-whg-gold/90 text-whg-goldink text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full">
+                      WHG
+                    </span>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="text-white font-bold text-sm leading-tight drop-shadow line-clamp-2">
+                      {(isES && m.caption_es ? m.caption_es : m.caption) || (isES ? 'Evento' : 'Event')}
+                    </p>
+                    {m.taken_label && (
+                      <p className="text-white/70 text-[11px] font-semibold mt-0.5">{m.taken_label}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="columns-2 md:columns-3 gap-3 [&>*]:mb-3">
             {[160, 220, 140, 200, 170, 190].map((h, i) => (
               <div key={i} className="break-inside-avoid rounded-2xl bg-whg-card/60 animate-pulse" style={{ height: h }} />
             ))}
           </div>
-        ) : wall.length === 0 && isUpcomingWall ? (
+        ) : onWall.length === 0 && isUpcomingWall ? (
           /* Not-yet-open location — hype sign until the first photo */
           <div className="text-center py-16 bg-whg-card/60 rounded-2xl border border-whg-gold/30 relative overflow-hidden">
             <div className="absolute top-3 left-4 text-lg opacity-40 select-none" aria-hidden>✨</div>
@@ -142,7 +209,7 @@ export default function MemoriesTab({ language }: Props) {
                 : 'This chapter of the WHG family hasn’t started yet. The first photo lands here when the doors open — and you might be in it.'}
             </p>
           </div>
-        ) : wall.length === 0 ? (
+        ) : onWall.length === 0 ? (
           <div className="text-center py-14 bg-whg-card/60 rounded-2xl border border-whg-line">
             <div className="text-4xl mb-3">📸</div>
             <p className="text-sm text-whg-dim font-medium">
@@ -333,6 +400,7 @@ function UploadModal({
   const [restaurantId, setRestaurantId] = useState<string>(defaultRestaurantId ?? '');
   const [caption, setCaption] = useState('');
   const [takenLabel, setTakenLabel] = useState('');
+  const [featured, setFeatured] = useState(false);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -375,6 +443,7 @@ function UploadModal({
         form.append('restaurant_id', restaurantId);
         form.append('caption', caption);
         form.append('taken_label', takenLabel);
+        form.append('featured', String(featured));
         const r = await fetch('/api/memories', { method: 'POST', body: form });
         if (!r.ok) {
           const j = await r.json().catch(() => ({}));
@@ -403,7 +472,7 @@ function UploadModal({
         const finRes = await fetch('/api/memories/video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'finalize', path, restaurant_id: restaurantId, caption, taken_label: takenLabel }),
+          body: JSON.stringify({ action: 'finalize', path, restaurant_id: restaurantId, caption, taken_label: takenLabel, featured }),
         });
         if (!finRes.ok) {
           const j = await finRes.json().catch(() => ({}));
@@ -417,6 +486,7 @@ function UploadModal({
         form.append('restaurant_id', restaurantId);
         form.append('caption', caption);
         form.append('taken_label', takenLabel);
+        form.append('featured', String(featured));
         const r = await fetch('/api/memories', { method: 'POST', body: form });
         if (!r.ok) {
           const j = await r.json().catch(() => ({}));
@@ -563,6 +633,30 @@ function UploadModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
             />
           </div>
+
+          {/* ⭐ Event toggle — fronts the wall in the Events row */}
+          <button
+            type="button"
+            onClick={() => setFeatured((v) => !v)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-colors ${
+              featured ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <span className="text-xl" aria-hidden>⭐</span>
+            <span className="min-w-0 flex-1">
+              <span className={`block text-xs font-bold ${featured ? 'text-amber-800' : 'text-gray-700'}`}>
+                {isES ? 'Destacar como evento' : 'Feature as an event'}
+              </span>
+              <span className={`block text-[10px] mt-0.5 ${featured ? 'text-amber-700' : 'text-gray-400'}`}>
+                {isES
+                  ? 'Va en la fila de Eventos, arriba del muro — para fiestas, hervidos y grandes momentos.'
+                  : 'Goes in the Events row at the top of the wall — for parties, boils, and big moments.'}
+              </span>
+            </span>
+            <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
+              featured ? 'border-amber-500 bg-amber-500 text-white' : 'border-gray-300 text-transparent'
+            }`}>✓</span>
+          </button>
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-medium">

@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
       caption: ((body.caption as string) || '').trim() || null,
       caption_es: ((body.caption_es as string) || '').trim() || null,
       taken_label: ((body.taken_label as string) || '').trim() || null,
+      featured: body.featured === true,
       uploaded_by: auth.user!.id,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

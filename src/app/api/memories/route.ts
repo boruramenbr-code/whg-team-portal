@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   const scopeRid = ridParam || (scopeOwn ? me.restaurant_id : null);
   let memoriesQuery = adminClient
     .from('memories')
-    .select('id, restaurant_id, photo_url, video_youtube_id, video_url, caption, caption_es, taken_label, created_at')
+    .select('id, restaurant_id, photo_url, video_youtube_id, video_url, caption, caption_es, taken_label, featured, created_at')
     .eq('active', true);
   if (scopeRid) {
     memoriesQuery = memoriesQuery.or(`restaurant_id.eq.${scopeRid},restaurant_id.is.null`);
@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
     caption,
     caption_es: captionEs,
     taken_label: takenLabel,
+    featured: form.get('featured') === 'true',
     uploaded_by: auth.user!.id,
   }).select('id').single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
