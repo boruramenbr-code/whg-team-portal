@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.12.2',
+    date: 'September 12, 2026',
+    title: 'One look everywhere: Handbook & Team go Midnight',
+    notes: [
+      'The Handbook — Checklist, Handbook reader, Policies, signing, and Ask — now wears the same Midnight Navy & Gold look as Home and Training',
+      'Team (Our Team org chart and Positions), the Tip Tracker, and the first-login welcome screens match too',
+      'Signatures are still drawn on a white pad, like signing on paper',
+    ],
+  },
+  {
     version: '2026.09.12',
     date: 'September 12, 2026',
     title: 'Faster logins: lighter Memories + quicker welcome',

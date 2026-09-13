@@ -152,14 +152,14 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#1B3A6B] flex items-center justify-center">
-        <div className="text-white/70 text-sm animate-pulse">{isES ? 'Cargando…' : 'Loading…'}</div>
+      <div className="fixed inset-0 z-50 bg-whg-night flex items-center justify-center">
+        <div className="text-whg-dim text-sm animate-pulse">{isES ? 'Cargando…' : 'Loading…'}</div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-b from-[#1B3A6B] via-[#2C4F8A] to-[#1B3A6B] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2 flex flex-col">
       {/* Top bar — progress dots centered, no big skip button */}
       <div className="flex items-center justify-center px-5 pt-safe pt-3 pb-3 flex-shrink-0">
         <div className="flex items-center gap-1.5">
@@ -167,7 +167,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all ${
-                i === stepIdx ? 'w-6 bg-white' : i < stepIdx ? 'w-3 bg-white/60' : 'w-3 bg-white/20'
+                i === stepIdx ? 'w-6 bg-whg-gold' : i < stepIdx ? 'w-3 bg-whg-gold/50' : 'w-3 bg-white/20'
               }`}
             />
           ))}
@@ -205,12 +205,12 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
 
       {/* Footer — back + primary action. Subtle "skip" lives below as a
           tiny escape hatch, not competing with Continue. */}
-      <div className="border-t border-white/10 bg-black/20 backdrop-blur-sm px-5 py-3 pb-safe flex-shrink-0">
+      <div className="border-t border-whg-line bg-whg-night backdrop-blur-sm px-5 py-3 pb-safe flex-shrink-0">
         <div className="flex items-center gap-3">
           {!isFirst ? (
             <button
               onClick={back}
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold text-white/70 hover:text-white"
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold text-whg-dim hover:text-whg-snow"
             >
               {isES ? '← Atrás' : '← Back'}
             </button>
@@ -219,7 +219,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
           {!isLast ? (
             <button
               onClick={advance}
-              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-white text-[#1B3A6B] hover:bg-gray-100 shadow-lg"
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-whg-gold text-whg-goldink hover:bg-whg-gold2 shadow-lg"
             >
               {isES ? 'Continuar →' : 'Continue →'}
             </button>
@@ -227,7 +227,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
             <button
               onClick={finish}
               disabled={submitting}
-              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-emerald-400 text-[#0B2447] hover:bg-emerald-300 shadow-lg disabled:opacity-50"
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold bg-whg-gold text-whg-goldink hover:bg-whg-gold2 shadow-lg disabled:opacity-50"
             >
               {submitting ? (isES ? 'Guardando…' : 'Saving…') : (isES ? 'Empecemos →' : "Let's get started →")}
             </button>
@@ -236,7 +236,7 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
         <div className="text-center mt-2">
           <button
             onClick={onComplete}
-            className="text-xs text-white/40 hover:text-white/70 underline-offset-2 hover:underline px-3 py-2"
+            className="text-xs text-whg-dim/70 hover:text-whg-snow underline-offset-2 hover:underline px-3 py-2"
           >
             {isES ? 'Saltar por ahora — puedes terminarlo después' : 'Skip for now — you can finish this later'}
           </button>
@@ -249,21 +249,21 @@ export default function WelcomeWizard({ firstName, restaurantName, onComplete, o
 /* ───────── Step 1: Install on phone ───────── */
 function InstallStep({ device, firstName, restaurantName, stepLabel, isES }: { device: DeviceKind; firstName: string; restaurantName: string | null; stepLabel: string; isES: boolean }) {
   return (
-    <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{stepLabel}</p>
+    <div className="text-whg-snow pt-4">
+      <p className="text-xs uppercase tracking-widest text-whg-dim mb-2">{stepLabel}</p>
       <h1 className="text-2xl font-bold mb-2">
         {isES ? `Pon esta app en tu teléfono, ${firstName}.` : `Put this app on your phone, ${firstName}.`}
       </h1>
-      <p className="text-sm text-white/80 leading-relaxed mb-5">
+      <p className="text-sm text-whg-snow/90 leading-relaxed mb-5">
         {isES
           ? 'La usarás cada turno — horario, capacitación, políticas, tu lista. Agrégala a tu pantalla de inicio para que abra como una app de verdad.'
           : 'You’ll use this every shift — schedule, training, policies, your checklist. Add it to your home screen so it opens like a real app.'}
       </p>
 
-      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
+      <div className="bg-whg-card backdrop-blur-sm rounded-2xl p-5 border border-whg-line">
         {device === 'ios' ? (
           <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-300">iPhone — Safari</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-whg-gold">iPhone — Safari</p>
             <Step number={1}>
               {isES
                 ? <>Toca el botón <strong>Compartir</strong> abajo en Safari (el cuadro con la flecha hacia arriba <span className="inline-block">⬆</span>).</>
@@ -287,7 +287,7 @@ function InstallStep({ device, firstName, restaurantName, stepLabel, isES }: { d
           </div>
         ) : device === 'android' ? (
           <div className="space-y-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-300">Android — Chrome</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-whg-gold">Android — Chrome</p>
             <Step number={1}>
               {isES
                 ? <>Toca el <strong>menú de tres puntos</strong> (⋮) arriba a la derecha en Chrome.</>
@@ -310,7 +310,7 @@ function InstallStep({ device, firstName, restaurantName, stepLabel, isES }: { d
             </Step>
           </div>
         ) : (
-          <p className="text-sm text-white/80">
+          <p className="text-sm text-whg-snow/90">
             {isES
               ? 'Estás en una computadora — no hay nada que instalar. Toca Continuar para seguir.'
               : 'You’re on a computer right now — no install needed. Tap Continue to keep going.'}
@@ -318,7 +318,7 @@ function InstallStep({ device, firstName, restaurantName, stepLabel, isES }: { d
         )}
       </div>
 
-      <p className="text-[11px] text-white/50 italic mt-4 text-center">
+      <p className="text-[11px] text-whg-dim/70 italic mt-4 text-center">
         {isES
           ? 'No te preocupes si lo saltas — siempre puedes hacerlo después.'
           : 'Don’t worry if you skip this — you can always do it later.'}
@@ -330,10 +330,10 @@ function InstallStep({ device, firstName, restaurantName, stepLabel, isES }: { d
 function Step({ number, children }: { number: number; children: React.ReactNode }) {
   return (
     <div className="flex gap-3 items-start">
-      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-300 text-[#0B2447] font-bold text-xs flex items-center justify-center">
+      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-whg-gold text-whg-goldink font-bold text-xs flex items-center justify-center">
         {number}
       </div>
-      <p className="text-sm text-white/90 leading-relaxed flex-1">{children}</p>
+      <p className="text-sm text-whg-snow/90 leading-relaxed flex-1">{children}</p>
     </div>
   );
 }
@@ -363,22 +363,22 @@ function renderBoldInline(text: string): React.ReactNode[] {
 /* ───────── Step 2: Welcome ───────── */
 function WelcomeStep({ firstName, restaurantName, content, isES }: { firstName: string; restaurantName: string | null; content: string | null; isES: boolean }) {
   return (
-    <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{isES ? 'Bienvenida' : 'Welcome'}</p>
+    <div className="text-whg-snow pt-4">
+      <p className="text-xs uppercase tracking-widest text-whg-dim mb-2">{isES ? 'Bienvenida' : 'Welcome'}</p>
       <h1 className="text-2xl font-bold mb-2">
         {isES
           ? `¡Bienvenido(a) a ${restaurantName || 'WHG'}, ${firstName}!`
           : `Welcome to ${restaurantName || 'WHG'}, ${firstName}!`}
       </h1>
-      <p className="text-sm text-white/80 mb-5">{isES ? 'Una nota rápida del equipo.' : 'A quick note from the team.'}</p>
+      <p className="text-sm text-whg-dim mb-5">{isES ? 'Una nota rápida del equipo.' : 'A quick note from the team.'}</p>
 
-      <div className="bg-white rounded-2xl p-5 text-gray-800 shadow-lg">
+      <div className="bg-whg-card border border-whg-line rounded-2xl p-5 text-whg-snow/90 shadow-lg">
         {content ? (
           <div className="whitespace-pre-wrap text-sm leading-relaxed">
             {renderBoldInline(content)}
           </div>
         ) : (
-          <p className="text-sm italic text-gray-500">
+          <p className="text-sm italic text-whg-dim">
             {isES
               ? 'Todavía no hay una nota de bienvenida — pero nos alegra que estés aquí.'
               : 'No welcome note has been written yet — but we’re glad you’re here.'}
@@ -392,16 +392,16 @@ function WelcomeStep({ firstName, restaurantName, content, isES }: { firstName: 
 /* ───────── Step 3: Our Story ───────── */
 function StoryStep({ title, body, isES }: { title: string; body: string; isES: boolean }) {
   return (
-    <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{isES ? 'Quiénes somos' : 'Who we are'}</p>
+    <div className="text-whg-snow pt-4">
+      <p className="text-xs uppercase tracking-widest text-whg-dim mb-2">{isES ? 'Quiénes somos' : 'Who we are'}</p>
       <h1 className="text-2xl font-bold mb-2">{title}</h1>
-      <p className="text-sm text-white/80 mb-5">
+      <p className="text-sm text-whg-dim mb-5">
         {isES
           ? 'Lectura rápida — este es el equipo al que te uniste y lo que defendemos.'
           : 'Quick read — this is the team you’ve joined and what we stand for.'}
       </p>
 
-      <div className="bg-white rounded-2xl p-5 text-gray-800 shadow-lg max-h-[60vh] overflow-y-auto">
+      <div className="bg-whg-card border border-whg-line rounded-2xl p-5 text-whg-snow/90 shadow-lg max-h-[60vh] overflow-y-auto">
         <StoryBody body={body} />
       </div>
     </div>
@@ -411,25 +411,25 @@ function StoryStep({ title, body, isES }: { title: string; body: string; isES: b
 /* ───────── Step 4: Checklist intro ───────── */
 function ChecklistStep({ firstName, isES }: { firstName: string; isES: boolean }) {
   return (
-    <div className="text-white pt-4">
-      <p className="text-xs uppercase tracking-widest text-white/60 mb-2">{isES ? 'Último paso' : 'Final step'}</p>
+    <div className="text-whg-snow pt-4">
+      <p className="text-xs uppercase tracking-widest text-whg-dim mb-2">{isES ? 'Último paso' : 'Final step'}</p>
       <h1 className="text-2xl font-bold mb-2">
         {isES
           ? `Ya estás dentro, ${firstName} — vamos a ponerte en marcha.`
           : `You’re in, ${firstName} — let’s get you moving.`}
       </h1>
-      <p className="text-sm text-white/80 leading-relaxed mb-5">
+      <p className="text-sm text-whg-snow/90 leading-relaxed mb-5">
         {isES
           ? 'En los restaurantes no hay tiempo para arranques lentos. Armamos esta lista para que termines el papeleo, te capacites y empieces a ganar turnos reales sin andar persiguiendo a nadie.'
           : 'Restaurants don’t have time for slow starts. We built this checklist so you can knock out paperwork, get trained, and start earning real shifts without chasing people down.'}
       </p>
-      <p className="text-sm text-white/80 leading-relaxed mb-5">
+      <p className="text-sm text-whg-snow/90 leading-relaxed mb-5">
         {isES
           ? 'La mayoría se marca sola cuando terminas. Tu gerente confirma el resto. Vuelve cuando quieras en la pestaña de Onboarding.'
           : 'Most of it auto-tracks when you finish. Your manager confirms the rest. Come back anytime in the Onboarding tab.'}
       </p>
 
-      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 border border-white/10 space-y-3">
+      <div className="bg-whg-card backdrop-blur-sm rounded-2xl p-5 border border-whg-line space-y-3">
         <Bullet>
           {isES
             ? <>✅ <strong>Se marca solo</strong> cuando terminas cosas (firmar políticas, leer Nuestra Historia, etc.)</>
@@ -456,7 +456,7 @@ function ChecklistStep({ firstName, isES }: { firstName: string; isES: boolean }
 }
 
 function Bullet({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-white/90 leading-relaxed">{children}</p>;
+  return <p className="text-sm text-whg-snow/90 leading-relaxed">{children}</p>;
 }
 
 /* ───────── Reused story body renderer (mirrors OurStoryModal) ───────── */
@@ -504,13 +504,13 @@ function StoryBody({ body }: { body: string }) {
   return (
     <div className="space-y-3 text-sm">
       {blocks.map((b, i) => {
-        if (b.kind === 'h2') return <h2 key={i} className="text-base font-bold text-[#1B3A6B] uppercase tracking-widest mt-4 pb-1 border-b border-gray-200">{b.text}</h2>;
-        if (b.kind === 'h3') return <h3 key={i} className="text-sm font-bold text-[#1B3A6B] mt-3">{b.text}</h3>;
+        if (b.kind === 'h2') return <h2 key={i} className="text-base font-bold text-whg-snow uppercase tracking-widest mt-4 pb-1 border-b border-whg-line">{b.text}</h2>;
+        if (b.kind === 'h3') return <h3 key={i} className="text-sm font-bold text-whg-snow mt-3">{b.text}</h3>;
         if (b.kind === 'bullets') return (
           <ul key={i} className="space-y-1.5 pl-1">
             {b.items.map((item, j) => (
               <li key={j} className="flex gap-2 leading-relaxed">
-                <span className="text-[#1B3A6B] flex-shrink-0">•</span>
+                <span className="text-whg-dim flex-shrink-0">•</span>
                 <span>{item}</span>
               </li>
             ))}

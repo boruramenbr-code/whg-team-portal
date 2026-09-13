@@ -535,17 +535,17 @@ function UploadModal({
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={saving ? undefined : onClose} />
-      <div className="relative w-full max-w-md bg-white rounded-t-2xl md:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-base font-bold text-[#1B3A6B]">
+      <div className="relative w-full max-w-md bg-whg-card border border-whg-line rounded-t-2xl md:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-whg-card border-b border-whg-line px-5 py-4 flex items-center justify-between rounded-t-2xl">
+          <h2 className="text-base font-bold text-whg-snow">
             🎞 {isES ? 'Agregar Recuerdos' : 'Add Memories'}
           </h2>
-          <button onClick={onClose} disabled={saving} className="text-gray-400 hover:text-gray-600 text-xl disabled:opacity-40">✕</button>
+          <button onClick={onClose} disabled={saving} className="text-whg-dim hover:text-whg-snow text-xl disabled:opacity-40">✕</button>
         </div>
         <div className="px-5 py-4 space-y-4">
           {/* Photos — bulk picker */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+            <label className="block text-[10px] font-bold text-whg-dim uppercase tracking-wide mb-1.5">
               {isES ? 'Fotos (elige varias)' : 'Photos (pick as many as you want)'}
             </label>
             <input
@@ -558,7 +558,7 @@ function UploadModal({
             />
             <button
               onClick={() => fileInput.current?.click()}
-              className="w-full py-4 border-2 border-dashed border-gray-300 hover:border-[#1B3A6B]/40 rounded-xl text-sm font-semibold text-[#1B3A6B] transition-colors"
+              className="w-full py-4 border-2 border-dashed border-whg-line hover:border-whg-gold/50 rounded-xl text-sm font-semibold text-whg-snow transition-colors"
             >
               {files.length > 0
                 ? `📸 ${files.length} ${isES ? 'seleccionadas' : 'selected'}`
@@ -568,7 +568,7 @@ function UploadModal({
 
           {/* Videos — straight from the camera roll */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+            <label className="block text-[10px] font-bold text-whg-dim uppercase tracking-wide mb-1.5">
               {isES ? `Videos (hasta ${MAX_VIDEO_MB}MB cada uno)` : `Videos (up to ${MAX_VIDEO_MB}MB each)`}
             </label>
             <input
@@ -581,7 +581,7 @@ function UploadModal({
             />
             <button
               onClick={() => videoInput.current?.click()}
-              className="w-full py-4 border-2 border-dashed border-gray-300 hover:border-[#1B3A6B]/40 rounded-xl text-sm font-semibold text-[#1B3A6B] transition-colors"
+              className="w-full py-4 border-2 border-dashed border-whg-line hover:border-whg-gold/50 rounded-xl text-sm font-semibold text-whg-snow transition-colors"
             >
               {videoFiles.length > 0
                 ? `🎬 ${videoFiles.length} ${isES ? 'seleccionados' : 'selected'}`
@@ -591,7 +591,7 @@ function UploadModal({
 
           {/* Or a YouTube video */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+            <label className="block text-[10px] font-bold text-whg-dim uppercase tracking-wide mb-1.5">
               {isES ? 'O un video de YouTube (opcional)' : 'Or a YouTube video (optional)'}
             </label>
             <input
@@ -599,13 +599,13 @@ function UploadModal({
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               placeholder="https://youtu.be/…"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+              className="w-full px-3 py-2 bg-whg-card2 border border-whg-line rounded-lg text-base md:text-sm text-whg-snow placeholder:text-whg-dim/60 focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20"
             />
           </div>
 
           {/* Which wall */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+            <label className="block text-[10px] font-bold text-whg-dim uppercase tracking-wide mb-1.5">
               {isES ? '¿De qué restaurante?' : 'Whose wall?'}
             </label>
             <div className="flex gap-1.5 flex-wrap">
@@ -615,7 +615,7 @@ function UploadModal({
                   type="button"
                   onClick={() => setRestaurantId(r.id)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                    restaurantId === r.id ? 'bg-[#1B3A6B] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    restaurantId === r.id ? 'bg-whg-gold text-whg-goldink shadow-sm' : 'bg-white/10 text-whg-dim hover:bg-white/20'
                   }`}
                 >
                   {r.name}
@@ -625,13 +625,13 @@ function UploadModal({
                 type="button"
                 onClick={() => setRestaurantId('')}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  restaurantId === '' ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  restaurantId === '' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white/10 text-whg-dim hover:bg-white/20'
                 }`}
               >
                 🏢 {isES ? 'Toda la familia WHG' : 'All of WHG'}
               </button>
             </div>
-            <p className="text-[10px] text-gray-400 mt-1.5">
+            <p className="text-[10px] text-whg-dim/70 mt-1.5">
               {isES
                 ? '“Toda la familia WHG” aparece en el muro de cada restaurante.'
                 : '“All of WHG” shows on every restaurant’s wall.'}
@@ -640,7 +640,7 @@ function UploadModal({
 
           {/* Caption + when — one per batch (usually one event) */}
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+            <label className="block text-[10px] font-bold text-whg-dim uppercase tracking-wide mb-1.5">
               {isES ? 'Título (se aplica a todas)' : 'Caption (applies to the whole batch)'}
             </label>
             <input
@@ -648,11 +648,11 @@ function UploadModal({
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder={isES ? 'p. ej. Hervido de cangrejo del equipo' : 'e.g. Team crawfish boil'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+              className="w-full px-3 py-2 bg-whg-card2 border border-whg-line rounded-lg text-base md:text-sm text-whg-snow placeholder:text-whg-dim/60 focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+            <label className="block text-[10px] font-bold text-whg-dim uppercase tracking-wide mb-1.5">
               {isES ? '¿Cuándo fue? (texto libre)' : 'When was it? (free text)'}
             </label>
             <input
@@ -660,7 +660,7 @@ function UploadModal({
               value={takenLabel}
               onChange={(e) => setTakenLabel(e.target.value)}
               placeholder={isES ? 'p. ej. Mayo 2023' : 'e.g. May 2023'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+              className="w-full px-3 py-2 bg-whg-card2 border border-whg-line rounded-lg text-base md:text-sm text-whg-snow placeholder:text-whg-dim/60 focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20"
             />
           </div>
 
@@ -669,27 +669,27 @@ function UploadModal({
             type="button"
             onClick={() => setFeatured((v) => !v)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-colors ${
-              featured ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-white hover:border-gray-300'
+              featured ? 'border-amber-400/60 bg-amber-400/10' : 'border-whg-line bg-whg-card2 hover:border-whg-dim/40'
             }`}
           >
             <span className="text-xl" aria-hidden>⭐</span>
             <span className="min-w-0 flex-1">
-              <span className={`block text-xs font-bold ${featured ? 'text-amber-800' : 'text-gray-700'}`}>
+              <span className={`block text-xs font-bold ${featured ? 'text-amber-200' : 'text-whg-snow'}`}>
                 {isES ? 'Destacar como evento' : 'Feature as an event'}
               </span>
-              <span className={`block text-[10px] mt-0.5 ${featured ? 'text-amber-700' : 'text-gray-400'}`}>
+              <span className={`block text-[10px] mt-0.5 ${featured ? 'text-amber-300/80' : 'text-whg-dim/70'}`}>
                 {isES
                   ? 'Va en la fila de Eventos, arriba del muro — para fiestas, hervidos y grandes momentos.'
                   : 'Goes in the Events row at the top of the wall — for parties, boils, and big moments.'}
               </span>
             </span>
             <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[10px] font-bold ${
-              featured ? 'border-amber-500 bg-amber-500 text-white' : 'border-gray-300 text-transparent'
+              featured ? 'border-amber-500 bg-amber-500 text-white' : 'border-whg-line text-transparent'
             }`}>✓</span>
           </button>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-medium">
+            <div className="bg-red-400/10 border border-red-400/30 rounded-xl px-4 py-3 text-xs text-red-200 font-medium">
               {error}
             </div>
           )}
@@ -699,8 +699,8 @@ function UploadModal({
             disabled={saving || (files.length === 0 && videoFiles.length === 0 && !videoUrl.trim())}
             className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
               saving || (files.length === 0 && videoFiles.length === 0 && !videoUrl.trim())
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-[#1B3A6B] text-white hover:bg-[#15305A]'
+                ? 'bg-white/10 text-whg-dim/50 cursor-not-allowed'
+                : 'bg-whg-gold text-whg-goldink hover:bg-whg-gold2'
             }`}
           >
             {saving

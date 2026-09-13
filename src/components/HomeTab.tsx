@@ -385,18 +385,18 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       {comingSoon && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setComingSoon(null)}>
           <div
-            className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center"
+            className="bg-whg-card border border-whg-line rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-5xl mb-3" aria-hidden>{comingSoon.emoji}</div>
-            <p className="text-[10px] uppercase tracking-widest text-amber-600 font-bold mb-1">Coming soon</p>
-            <h2 className="text-lg font-bold text-[#1B3A6B] mb-2">{comingSoon.title}</h2>
-            <p className="text-sm text-gray-600 leading-relaxed mb-5">
+            <p className="text-[10px] uppercase tracking-widest text-whg-gold font-bold mb-1">Coming soon</p>
+            <h2 className="text-lg font-bold text-whg-snow mb-2">{comingSoon.title}</h2>
+            <p className="text-sm text-whg-dim leading-relaxed mb-5">
               {comingSoon.description}
             </p>
             <button
               onClick={() => setComingSoon(null)}
-              className="w-full py-3 bg-[#1B3A6B] text-white text-sm font-bold rounded-xl hover:bg-[#2C4F8A] transition-colors"
+              className="w-full py-3 bg-whg-gold text-whg-goldink text-sm font-bold rounded-xl hover:bg-whg-gold2 transition-colors"
             >
               Got it
             </button>
@@ -767,7 +767,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             >
               <div className="flex flex-col sm:flex-row">
                 {/* Thumbnail — uses YouTube's hqdefault for a sharper feel */}
-                <div className="relative flex-shrink-0 w-full sm:w-44 aspect-video sm:aspect-auto bg-gray-200 overflow-hidden">
+                <div className="relative flex-shrink-0 w-full sm:w-44 aspect-video sm:aspect-auto bg-whg-card2 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`https://i.ytimg.com/vi/${latestTraining.youtube_id}/hqdefault.jpg`}

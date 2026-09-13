@@ -11,7 +11,7 @@ import HomeTab from './HomeTab';
 // JS only ships HomeTab + WelcomeSplash. Other tabs download on first
 // visit. `ssr: false` is safe because DashboardClient is already 'use client'.
 const TabLoader = () => (
-  <div className="flex-1 flex items-center justify-center text-gray-400 text-sm py-12">
+  <div className="flex-1 flex items-center justify-center text-whg-dim text-sm py-12 bg-whg-night">
     Loading…
   </div>
 );
@@ -469,20 +469,20 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {tabMounted('handbook') && (
         <div className={tabShown('handbook') ? 'contents' : 'hidden'}>
         {activeHandbookSub === 'checklist' && (
-          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB] tab-content-enter">
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2 tab-content-enter">
             <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
               <div className="flex items-start justify-between gap-3 mb-1">
-                <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B]">
+                <h1 className="text-2xl md:text-3xl font-bold text-whg-snow">
                   {isES ? 'Tu Lista de Bienvenida' : 'Your Onboarding'}
                 </h1>
                 <button
                   onClick={() => { setWizardReplay(true); setShowWizard(true); }}
-                  className="flex-shrink-0 text-[11px] text-[#2E86C1] hover:text-[#1B3A6B] underline underline-offset-2 mt-1.5"
+                  className="flex-shrink-0 text-[11px] text-sky-300 hover:text-whg-snow underline underline-offset-2 mt-1.5"
                 >
                   {isES ? 'Ver intro de nuevo' : 'Watch intro again'}
                 </button>
               </div>
-              <p className="text-sm text-gray-600 mb-5">
+              <p className="text-sm text-whg-dim mb-5">
                 {isES
                   ? 'Trabaja en cada elemento. Tu manager confirmará los completados.'
                   : 'Work through each item — your manager will confirm completed ones.'}
@@ -513,7 +513,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {/* HANDBOOK & POLICIES → Ask (chatbot) */}
         {activeHandbookSub === 'ask' && (
           <>
-            <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] tab-content-enter">
+            <main className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gradient-to-b from-whg-night to-whg-night2 tab-content-enter">
               <div className="max-w-2xl w-full mx-auto h-full flex flex-col">
                 <ChatInterface
                   profile={profile}
@@ -530,7 +530,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
               <button
                 onClick={() => setMobileTopicsOpen(true)}
                 className={`lg:hidden fixed bottom-36 md:bottom-20 right-4 z-20 px-4 py-2.5 rounded-full shadow-lg text-xs font-bold text-white flex items-center gap-1.5 transition-colors ${
-                  handbookSource === 'manager' ? 'bg-amber-600' : 'bg-[#1B3A6B]'
+                  handbookSource === 'manager' ? 'bg-amber-600' : 'bg-whg-card2 ring-1 ring-whg-gold/40'
                 }`}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -546,7 +546,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
             </main>
 
             {/* Desktop topics sidebar */}
-            <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-[#D6DEE8]/60 bg-[#CDDAE7] overflow-hidden">
+            <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-l border-whg-line bg-whg-night overflow-hidden">
               <Sidebar handbookSource={handbookSource} onSelect={handleSelect} language={language} />
             </aside>
 
@@ -557,12 +557,12 @@ export default function DashboardClient({ profile, isManager }: Props) {
                   className="lg:hidden fixed inset-0 bg-black/40 z-30"
                   onClick={() => setMobileTopicsOpen(false)}
                 />
-                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-                    <h3 className="font-semibold text-[#1B3A6B] text-sm">Browse Topics</h3>
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-whg-card border-t border-whg-line rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-whg-line flex-shrink-0">
+                    <h3 className="font-semibold text-whg-snow text-sm">Browse Topics</h3>
                     <button
                       onClick={() => setMobileTopicsOpen(false)}
-                      className="text-gray-400 hover:text-gray-600 text-lg font-light leading-none"
+                      className="text-whg-dim hover:text-whg-snow text-lg font-light leading-none"
                     >
                       ✕
                     </button>

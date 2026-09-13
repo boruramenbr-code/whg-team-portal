@@ -93,21 +93,21 @@ export default function PositionsSection({ language }: Props) {
     : { FOH: 'Front of House', BOH: 'Back of House', Management: 'Management' };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8 space-y-4">
 
         {/* ── Header ── */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="text-lg font-bold text-[#1B3A6B] flex items-center gap-2">
+        <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-5">
+          <h2 className="text-lg font-bold text-whg-snow flex items-center gap-2">
             <span>🧭</span>
             {isES ? 'Posiciones del Equipo' : 'Team Positions'}
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-whg-dim mt-1">
             {isES
               ? 'Toca una posición para ver qué hace.'
               : 'Tap a position to see what it does.'}
           </p>
-          <p className="text-xs text-[#1B3A6B] font-semibold mt-2 italic leading-relaxed">
+          <p className="text-xs text-whg-snow/90 font-semibold mt-2 italic leading-relaxed">
             {isES
               ? 'Estos son nuestros estándares. Cualquier cosa por debajo será atendida por la gerencia.'
               : 'These are our standards. Anything below gets addressed by management.'}
@@ -116,8 +116,8 @@ export default function PositionsSection({ language }: Props) {
 
         {/* ── Restaurant switcher (admins / multi-location users) ── */}
         {availableRestaurants.length > 1 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+          <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim mb-2">
               {isES ? 'Viendo Como' : 'Viewing As'}
             </p>
             <div className="flex gap-1.5 flex-wrap">
@@ -127,8 +127,8 @@ export default function PositionsSection({ language }: Props) {
                   onClick={() => onSelectRestaurant(r.id)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                     restaurantId === r.id
-                      ? 'bg-[#1B3A6B] text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                      : 'bg-white/10 text-whg-dim hover:bg-white/20'
                   }`}
                 >
                   {r.name}
@@ -143,13 +143,13 @@ export default function PositionsSection({ language }: Props) {
 
         {/* ── Loading / empty states ── */}
         {loading && (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-gray-500">
+          <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-8 text-center text-sm text-whg-dim">
             {isES ? 'Cargando…' : 'Loading…'}
           </div>
         )}
 
         {!loading && positions.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-gray-500">
+          <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-8 text-center text-sm text-whg-dim">
             {isES ? 'No hay posiciones todavía.' : 'No positions yet.'}
           </div>
         )}
@@ -159,8 +159,8 @@ export default function PositionsSection({ language }: Props) {
           const items = byDept[dept];
           if (items.length === 0) return null;
           return (
-            <div key={dept} className="bg-white rounded-2xl shadow-sm p-4">
-              <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-3 px-1">
+            <div key={dept} className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-4">
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-whg-dim mb-3 px-1">
                 {deptLabels[dept]}
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -168,10 +168,10 @@ export default function PositionsSection({ language }: Props) {
                   <button
                     key={p.id}
                     onClick={() => setActive(p)}
-                    className="tap-highlight text-left bg-gray-50 hover:bg-[#EEF3F9] active:bg-[#DCE6F1] border border-gray-200 rounded-xl px-3 py-3 transition-colors flex items-center gap-2.5"
+                    className="tap-highlight text-left bg-whg-card2 hover:bg-white/5 active:bg-white/10 border border-whg-line rounded-xl px-3 py-3 transition-colors flex items-center gap-2.5"
                   >
                     <span className="text-2xl flex-shrink-0">{p.emoji}</span>
-                    <span className="text-sm font-semibold text-[#1B3A6B] leading-tight">
+                    <span className="text-sm font-semibold text-whg-snow leading-tight">
                       {p.name}
                     </span>
                   </button>
@@ -222,32 +222,32 @@ function PositionDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[88vh] overflow-hidden flex flex-col"
+        className="bg-whg-card border border-whg-line w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-xl max-h-[88vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sm:hidden flex justify-center pt-2 pb-1">
-          <div className="w-10 h-1 rounded-full bg-gray-300" />
+          <div className="w-10 h-1 rounded-full bg-whg-dim/50" />
         </div>
 
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="px-5 py-4 border-b border-whg-line flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-4xl flex-shrink-0">{position.emoji}</span>
             <div className="min-w-0">
-              <h3 className="text-lg font-bold text-[#1B3A6B] leading-tight truncate">
+              <h3 className="text-lg font-bold text-whg-snow leading-tight truncate">
                 {position.name}
               </h3>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-500 mt-0.5">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-whg-dim mt-0.5">
                 {deptLabel}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
+            className="flex-shrink-0 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-whg-dim hover:text-whg-snow flex items-center justify-center transition-colors"
             aria-label={isES ? 'Cerrar' : 'Close'}
           >
             ✕
@@ -258,12 +258,12 @@ function PositionDetailModal({
           {hasDescription ? (
             <PositionDescriptionRenderer text={position.description!} />
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-whg-dim">
               <div className="text-3xl mb-2">📝</div>
               <p className="text-sm font-medium">
                 {isES ? 'Descripción próximamente.' : 'Description coming soon.'}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-whg-dim/70 mt-1">
                 {isES
                   ? 'Habla con tu gerente si tienes preguntas sobre esta posición.'
                   : 'Talk to your manager if you have questions about this position.'}
@@ -391,7 +391,7 @@ function PositionDescriptionRenderer({ text }: { text: string }) {
     parts.forEach((p, idx) => {
       if (!p) return;
       if (p.startsWith('**') && p.endsWith('**')) {
-        out.push(<strong key={idx} className="font-bold text-gray-900">{p.slice(2, -2)}</strong>);
+        out.push(<strong key={idx} className="font-bold text-whg-snow">{p.slice(2, -2)}</strong>);
       } else if (p.startsWith('*') && p.endsWith('*')) {
         out.push(<em key={idx} className="italic">{p.slice(1, -1)}</em>);
       } else {
@@ -408,33 +408,33 @@ function PositionDescriptionRenderer({ text }: { text: string }) {
         switch (b.type) {
           case 'info':
             return (
-              <div key={idx} className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
+              <div key={idx} className="bg-whg-card2 border border-whg-line rounded-xl p-3 space-y-1.5">
                 {b.rows.map((r, i2) => (
                   <div key={i2} className="flex gap-3 items-baseline">
-                    <span className="text-[10px] font-bold text-[#1B3A6B] uppercase tracking-widest w-[88px] flex-shrink-0">
+                    <span className="text-[10px] font-bold text-whg-dim uppercase tracking-widest w-[88px] flex-shrink-0">
                       {r.key}
                     </span>
-                    <span className="text-xs text-gray-700 flex-1">{r.value}</span>
+                    <span className="text-xs text-whg-snow/90 flex-1">{r.value}</span>
                   </div>
                 ))}
               </div>
             );
           case 'h2':
             return (
-              <h3 key={idx} className="text-sm font-bold uppercase tracking-widest text-[#1B3A6B] pt-3 pb-1 border-b border-gray-200">
+              <h3 key={idx} className="text-sm font-bold uppercase tracking-widest text-whg-snow pt-3 pb-1 border-b border-whg-line">
                 {b.text}
               </h3>
             );
           case 'h3':
             return (
-              <h4 key={idx} className="text-sm font-bold text-[#1B3A6B] pt-2">
+              <h4 key={idx} className="text-sm font-bold text-whg-snow pt-2">
                 {b.text}
               </h4>
             );
           case 'callout':
             return (
-              <div key={idx} className="bg-amber-50 border-l-4 border-amber-400 px-3 py-2 rounded-r-md">
-                <p className="text-xs italic text-amber-900 leading-relaxed">
+              <div key={idx} className="bg-amber-400/10 border-l-4 border-amber-400 px-3 py-2 rounded-r-md">
+                <p className="text-xs italic text-amber-200 leading-relaxed">
                   <strong className="not-italic">Standard:</strong>{' '}
                   {renderInline(b.text.replace(/^Standard:\s*/i, ''))}
                 </p>
@@ -444,8 +444,8 @@ function PositionDescriptionRenderer({ text }: { text: string }) {
             return (
               <ul key={idx} className="space-y-1.5 pl-1">
                 {b.items.map((it, i2) => (
-                  <li key={i2} className="flex items-start gap-2 text-sm text-gray-700 leading-relaxed">
-                    <span className="text-[#1B3A6B] flex-shrink-0 mt-0.5">•</span>
+                  <li key={i2} className="flex items-start gap-2 text-sm text-whg-snow/90 leading-relaxed">
+                    <span className="text-whg-dim flex-shrink-0 mt-0.5">•</span>
                     <span>{renderInline(it)}</span>
                   </li>
                 ))}
@@ -453,7 +453,7 @@ function PositionDescriptionRenderer({ text }: { text: string }) {
             );
           case 'p':
             return (
-              <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+              <p key={idx} className="text-sm text-whg-snow/90 leading-relaxed">
                 {renderInline(b.text)}
               </p>
             );
@@ -480,41 +480,41 @@ function KnowYourPayCard({ language }: { language: 'en' | 'es' }) {
   const isES = language === 'es';
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="tap-highlight w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-gray-50 transition-colors"
+        className="tap-highlight w-full flex items-center justify-between gap-3 px-5 py-4 hover:bg-white/5 transition-colors"
         aria-expanded={open}
       >
         <div className="flex items-center gap-3 min-w-0 text-left">
           <span className="text-xl flex-shrink-0">💡</span>
           <div className="min-w-0">
-            <div className="text-sm font-bold text-[#1B3A6B]">
+            <div className="text-sm font-bold text-whg-snow">
               {isES ? 'Conoce Tu Pago' : 'Know Your Pay'}
             </div>
-            <div className="text-[11px] text-gray-500 truncate">
+            <div className="text-[11px] text-whg-dim truncate">
               {isES
                 ? 'Cómo funcionan los salarios mínimos en Louisiana.'
                 : 'How minimum wage works in Louisiana.'}
             </div>
           </div>
         </div>
-        <span className={`text-gray-400 text-base flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}>
+        <span className={`text-whg-dim/70 text-base flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}>
           ⌄
         </span>
       </button>
 
       {open && (
-        <div className="px-5 pb-5 pt-1 space-y-4 border-t border-gray-100">
+        <div className="px-5 pb-5 pt-1 space-y-4 border-t border-whg-line">
           {/* Standard minimum */}
           <div>
             <div className="flex items-baseline justify-between mb-1">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-whg-dim">
                 {isES ? 'Salario Mínimo Estándar' : 'Standard Minimum Wage'}
               </h4>
-              <span className="text-xl font-bold text-[#1B3A6B]">$7.25/hr</span>
+              <span className="text-xl font-bold text-whg-snow">$7.25/hr</span>
             </div>
-            <p className="text-xs text-gray-600 leading-relaxed">
+            <p className="text-xs text-whg-dim leading-relaxed">
               {isES
                 ? 'Louisiana no tiene un salario mínimo estatal, por lo que se aplica el mínimo federal de $7.25 por hora.'
                 : 'Louisiana has no state minimum wage, so the federal minimum of $7.25/hr applies.'}
@@ -522,14 +522,14 @@ function KnowYourPayCard({ language }: { language: 'en' | 'es' }) {
           </div>
 
           {/* Tipped minimum */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <div className="bg-amber-400/10 border border-amber-400/30 rounded-xl p-3">
             <div className="flex items-baseline justify-between mb-1">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-amber-900">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-amber-300">
                 {isES ? 'Mínimo Para Empleados Con Propinas' : 'Tipped Minimum'}
               </h4>
-              <span className="text-xl font-bold text-amber-900">$2.13/hr</span>
+              <span className="text-xl font-bold text-amber-200">$2.13/hr</span>
             </div>
-            <p className="text-xs text-amber-900 leading-relaxed">
+            <p className="text-xs text-amber-200 leading-relaxed">
               {isES
                 ? 'Si recibes propinas (servidor, bartender, etc.), tu salario base es $2.13/hr, y tus propinas hacen el resto. Por ley, tu salario base + propinas debe promediar al menos $7.25/hr cada semana laboral. Si una semana tus propinas no llegan, el restaurante cubre la diferencia.'
                 : 'If you receive tips (server, bartender, etc.), your cash wage is $2.13/hr and your tips make up the rest. By law, your cash wage + tips must average at least $7.25/hr each workweek. If a workweek’s tips fall short, the restaurant makes up the difference.'}
@@ -537,18 +537,18 @@ function KnowYourPayCard({ language }: { language: 'en' | 'es' }) {
           </div>
 
           {/* WHG promise */}
-          <div className="bg-[#EEF3F9] border border-[#C5D3E2] rounded-xl p-3">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-[#1B3A6B] mb-1">
+          <div className="bg-whg-card2 border border-whg-line rounded-xl p-3">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-whg-snow mb-1">
               {isES ? 'Nuestra Promesa' : 'Our Promise'}
             </h4>
-            <p className="text-xs text-gray-700 leading-relaxed">
+            <p className="text-xs text-whg-snow/90 leading-relaxed">
               {isES
                 ? 'WHG paga en o por encima de estos mínimos. Si alguna vez tienes preguntas sobre tu pago, habla con tu gerente o pide ver tus reportes de propinas y horas.'
                 : 'WHG pays at or above these minimums. If you ever have questions about your pay, talk to your manager or ask to see your tip and hours reports.'}
             </p>
           </div>
 
-          <p className="text-[10px] text-gray-400 italic text-center">
+          <p className="text-[10px] text-whg-dim/70 italic text-center">
             {isES
               ? 'Información general. Para preguntas específicas, habla con tu gerente.'
               : 'General reference. For specific questions, talk to your manager.'}

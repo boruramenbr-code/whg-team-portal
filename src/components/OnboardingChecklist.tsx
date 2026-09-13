@@ -152,12 +152,12 @@ const LINK_ICON: Record<LinkType, string> = {
 };
 
 const LINK_TYPE_BG: Record<LinkType, string> = {
-  telegram: 'bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100',
-  app_store: 'bg-gray-900 border-gray-900 text-white hover:bg-black',
+  telegram: 'bg-sky-400/10 border-sky-400/30 text-sky-200 hover:bg-sky-400/20',
+  app_store: 'bg-black border-whg-line text-whg-snow hover:border-whg-dim',
   play_store: 'bg-emerald-600 border-emerald-700 text-white hover:bg-emerald-700',
-  web: 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100',
-  video: 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100',
-  pdf: 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100',
+  web: 'bg-whg-card2 border-whg-line text-whg-snow/90 hover:bg-white/10',
+  video: 'bg-rose-400/10 border-rose-400/30 text-rose-200 hover:bg-rose-400/20',
+  pdf: 'bg-amber-400/10 border-amber-400/30 text-amber-200 hover:bg-amber-400/20',
 };
 
 /* ───────── Main widget ───────── */
@@ -282,14 +282,14 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
     // a flash of empty heading on HomeTab.
     if (compact && showHeading) return null;
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 text-center">
-        <div className="text-gray-400 text-sm animate-pulse">{t.loading}</div>
+      <div className="bg-whg-card border border-whg-line rounded-2xl shadow-sm p-6 text-center">
+        <div className="text-whg-dim/70 text-sm animate-pulse">{t.loading}</div>
       </div>
     );
   }
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-700">
+      <div className="bg-red-400/10 border border-red-400/30 rounded-2xl p-4 text-sm text-red-200">
         {error}
       </div>
     );
@@ -307,10 +307,10 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
   return (
     <div className="space-y-3">
       {showHeading && (
-        <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+        <h2 className="text-sm font-bold text-whg-snow/90 uppercase tracking-wide flex items-center gap-2">
           <span className="text-base">✅</span>
           Your Onboarding
-          <span className="ml-auto text-[11px] font-normal text-gray-500 normal-case tracking-normal">
+          <span className="ml-auto text-[11px] font-normal text-whg-dim normal-case tracking-normal">
             {t.doneCount(data.progress.fully_complete, data.progress.total)}
           </span>
         </h2>
@@ -319,29 +319,29 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
       {/* 100% celebration — the finish line deserves better than a widget
           quietly disappearing. Employee view only; managers keep the stats. */}
       {isAllDone && !managerMode && (
-        <div className="rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-[3px] shadow-xl shadow-emerald-300/40">
-          <div className="rounded-[22px] bg-gradient-to-br from-emerald-50 to-teal-50 px-6 py-7 text-center relative overflow-hidden">
+        <div className="rounded-3xl bg-gradient-to-br from-whg-gold via-emerald-400 to-teal-500 p-[3px] shadow-xl shadow-emerald-500/20">
+          <div className="rounded-[22px] bg-gradient-to-br from-emerald-600 to-teal-700 px-6 py-7 text-center relative overflow-hidden">
             <div className="absolute -top-2 -left-2 text-2xl opacity-60 select-none" aria-hidden>🎊</div>
             <div className="absolute -top-2 -right-2 text-2xl opacity-60 select-none" aria-hidden>✨</div>
             <div className="text-5xl mb-2" aria-hidden>🏆</div>
-            <h2 className="text-xl md:text-2xl font-extrabold text-emerald-900">
+            <h2 className="text-xl md:text-2xl font-extrabold text-white">
               {t.allDoneTitle(firstName)}
             </h2>
-            <p className="text-sm text-emerald-800 mt-2 leading-relaxed">{t.allDoneBody}</p>
+            <p className="text-sm text-white/90 mt-2 leading-relaxed">{t.allDoneBody}</p>
           </div>
         </div>
       )}
 
       {/* Header / progress */}
-      <div className={`bg-white rounded-2xl shadow-sm ${compact ? 'p-4' : 'p-5'}`}>
+      <div className={`bg-whg-card2 border border-whg-gold/30 rounded-2xl shadow-sm ${compact ? 'p-4' : 'p-5'}`}>
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{t.headerLabel}</p>
-            <h2 className="text-base md:text-lg font-bold text-[#1B3A6B] truncate">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim">{t.headerLabel}</p>
+            <h2 className="text-base md:text-lg font-bold text-whg-snow truncate">
               {managerMode ? data.full_name : t.yourTitle}
             </h2>
             {managerMode && (
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-whg-dim mt-0.5">
                 {data.restaurant_name ?? 'No restaurant'}
                 {data.onboarding_category ? ` · ${data.onboarding_category.toUpperCase()}` : ' · category not set'}
                 {data.hire_date && ` · Hired ${new Date(data.hire_date).toLocaleDateString()}`}
@@ -349,17 +349,17 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
             )}
           </div>
           <div className="text-right shrink-0">
-            <div className="text-2xl font-bold text-[#1B3A6B]">{data.progress.pct_complete}%</div>
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider">{t.complete}</div>
+            <div className="text-2xl font-bold text-whg-snow">{data.progress.pct_complete}%</div>
+            <div className="text-[10px] text-whg-dim uppercase tracking-wider">{t.complete}</div>
           </div>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+        <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
           <div
-            className={`h-full transition-all ${data.progress.pct_complete === 100 ? 'bg-green-500' : 'bg-[#1B3A6B]'}`}
+            className={`h-full transition-all ${data.progress.pct_complete === 100 ? 'bg-emerald-500' : 'bg-whg-gold'}`}
             style={{ width: `${data.progress.pct_complete}%` }}
           />
         </div>
-        <p className="text-[11px] text-gray-500 mt-2">
+        <p className="text-[11px] text-whg-dim mt-2">
           {managerMode
             ? `${data.progress.fully_complete} of ${data.progress.total} items fully complete · ${data.progress.employee_checked} checked by employee · ${data.progress.manager_checked} confirmed by manager`
             : t.yourProgress(data.progress.fully_complete, data.progress.total)}
@@ -367,8 +367,8 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
 
         {/* Manager: category picker if not set */}
         {managerMode && !data.onboarding_category && (
-          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-xs font-semibold text-amber-800 mb-2">
+          <div className="mt-3 bg-amber-400/10 border border-amber-400/30 rounded-lg p-3">
+            <p className="text-xs font-semibold text-amber-200 mb-2">
               Set this hire&rsquo;s category so the right items appear.
             </p>
             <div className="flex gap-2">
@@ -377,7 +377,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
                   key={c}
                   onClick={() => setCategory(c)}
                   disabled={savingCategory}
-                  className="flex-1 px-3 py-2 text-xs font-semibold rounded-md bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                  className="flex-1 px-3 py-2 text-xs font-semibold rounded-md bg-whg-card2 border border-amber-400/30 text-amber-200 hover:bg-amber-400/20 disabled:opacity-50"
                 >
                   {c === 'foh' ? 'Front of House' : c === 'boh' ? 'Back of House' : 'Management'}
                 </button>
@@ -389,7 +389,7 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
         {/* Manager: category change (if already set) */}
         {managerMode && data.onboarding_category && (
           <div className="mt-3 flex items-center gap-2 text-[11px]">
-            <span className="text-gray-500">Change category:</span>
+            <span className="text-whg-dim">Change category:</span>
             {(['foh', 'boh', 'mgmt'] as OnboardingCategory[]).map((c) => (
               <button
                 key={c}
@@ -397,8 +397,8 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
                 disabled={savingCategory || data.onboarding_category === c}
                 className={`px-2 py-0.5 rounded-full border text-[11px] font-semibold ${
                   data.onboarding_category === c
-                    ? 'bg-[#1B3A6B] text-white border-[#1B3A6B]'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                    ? 'bg-whg-gold text-whg-goldink border-whg-gold'
+                    : 'bg-white/10 border-whg-line text-whg-dim hover:bg-white/20'
                 } disabled:opacity-50`}
               >
                 {c.toUpperCase()}
@@ -434,8 +434,8 @@ export default function OnboardingChecklist({ endpoint, managerMode = false, tar
               }
               className={`w-full sticky top-0 z-10 rounded-xl shadow-md px-4 py-3 flex items-center justify-between transition-colors ${
                 sectionComplete
-                  ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                  : 'bg-[#1B3A6B] hover:bg-[#2C4F8A] text-white'
+                  ? 'bg-emerald-900 hover:bg-emerald-800 border border-emerald-400/30 text-white'
+                  : 'bg-whg-card2 border border-whg-line hover:border-whg-gold/40 text-whg-snow'
               }`}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -545,7 +545,7 @@ function ItemCard({
     ? 'bg-emerald-500'
     : (employeeChecked || managerChecked)
     ? 'bg-amber-400'
-    : 'bg-gray-200';
+    : 'bg-whg-line';
 
   const description = item.description ?? '';
   const isLongDesc = description.length > 80;
@@ -555,18 +555,18 @@ function ItemCard({
   // ── Compact mode for completed items ──
   if (isCompact) {
     return (
-      <div className="flex items-stretch bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="flex items-stretch bg-whg-card border border-whg-line rounded-xl shadow-sm overflow-hidden">
         <div className={`w-1 ${stripeClass}`} />
         <button
           onClick={onToggleExpand}
-          className="flex-1 flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+          className="flex-1 flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-white/5 transition-colors text-left"
         >
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-emerald-500 text-sm shrink-0" aria-hidden>✓</span>
-            <span className="text-[10px] font-bold text-gray-400 shrink-0">#{stepNumber}</span>
-            <span className="text-xs font-semibold text-gray-700 truncate">{item.title}</span>
+            <span className="text-emerald-300 text-sm shrink-0" aria-hidden>✓</span>
+            <span className="text-[10px] font-bold text-whg-dim/70 shrink-0">#{stepNumber}</span>
+            <span className="text-xs font-semibold text-whg-snow/90 truncate">{item.title}</span>
           </div>
-          <span className="text-[10px] text-gray-400 shrink-0 font-semibold">{t.view}</span>
+          <span className="text-[10px] text-whg-dim/70 shrink-0 font-semibold">{t.view}</span>
         </button>
       </div>
     );
@@ -579,20 +579,20 @@ function ItemCard({
 
   // Status badge
   const badge = isComplete
-    ? { text: t.badgeDone, cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' }
+    ? { text: t.badgeDone, cls: 'bg-emerald-400/10 text-emerald-300 border-emerald-400/30' }
     : (employeeChecked || managerChecked)
-    ? { text: t.badgeInProgress, cls: 'bg-amber-100 text-amber-800 border-amber-200' }
-    : { text: t.badgeUpNext, cls: 'bg-gray-100 text-gray-600 border-gray-200' };
+    ? { text: t.badgeInProgress, cls: 'bg-amber-400/10 text-amber-300 border-amber-400/30' }
+    : { text: t.badgeUpNext, cls: 'bg-white/10 text-whg-dim border-whg-line' };
 
   return (
-    <div className="flex items-stretch bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="flex items-stretch bg-whg-card border border-whg-line rounded-xl shadow-sm overflow-hidden">
       <div className={`w-1 ${stripeClass}`} />
       <div className="flex-1 p-4 min-w-0">
         {/* Header row */}
         <div className="flex items-start justify-between gap-2 mb-1">
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className="text-[10px] font-bold text-gray-400 shrink-0">#{stepNumber}</span>
-            <h3 className="text-sm font-semibold text-gray-800 leading-snug">{item.title}</h3>
+            <span className="text-[10px] font-bold text-whg-dim/70 shrink-0">#{stepNumber}</span>
+            <h3 className="text-sm font-semibold text-whg-snow leading-snug">{item.title}</h3>
           </div>
           <span className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0 font-semibold ${badge.cls}`}>
             {badge.text}
@@ -601,13 +601,13 @@ function ItemCard({
 
         {/* Description */}
         {description && (
-          <div className="text-xs text-gray-600 mt-1.5 leading-relaxed whitespace-pre-wrap">
+          <div className="text-xs text-whg-dim mt-1.5 leading-relaxed whitespace-pre-wrap">
             {showDescTruncated ? (
               <>
                 {renderBoldInline(truncatePreview(description))}
                 <button
                   onClick={onToggleExpand}
-                  className="text-[#2E86C1] font-semibold ml-1 px-1 py-1 hover:underline"
+                  className="text-sky-300 font-semibold ml-1 px-1 py-1 hover:underline"
                 >
                   {t.readMore}
                 </button>
@@ -619,7 +619,7 @@ function ItemCard({
                   <div className="mt-2">
                     <button
                       onClick={onToggleExpand}
-                      className="text-[#2E86C1] text-[11px] font-semibold px-1 py-1 hover:underline"
+                      className="text-sky-300 text-[11px] font-semibold px-1 py-1 hover:underline"
                     >
                       {t.showLess}
                     </button>
@@ -654,12 +654,12 @@ function ItemCard({
         )}
 
         {/* Footer — separated by a thin divider */}
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-whg-line">
           {item.requires_employee_check && (
             action ? (
               <button
                 onClick={() => onAction?.(action.key)}
-                className="flex-1 px-3 py-2.5 rounded-lg text-[12px] font-bold transition-colors bg-[#1B3A6B] text-white hover:bg-[#2C4F8A] shadow-sm flex items-center justify-center gap-1.5"
+                className="flex-1 px-3 py-2.5 rounded-lg text-[12px] font-bold transition-colors bg-whg-gold text-whg-goldink hover:bg-whg-gold2 shadow-sm flex items-center justify-center gap-1.5"
               >
                 <span>{action.label}</span>
                 <span>→</span>
@@ -687,7 +687,7 @@ function ItemCard({
           {isComplete && (
             <button
               onClick={onToggleExpand}
-              className="text-[10px] text-gray-400 hover:text-gray-600 px-2 py-2 font-semibold"
+              className="text-[10px] text-whg-dim/70 hover:text-whg-snow px-2 py-2 font-semibold"
             >
               {t.collapse}
             </button>
@@ -706,19 +706,19 @@ function ItemCard({
 function ManagerInstructions({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 overflow-hidden">
+    <div className="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-amber-100 transition-colors"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-amber-400/20 transition-colors"
       >
-        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-800">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-300">
           📘 Manager instructions
         </span>
-        <span className={`text-amber-700 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+        <span className={`text-amber-300 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
       </button>
       {open && (
-        <div className="px-3 pb-3 pt-1 border-t border-amber-200">
-          <div className="text-[12px] text-amber-900 leading-relaxed whitespace-pre-wrap">
+        <div className="px-3 pb-3 pt-1 border-t border-amber-400/30">
+          <div className="text-[12px] text-amber-200 leading-relaxed whitespace-pre-wrap">
             {renderBoldInline(text)}
           </div>
         </div>
@@ -759,7 +759,7 @@ function linkify(s: string, baseKey: string): React.ReactNode {
   while ((m = urlRegex.exec(s)) !== null) {
     if (m.index > lastIndex) parts.push(s.slice(lastIndex, m.index));
     parts.push(
-      <a key={`u-${baseKey}-${k++}`} href={m[1]} target="_blank" rel="noopener noreferrer" className="underline text-amber-700 hover:text-amber-900">
+      <a key={`u-${baseKey}-${k++}`} href={m[1]} target="_blank" rel="noopener noreferrer" className="underline text-amber-300 hover:text-amber-200">
         {m[1]}
       </a>
     );
@@ -792,7 +792,7 @@ function CheckPill({
       <button
         onClick={onClick}
         disabled={disabled}
-        className={`${base} bg-green-50 border-green-300 text-green-800 ${disabled ? 'cursor-default' : 'hover:bg-green-100 hover:border-green-400'}`}
+        className={`${base} bg-emerald-400/10 border-emerald-400/30 text-emerald-300 ${disabled ? 'cursor-default' : 'hover:bg-emerald-400/20 hover:border-emerald-400/50'}`}
         title={timestamp ? new Date(timestamp).toLocaleString() : undefined}
       >
         <div className="flex items-center gap-1.5">
@@ -809,8 +809,8 @@ function CheckPill({
       disabled={disabled}
       className={`${base} ${
         disabled
-          ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-default'
-          : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-[#1B3A6B] hover:text-[#1B3A6B]'
+          ? 'bg-whg-card2 border-whg-line text-whg-dim/70 cursor-default'
+          : 'bg-whg-card2 border-whg-line text-whg-dim hover:bg-white/5 hover:border-whg-gold hover:text-whg-gold'
       }`}
     >
       <div className="flex items-center gap-1.5">

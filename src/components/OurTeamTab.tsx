@@ -75,7 +75,7 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-sm text-whg-dim bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
         {isES ? 'Cargando...' : 'Loading...'}
       </div>
     );
@@ -83,7 +83,7 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
 
   if (locations.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-sm text-whg-dim bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
         {isES ? 'No hay ubicaciones asignadas.' : 'No locations assigned.'}
       </div>
     );
@@ -93,7 +93,7 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* ── Location switcher (only if multiple locations) ── */}
       {hasMultipleLocations && (
-        <div className="border-b border-[#D6DEE8]/60 bg-[#C8D4E1] px-3 md:px-4 py-2 flex-shrink-0">
+        <div className="border-b border-whg-line bg-whg-night px-3 md:px-4 py-2 flex-shrink-0">
           <div className="flex flex-wrap gap-2 justify-center">
             {locations.map((loc) => {
               const isActive = activeLocationId === loc.id;
@@ -104,8 +104,8 @@ export default function OurTeamTab({ restaurantId, restaurantName, role, languag
                   onClick={() => handleLocationChange(loc.id)}
                   className={`tap-highlight px-5 py-2 rounded-full text-sm font-semibold transition-all ${
                     isActive
-                      ? 'bg-white text-[#1B3A6B] shadow-md border-2 border-[#1B3A6B]/20'
-                      : 'bg-white/40 text-gray-500 hover:bg-white/70 hover:text-gray-700 border-2 border-transparent'
+                      ? 'bg-whg-gold text-whg-goldink shadow-md border-2 border-whg-gold'
+                      : 'bg-white/10 text-whg-dim hover:bg-white/20 hover:text-whg-snow border-2 border-transparent'
                   }`}
                 >
                   {loc.name}

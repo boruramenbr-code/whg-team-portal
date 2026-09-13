@@ -129,20 +129,20 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
   }, [sections]);
 
   if (loading) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-gray-500">Loading handbook…</div>;
+    return <div className="flex-1 flex items-center justify-center text-sm text-whg-dim">Loading handbook…</div>;
   }
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-sm">
-          <p className="text-sm text-red-600 font-semibold">Couldn&apos;t load handbook</p>
-          <p className="text-xs text-gray-500 mt-1">{error}</p>
+          <p className="text-sm text-red-300 font-semibold">Couldn&apos;t load handbook</p>
+          <p className="text-xs text-whg-dim mt-1">{error}</p>
         </div>
       </div>
     );
   }
   if (sections.length === 0) {
-    return <div className="flex-1 flex items-center justify-center text-sm text-gray-500">No handbook content yet.</div>;
+    return <div className="flex-1 flex items-center justify-center text-sm text-whg-dim">No handbook content yet.</div>;
   }
 
   const filteredToc = matchedIds
@@ -150,11 +150,11 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
     : sections;
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB]">
+    <div className="flex-1 flex overflow-hidden bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       {/* Desktop TOC sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-r border-gray-200 bg-white">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="text-xs font-bold uppercase tracking-wide text-gray-500">Contents</h2>
+      <aside className="hidden lg:flex flex-col w-64 flex-shrink-0 border-r border-whg-line bg-whg-night">
+        <div className="px-4 py-3 border-b border-whg-line">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-whg-dim">Contents</h2>
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
           {filteredToc.map((s) => (
@@ -163,16 +163,16 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
               onClick={() => scrollToSection(s.id)}
               className={`w-full text-left px-4 py-2 text-sm transition-colors ${
                 activeId === s.id
-                  ? 'bg-[#EBF3FB] text-[#1B3A6B] font-semibold border-l-2 border-[#1B3A6B]'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#1B3A6B]'
+                  ? 'bg-whg-gold/20 text-whg-snow font-semibold border-l-2 border-whg-gold'
+                  : 'text-whg-dim hover:bg-white/5 hover:text-whg-snow'
               }`}
             >
-              <span className="text-[10px] font-bold text-gray-400 mr-2">{s.sort_order}</span>
+              <span className="text-[10px] font-bold text-whg-dim/70 mr-2">{s.sort_order}</span>
               {s.title}
             </button>
           ))}
           {matchedIds && filteredToc.length === 0 && (
-            <div className="px-4 py-6 text-xs text-gray-500 text-center">No matches.</div>
+            <div className="px-4 py-6 text-xs text-whg-dim text-center">No matches.</div>
           )}
         </nav>
       </aside>
@@ -180,10 +180,10 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
       {/* Main reading column */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar: search + mobile TOC button */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
+        <div className="bg-whg-night border-b border-whg-line px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => setMobileTocOpen(true)}
-            className="lg:hidden p-2 -ml-2 text-gray-500 hover:text-[#1B3A6B]"
+            className="lg:hidden p-2 -ml-2 text-whg-dim hover:text-whg-snow"
             aria-label="Open table of contents"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -198,15 +198,15 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search the handbook…"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1]"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-whg-line rounded-lg bg-whg-card2 text-whg-snow placeholder:text-whg-dim/60 focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20"
             />
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="absolute left-3 top-1/2 -translate-y-1/2 text-whg-dim/70">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
           {search && (
-            <span className="text-[11px] text-gray-500 flex-shrink-0 hidden sm:inline">
+            <span className="text-[11px] text-whg-dim flex-shrink-0 hidden sm:inline">
               {matchedIds?.size ?? 0} matches
             </span>
           )}
@@ -215,13 +215,13 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
         {/* Content — responsive typography per spec:
             mobile 18px, tablet 17px, desktop 16px, capped at ~700px width */}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-          <article className="max-w-[700px] mx-auto px-4 md:px-8 py-6 md:py-8 text-gray-800 text-base md:text-[17px] lg:text-[16px] leading-relaxed">
-            <header className="mb-8 pb-6 border-b border-gray-200">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#2E86C1] mb-1">
+          <article className="max-w-[700px] mx-auto px-4 md:px-8 py-6 md:py-8 text-whg-snow/90 text-base md:text-[17px] lg:text-[16px] leading-relaxed">
+            <header className="mb-8 pb-6 border-b border-whg-line">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-sky-300 mb-1">
                 WHG Team Handbook
               </p>
-              <h1 className="text-3xl font-bold text-[#1B3A6B]">Wong Hospitality Group</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <h1 className="text-3xl font-bold text-whg-snow">Wong Hospitality Group</h1>
+              <p className="text-sm text-whg-dim mt-1">
                 Version {sections[0].handbook_version}.0 · Read on any device
               </p>
             </header>
@@ -235,14 +235,14 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
                   data-section-id={s.id}
                   className={`mb-10 scroll-mt-4 transition-opacity ${dimmed ? 'opacity-30' : 'opacity-100'}`}
                 >
-                  <h2 className="text-xl md:text-2xl font-bold text-[#1B3A6B] mb-4">
-                    <span className="text-[#2E86C1] mr-2">{s.sort_order}.</span>
+                  <h2 className="text-xl md:text-2xl font-bold text-whg-snow mb-4">
+                    <span className="text-sky-300 mr-2">{s.sort_order}.</span>
                     {s.title}
                   </h2>
                   {renderBody(s.body, search)}
                   {s.media && s.media.length > 0 && (
-                    <div className="mt-6 pt-5 border-t border-gray-100">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">
+                    <div className="mt-6 pt-5 border-t border-whg-line">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-whg-dim/70 mb-3">
                         Visual Reference
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -250,17 +250,17 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
                           <button
                             key={m.id}
                             onClick={() => setLightbox(m)}
-                            className="group block text-left rounded-lg border border-gray-200 bg-white overflow-hidden hover:border-[#2E86C1] hover:shadow-sm transition-all"
+                            className="group block text-left rounded-lg border border-whg-line bg-whg-card overflow-hidden hover:border-sky-300/50 hover:shadow-sm transition-all"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={m.url}
                               alt={m.alt_text}
                               loading="lazy"
-                              className="w-full h-28 object-cover bg-gray-50 group-hover:opacity-95"
+                              className="w-full h-28 object-cover bg-whg-card2 group-hover:opacity-95"
                             />
                             {m.caption && (
-                              <div className="px-2 py-1.5 text-[11px] font-medium text-gray-600 group-hover:text-[#1B3A6B] line-clamp-2">
+                              <div className="px-2 py-1.5 text-[11px] font-medium text-whg-dim group-hover:text-whg-snow line-clamp-2">
                                 {m.caption}
                               </div>
                             )}
@@ -273,8 +273,8 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
               );
             })}
 
-            <footer className="mt-12 pt-6 border-t border-gray-200 text-center">
-              <p className="text-xs text-gray-400">
+            <footer className="mt-12 pt-6 border-t border-whg-line text-center">
+              <p className="text-xs text-whg-dim/70">
                 End of handbook · WHG Team Portal
               </p>
             </footer>
@@ -317,13 +317,13 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
       {/* Mobile TOC sheet */}
       {mobileTocOpen && (
         <>
-          <div className="lg:hidden fixed inset-0 bg-black/40 z-30" onClick={() => setMobileTocOpen(false)} />
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-              <h3 className="font-semibold text-[#1B3A6B] text-sm">Contents</h3>
+          <div className="lg:hidden fixed inset-0 bg-black/60 z-30" onClick={() => setMobileTocOpen(false)} />
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-whg-card border border-whg-line rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-whg-line flex-shrink-0">
+              <h3 className="font-semibold text-whg-snow text-sm">Contents</h3>
               <button
                 onClick={() => setMobileTocOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                className="text-whg-dim hover:text-whg-snow text-lg leading-none"
               >
                 ✕
               </button>
@@ -335,11 +335,11 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
                   onClick={() => scrollToSection(s.id)}
                   className={`w-full text-left px-4 py-3 text-sm transition-colors ${
                     activeId === s.id
-                      ? 'bg-[#EBF3FB] text-[#1B3A6B] font-semibold'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-whg-gold/20 text-whg-snow font-semibold'
+                      : 'text-whg-snow/90 hover:bg-white/5'
                   }`}
                 >
-                  <span className="text-[10px] font-bold text-gray-400 mr-2">{s.sort_order}</span>
+                  <span className="text-[10px] font-bold text-whg-dim/70 mr-2">{s.sort_order}</span>
                   {s.title}
                 </button>
               ))}
@@ -445,7 +445,7 @@ function renderBody(body: string, search: string) {
             return (
               <h3
                 key={idx}
-                className="text-lg md:text-xl font-bold text-[#1B3A6B] mt-8 mb-2 pb-1 border-b border-gray-100"
+                className="text-lg md:text-xl font-bold text-whg-snow mt-8 mb-2 pb-1 border-b border-whg-line"
               >
                 {maybeHighlight(b.text)}
               </h3>
@@ -454,7 +454,7 @@ function renderBody(body: string, search: string) {
           return (
             <h4
               key={idx}
-              className="text-sm md:text-base font-semibold text-[#2E86C1] mt-5 mb-1 uppercase tracking-wide"
+              className="text-sm md:text-base font-semibold text-sky-300 mt-5 mb-1 uppercase tracking-wide"
             >
               {maybeHighlight(b.text)}
             </h4>
@@ -462,7 +462,7 @@ function renderBody(body: string, search: string) {
         }
         if (b.kind === 'list') {
           return (
-            <ul key={idx} className="list-disc pl-6 space-y-1.5 marker:text-[#2E86C1]">
+            <ul key={idx} className="list-disc pl-6 space-y-1.5 marker:text-sky-300">
               {b.items.map((item, i) => (
                 <li key={i} className="leading-relaxed">
                   {maybeHighlight(item)}
@@ -487,7 +487,7 @@ function highlight(text: string, query: string) {
   const parts = text.split(re);
   return parts.map((part, i) =>
     re.test(part) && part.toLowerCase() === query.toLowerCase() ? (
-      <mark key={i} className="bg-yellow-200 text-gray-900 px-0.5 rounded">{part}</mark>
+      <mark key={i} className="bg-whg-gold/20 text-whg-snow px-0.5 rounded">{part}</mark>
     ) : (
       <span key={i}>{part}</span>
     )

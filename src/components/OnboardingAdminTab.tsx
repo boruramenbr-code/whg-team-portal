@@ -90,11 +90,15 @@ export default function OnboardingAdminTab() {
         >
           ← Back to hires
         </button>
-        <OnboardingChecklist
-          endpoint={`/api/onboarding/users/${drillUser.user_id}`}
-          managerMode
-          targetUserId={drillUser.user_id}
-        />
+        {/* The checklist is styled for the dark staff portal; frame it so it
+            reads as an embedded card on this light page. */}
+        <div className="bg-whg-night rounded-2xl p-3 md:p-4">
+          <OnboardingChecklist
+            endpoint={`/api/onboarding/users/${drillUser.user_id}`}
+            managerMode
+            targetUserId={drillUser.user_id}
+          />
+        </div>
       </div>
     );
   }

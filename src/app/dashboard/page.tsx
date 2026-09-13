@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const isManager = ['manager', 'assistant_manager', 'admin'].includes(profile.role);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-whg-night">
       <Header profile={profile} showAdminLink={isManager} currentPage="chat" />
       <DashboardClient profile={profile} isManager={isManager} />
     </div>

@@ -18,15 +18,15 @@ export default function Sidebar({ handbookSource, onSelect, language }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Tab toggle */}
-      <div className="flex border-b border-gray-100 flex-shrink-0">
+      <div className="flex border-b border-whg-line flex-shrink-0">
         <button
           onClick={() => setTab('topics')}
           className={`flex-1 py-2.5 text-xs font-semibold transition-all ${
             tab === 'topics'
               ? isManager
-                ? 'text-amber-700 border-b-2 border-amber-500 bg-amber-50/50'
-                : 'text-[#1B3A6B] border-b-2 border-[#2E86C1] bg-[#EBF3FB]/50'
-              : 'text-gray-400 hover:text-gray-600'
+                ? 'text-amber-300 border-b-2 border-amber-400 bg-amber-400/10'
+                : 'text-whg-gold border-b-2 border-whg-gold bg-whg-gold/10'
+              : 'text-whg-dim/70 hover:text-whg-dim'
           }`}
         >
           {isSpanish ? 'Temas' : 'Topics'}
@@ -36,9 +36,9 @@ export default function Sidebar({ handbookSource, onSelect, language }: Props) {
           className={`flex-1 py-2.5 text-xs font-semibold transition-all ${
             tab === 'popular'
               ? isManager
-                ? 'text-amber-700 border-b-2 border-amber-500 bg-amber-50/50'
-                : 'text-[#1B3A6B] border-b-2 border-[#2E86C1] bg-[#EBF3FB]/50'
-              : 'text-gray-400 hover:text-gray-600'
+                ? 'text-amber-300 border-b-2 border-amber-400 bg-amber-400/10'
+                : 'text-whg-gold border-b-2 border-whg-gold bg-whg-gold/10'
+              : 'text-whg-dim/70 hover:text-whg-dim'
           }`}
         >
           {isSpanish ? 'Popular' : 'Popular'}

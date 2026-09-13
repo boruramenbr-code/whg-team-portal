@@ -23,17 +23,17 @@ interface Props {
 
 /* ───────── gradient palette by role level ───────── */
 const LEVEL_GRADIENT: Record<number, string> = {
-  1: 'from-violet-400 to-purple-600',
-  2: 'from-blue-400 to-blue-700',
-  3: 'from-indigo-400 to-indigo-600',
-  4: 'from-cyan-400 to-blue-500',
-  5: 'from-teal-400 to-emerald-600',
+  1: 'from-violet-400/30 to-purple-600/30 border-violet-400/40 text-violet-200',
+  2: 'from-blue-400/30 to-blue-700/30 border-blue-400/40 text-blue-200',
+  3: 'from-indigo-400/30 to-indigo-600/30 border-indigo-400/40 text-indigo-200',
+  4: 'from-cyan-400/30 to-blue-500/30 border-cyan-400/40 text-cyan-200',
+  5: 'from-teal-400/30 to-emerald-600/30 border-teal-400/40 text-teal-200',
 };
 
 const SPECIAL_GRADIENT: Record<string, string> = {
-  silentPartner: 'from-slate-300 to-gray-500',
-  boh: 'from-violet-400 to-purple-500',
-  foh: 'from-teal-400 to-emerald-500',
+  silentPartner: 'from-slate-300/25 to-gray-500/25 border-slate-400/40 text-slate-200',
+  boh: 'from-violet-400/30 to-purple-500/30 border-violet-400/40 text-violet-200',
+  foh: 'from-teal-400/30 to-emerald-500/30 border-teal-400/40 text-teal-200',
 };
 
 function getGradient(p: Position): string {
@@ -52,11 +52,11 @@ const LEVEL_LABEL: Record<number, string> = {
 };
 
 const LEVEL_LABEL_COLOR: Record<number, string> = {
-  1: 'text-purple-700',
-  2: 'text-blue-700',
-  3: 'text-indigo-600',
-  4: 'text-cyan-700',
-  5: 'text-teal-700',
+  1: 'text-purple-300',
+  2: 'text-blue-300',
+  3: 'text-indigo-300',
+  4: 'text-cyan-300',
+  5: 'text-teal-300',
 };
 
 /* ───────── restaurant logo mapping ───────── */
@@ -230,24 +230,24 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
   /* ── Loading / Error / Empty states ── */
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm text-gray-500">
+      <div className="flex-1 flex items-center justify-center text-sm text-whg-dim bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
         Loading team…
       </div>
     );
   }
   if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
         <div className="text-center max-w-sm">
-          <p className="text-sm text-red-600 font-semibold">Couldn&apos;t load team</p>
-          <p className="text-xs text-gray-500 mt-1">{error}</p>
+          <p className="text-sm text-red-300 font-semibold">Couldn&apos;t load team</p>
+          <p className="text-xs text-whg-dim mt-1">{error}</p>
         </div>
       </div>
     );
   }
   if (positions.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-sm text-gray-500 gap-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-sm text-whg-dim gap-4 bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
         <p>No team set up yet.</p>
       </div>
     );
@@ -256,23 +256,26 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
   const logo = getRestaurantLogo(currentName);
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#EFF3F7]">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       <div className="max-w-lg mx-auto px-4 py-6 md:py-8">
         {/* Header */}
         <div className="text-center mb-6">
           {logo && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={logo}
-              alt={currentName || 'Restaurant'}
-              className="mx-auto mb-2 h-14 md:h-16 w-auto object-contain"
-            />
+            /* Black logo on a light plate so it reads on the midnight canvas */
+            <div className="mx-auto mb-2 w-fit bg-white/90 rounded-xl px-3 py-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logo}
+                alt={currentName || 'Restaurant'}
+                className="h-14 md:h-16 w-auto object-contain"
+              />
+            </div>
           )}
-          <p className="text-[11px] uppercase tracking-[1.5px] text-gray-400 font-medium mb-1">
+          <p className="text-[11px] uppercase tracking-[1.5px] text-whg-dim/70 font-medium mb-1">
             {currentName || 'Wong Hospitality Group'}
           </p>
-          <h1 className="text-xl font-semibold text-[#1B3A6B]">Meet your team</h1>
-          <p className="text-xs text-gray-400 mt-1">Tap anyone to learn more</p>
+          <h1 className="text-xl font-semibold text-whg-snow">Meet your team</h1>
+          <p className="text-xs text-whg-dim/70 mt-1">Tap anyone to learn more</p>
         </div>
 
         {/* ── Tier sections ── */}
@@ -394,9 +397,9 @@ export default function OrgChartTab({ restaurantId, restaurantName, isAdmin }: P
 
 /* ───────── tier card wrapper ───────── */
 function TierCard({ level, subLabel, children }: { level: number; subLabel?: string; children: React.ReactNode }) {
-  const labelColor = LEVEL_LABEL_COLOR[Math.min(level, 5)] || 'text-gray-600';
+  const labelColor = LEVEL_LABEL_COLOR[Math.min(level, 5)] || 'text-whg-dim';
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+    <div className="bg-whg-card rounded-2xl border border-whg-line p-4 shadow-sm">
       <p className={`text-[11px] uppercase tracking-[1px] font-semibold ${labelColor} mb-3`}>
         {subLabel || LEVEL_LABEL[Math.min(level, 5)]}
       </p>
@@ -453,13 +456,13 @@ function PhotoUploadOverlay({
             inputRef.current?.click();
           }
         }}
-        className={`absolute ${sizeClasses} rounded-full bg-[#1B3A6B] border-2 border-white flex items-center justify-center shadow-md hover:bg-[#2E86C1] transition-colors`}
+        className={`absolute ${sizeClasses} rounded-full bg-whg-gold text-whg-goldink border-2 border-whg-card flex items-center justify-center shadow-md hover:bg-whg-gold2 transition-colors`}
         disabled={uploading}
       >
         {uploading ? (
-          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="w-3 h-3 border-2 border-whg-goldink border-t-transparent rounded-full animate-spin" />
         ) : (
-          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>
@@ -499,12 +502,12 @@ function OwnerAvatar({
   return (
     <button onClick={() => onToggle(position.id)} className="tap-highlight text-center group">
       <div className="relative mx-auto mb-2">
-        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border-[3px] border-white shadow-md transition-transform group-active:scale-95 ${expanded ? 'ring-2 ring-blue-200 ring-offset-2' : ''}`}>
+        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center border-[3px] shadow-md transition-transform group-active:scale-95 ${expanded ? 'ring-2 ring-whg-gold ring-offset-2 ring-offset-whg-card' : ''}`}>
           {position.photo_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={position.photo_url} alt={fullName} className="w-full h-full rounded-full object-cover" />
           ) : (
-            <span className="text-white font-semibold text-base">{initials}</span>
+            <span className="font-semibold text-base">{initials}</span>
           )}
         </div>
         {canUpload && (
@@ -518,18 +521,18 @@ function OwnerAvatar({
           />
         )}
       </div>
-      <p className="text-sm font-semibold text-[#1B3A6B]">{fullName}</p>
-      <p className={`text-[11px] ${isSilent ? 'text-slate-400' : 'text-gray-400'}`}>{position.title}</p>
+      <p className="text-sm font-semibold text-whg-snow">{fullName}</p>
+      <p className={`text-[11px] ${isSilent ? 'text-whg-dim/70' : 'text-whg-dim'}`}>{position.title}</p>
 
       {expanded && (
-        <div className="mt-2 text-left bg-gray-50 rounded-lg p-2.5 animate-fadeIn">
+        <div className="mt-2 text-left bg-whg-card2 rounded-lg p-2.5 animate-fadeIn">
           {directReports.length > 0 && (
-            <p className="text-xs text-gray-500">
-              Manages <span className="font-semibold text-[#1B3A6B]">{directReports.length}</span> {directReports.length === 1 ? 'person' : 'people'}
+            <p className="text-xs text-whg-dim">
+              Manages <span className="font-semibold text-whg-snow">{directReports.length}</span> {directReports.length === 1 ? 'person' : 'people'}
             </p>
           )}
           {position.detail && (
-            <p className="text-xs text-gray-400 mt-1">{position.detail}</p>
+            <p className="text-xs text-whg-dim mt-1">{position.detail}</p>
           )}
         </div>
       )}
@@ -570,17 +573,17 @@ function ListCard({
     <button
       onClick={() => onToggle(position.id)}
       className={`tap-highlight text-left w-full rounded-xl p-3 transition-all ${
-        expanded ? 'bg-blue-50/60 border border-blue-100' : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+        expanded ? 'bg-whg-card2 border border-whg-gold/40' : 'bg-whg-card2 hover:bg-white/5 border border-transparent'
       }`}
     >
       <div className="flex items-center gap-3">
         <div className="relative flex-shrink-0">
-          <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
+          <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${gradient} border flex items-center justify-center shadow-sm`}>
             {position.photo_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={position.photo_url} alt={fullName} className="w-full h-full rounded-full object-cover" />
             ) : (
-              <span className="text-white font-semibold text-sm">{initials}</span>
+              <span className="font-semibold text-sm">{initials}</span>
             )}
           </div>
           {canUpload && (
@@ -595,8 +598,8 @@ function ListCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#1B3A6B]">{fullName}</p>
-          <p className="text-xs text-gray-400">{position.title}</p>
+          <p className="text-sm font-semibold text-whg-snow">{fullName}</p>
+          <p className="text-xs text-whg-dim">{position.title}</p>
         </div>
         <svg
           width="16"
@@ -605,24 +608,24 @@ function ListCard({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className={`text-gray-300 flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
+          className={`text-whg-dim/50 flex-shrink-0 transition-transform ${expanded ? 'rotate-90' : ''}`}
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </div>
 
       {expanded && (
-        <div className="mt-3 pt-2.5 border-t border-gray-200/60 animate-fadeIn space-y-1.5 ml-14">
+        <div className="mt-3 pt-2.5 border-t border-whg-line animate-fadeIn space-y-1.5 ml-14">
           {chain.length > 0 && (
             <div>
-              <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium mb-1.5">Chain of Command</p>
+              <p className="text-[11px] text-whg-dim/70 uppercase tracking-wide font-medium mb-1.5">Chain of Command</p>
               <div className="flex flex-wrap items-center gap-1">
                 {chain.map((name, i) => (
                   <span key={i} className="flex items-center gap-1">
-                    <span className="px-2 py-0.5 bg-white rounded-full text-[11px] font-medium text-[#1B3A6B] border border-gray-100 shadow-sm">
+                    <span className="px-2 py-0.5 bg-whg-card rounded-full text-[11px] font-medium text-whg-snow/90 border border-whg-line shadow-sm">
                       {name}
                     </span>
-                    {i < chain.length - 1 && <span className="text-gray-300 text-[10px]">→</span>}
+                    {i < chain.length - 1 && <span className="text-whg-dim/50 text-[10px]">→</span>}
                   </span>
                 ))}
               </div>
@@ -630,12 +633,12 @@ function ListCard({
           )}
           {directReports.length > 0 && (
             <div>
-              <p className="text-xs text-gray-400 mb-1">
-                Manages <span className="font-semibold text-[#1B3A6B]">{directReports.length}</span>:
+              <p className="text-xs text-whg-dim mb-1">
+                Manages <span className="font-semibold text-whg-snow">{directReports.length}</span>:
               </p>
               <div className="flex flex-wrap gap-1">
                 {directReports.map((dr) => (
-                  <span key={dr.id} className="px-2 py-0.5 bg-white rounded-full text-[11px] font-medium text-[#1B3A6B] border border-gray-100 shadow-sm">
+                  <span key={dr.id} className="px-2 py-0.5 bg-whg-card rounded-full text-[11px] font-medium text-whg-snow/90 border border-whg-line shadow-sm">
                     {dr.first_name}{dr.last_initial ? ` ${dr.last_initial}.` : ''}
                   </span>
                 ))}
@@ -643,7 +646,7 @@ function ListCard({
             </div>
           )}
           {position.detail && (
-            <p className="text-xs text-gray-400 leading-relaxed">{position.detail}</p>
+            <p className="text-xs text-whg-dim leading-relaxed">{position.detail}</p>
           )}
         </div>
       )}
@@ -656,7 +659,7 @@ function StaffRoleIcon({ title }: { title: string }) {
   if (title === 'FOH') {
     // Person with tray — server/host icon
     return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="7" r="3" />
         <path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" />
       </svg>
@@ -665,7 +668,7 @@ function StaffRoleIcon({ title }: { title: string }) {
   if (title === 'BOH') {
     // Chef hat icon
     return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6z" />
         <line x1="6" y1="17" x2="18" y2="17" />
       </svg>
@@ -673,7 +676,7 @@ function StaffRoleIcon({ title }: { title: string }) {
   }
   // Generic staff
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="7" r="3" />
       <path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" />
     </svg>
@@ -703,26 +706,26 @@ function StaffChip({
     <button
       onClick={() => onToggle(position.id)}
       className={`tap-highlight text-center w-full rounded-xl py-3 px-2 transition-all ${
-        expanded ? 'bg-blue-50/60 border border-blue-100 col-span-2' : 'bg-gray-50 border border-transparent hover:bg-gray-100'
+        expanded ? 'bg-whg-card2 border border-whg-gold/40 col-span-2' : 'bg-whg-card2 border border-transparent hover:bg-white/5'
       }`}
     >
       <div className="relative mx-auto mb-1.5 w-10 h-10">
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
+        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${gradient} border flex items-center justify-center shadow-sm`}>
           <StaffRoleIcon title={position.title} />
         </div>
       </div>
-      <p className="text-xs font-semibold text-[#1B3A6B] truncate">{fullName}</p>
+      <p className="text-xs font-semibold text-whg-snow truncate">{fullName}</p>
 
       {expanded && chain.length > 0 && (
         <div className="mt-2 animate-fadeIn text-center">
-          <p className="text-[10px] text-gray-400 uppercase tracking-wide font-medium mb-1">Chain of Command</p>
+          <p className="text-[10px] text-whg-dim/70 uppercase tracking-wide font-medium mb-1">Chain of Command</p>
           <div className="flex flex-wrap justify-center items-center gap-1">
             {chain.map((name, i) => (
               <span key={i} className="flex items-center gap-1">
-                <span className="px-1.5 py-0.5 bg-white rounded-full text-[10px] font-medium text-[#1B3A6B] border border-gray-100 shadow-sm">
+                <span className="px-1.5 py-0.5 bg-whg-card rounded-full text-[10px] font-medium text-whg-snow/90 border border-whg-line shadow-sm">
                   {name}
                 </span>
-                {i < chain.length - 1 && <span className="text-gray-300 text-[9px]">→</span>}
+                {i < chain.length - 1 && <span className="text-whg-dim/50 text-[9px]">→</span>}
               </span>
             ))}
           </div>

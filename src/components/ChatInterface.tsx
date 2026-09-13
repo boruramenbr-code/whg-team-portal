@@ -200,23 +200,23 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
       {/* Top control bar — manager toggle + language toggle */}
       <div className={`px-4 py-2.5 border-b flex-shrink-0 transition-colors ${
         isManager && handbookSource === 'manager'
-          ? 'bg-[#1B3A6B] border-[#152d54]'
-          : 'bg-white border-gray-100'
+          ? 'bg-amber-400/10 border-amber-400/30'
+          : 'bg-whg-card border-whg-line'
       }`}>
         <div className="flex items-center justify-between gap-3">
           {/* Manager handbook toggle (managers only, hidden when source is locked) */}
           {showSourceToggle ? (
             <div className={`flex rounded-lg p-0.5 ${
-              handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
+              handbookSource === 'manager' ? 'bg-whg-night/60' : 'bg-white/10'
             }`}>
               <button
                 onClick={() => { setHandbookSource('employee'); onHandbookSourceChange?.('employee'); }}
                 className={`py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'employee'
-                    ? 'bg-white text-[#1B3A6B] shadow-sm'
+                    ? 'bg-whg-gold text-whg-goldink shadow-sm'
                     : handbookSource === 'manager'
-                    ? 'text-white/60 hover:text-white'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'text-whg-dim hover:text-whg-snow'
+                    : 'text-whg-dim hover:text-whg-snow/90'
                 }`}
               >
                 Team Handbook
@@ -225,8 +225,8 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
                 onClick={() => { setHandbookSource('manager'); onHandbookSourceChange?.('manager'); }}
                 className={`py-1.5 px-3 text-xs font-semibold rounded-md transition-all ${
                   handbookSource === 'manager'
-                    ? 'bg-[#2E86C1] text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'text-whg-dim hover:text-whg-snow/90'
                 }`}
               >
                 Manager Reference
@@ -238,18 +238,18 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
 
           {/* Language toggle — EN / ES */}
           <div className={`flex rounded-lg p-0.5 flex-shrink-0 ${
-            isManager && handbookSource === 'manager' ? 'bg-[#152d54]' : 'bg-gray-100'
+            isManager && handbookSource === 'manager' ? 'bg-whg-night/60' : 'bg-white/10'
           }`}>
             <button
               onClick={() => onLanguageChange('en')}
               className={`py-1 px-2.5 text-xs font-bold rounded-md transition-all ${
                 language === 'en'
                   ? isManager && handbookSource === 'manager'
-                    ? 'bg-white text-[#1B3A6B] shadow-sm'
-                    : 'bg-white text-[#1B3A6B] shadow-sm'
+                    ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                    : 'bg-whg-gold text-whg-goldink shadow-sm'
                   : isManager && handbookSource === 'manager'
-                  ? 'text-white/50 hover:text-white'
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'text-whg-dim hover:text-whg-snow'
+                  : 'text-whg-dim/70 hover:text-whg-dim'
               }`}
             >
               EN
@@ -259,11 +259,11 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
               className={`py-1 px-2.5 text-xs font-bold rounded-md transition-all ${
                 language === 'es'
                   ? isManager && handbookSource === 'manager'
-                    ? 'bg-white text-[#1B3A6B] shadow-sm'
-                    : 'bg-white text-[#1B3A6B] shadow-sm'
+                    ? 'bg-whg-gold text-whg-goldink shadow-sm'
+                    : 'bg-whg-gold text-whg-goldink shadow-sm'
                   : isManager && handbookSource === 'manager'
-                  ? 'text-white/50 hover:text-white'
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'text-whg-dim hover:text-whg-snow'
+                  : 'text-whg-dim/70 hover:text-whg-dim'
               }`}
             >
               ES
@@ -277,20 +277,20 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center pt-4 pb-8">
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-4 ${
-              handbookSource === 'manager' ? 'bg-[#1B3A6B]' : 'bg-[#EBF3FB]'
+              handbookSource === 'manager' ? 'bg-amber-400/10 border border-amber-400/30' : 'bg-whg-card2 border border-whg-line'
             }`}>
               <span className={`font-bold text-lg ${
-                handbookSource === 'manager' ? 'text-white' : 'text-[#1B3A6B]'
+                handbookSource === 'manager' ? 'text-amber-200' : 'text-whg-snow'
               }`}>WHG</span>
             </div>
-            <h3 className="text-[#1B3A6B] font-bold text-lg">
+            <h3 className="text-whg-snow font-bold text-lg">
               {handbookSource === 'manager'
                 ? 'Manager Reference'
                 : language === 'es'
                 ? `¡Hola, ${firstName}!`
                 : greeting}
             </h3>
-            <p className="text-gray-500 text-sm mt-1 max-w-xs">
+            <p className="text-whg-dim text-sm mt-1 max-w-xs">
               {handbookSource === 'manager'
                 ? 'Ask about policies, discipline, coaching, operations — straight from your reference guide.'
                 : language === 'es'
@@ -308,10 +308,10 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
                 <button
                   key={q}
                   onClick={() => sendMessage(q)}
-                  className={`w-full text-left px-4 py-3 bg-white border rounded-xl text-sm transition-all ${
+                  className={`w-full text-left px-4 py-3 bg-whg-card border rounded-xl text-sm transition-all ${
                     handbookSource === 'manager'
-                      ? 'border-[#1B3A6B]/20 text-gray-700 hover:border-[#1B3A6B] hover:bg-[#1B3A6B]/5 hover:text-[#1B3A6B]'
-                      : 'border-gray-200 text-gray-600 hover:border-[#2E86C1] hover:text-[#1B3A6B] hover:bg-[#EBF3FB]'
+                      ? 'border-amber-400/30 text-whg-snow/90 hover:border-amber-400/60 hover:bg-amber-400/10 hover:text-amber-200'
+                      : 'border-whg-line text-whg-dim hover:border-sky-400/40 hover:text-whg-snow hover:bg-whg-card2'
                   }`}
                 >
                   {q}
@@ -330,37 +330,37 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
           >
             {msg.role === 'assistant' && (
               <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5 ${
-                msg.source === 'manager' ? 'bg-amber-600' : 'bg-[#1B3A6B]'
+                msg.source === 'manager' ? 'bg-amber-500' : 'bg-whg-card2 border border-whg-line'
               }`}>
-                <span className="text-white text-[10px] font-bold">W</span>
+                <span className="text-whg-snow text-[10px] font-bold">W</span>
               </div>
             )}
 
             <div className="flex flex-col gap-1 max-w-[82%]">
               {msg.role === 'assistant' && msg.source === 'manager' && msg.content !== '' && (
-                <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide pl-1">
+                <span className="text-[10px] font-semibold text-amber-300 uppercase tracking-wide pl-1">
                   Manager Reference
                 </span>
               )}
               {msg.role === 'assistant' && msg.source === 'employee' && msg.content !== '' && (
-                <span className="text-[10px] font-semibold text-[#2E86C1] uppercase tracking-wide pl-1">
+                <span className="text-[10px] font-semibold text-sky-300 uppercase tracking-wide pl-1">
                   Team Handbook
                 </span>
               )}
               <div
                 className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
-                    ? 'bg-[#1B3A6B] text-white rounded-br-sm'
+                    ? 'bg-whg-gold/15 border border-whg-gold/30 text-whg-snow rounded-br-sm'
                     : msg.source === 'manager'
-                    ? 'bg-amber-50 text-gray-800 border border-amber-200 shadow-sm rounded-bl-sm'
-                    : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
+                    ? 'bg-amber-400/10 text-whg-snow/90 border border-amber-400/30 shadow-sm rounded-bl-sm'
+                    : 'bg-whg-card text-whg-snow/90 border border-whg-line shadow-sm rounded-bl-sm'
                 }`}
               >
                 {msg.content === '' && msg.role === 'assistant' ? (
                   <span className="flex gap-1 items-center py-0.5">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full typing-dot" />
+                    <span className="w-1.5 h-1.5 bg-whg-dim rounded-full typing-dot" />
+                    <span className="w-1.5 h-1.5 bg-whg-dim rounded-full typing-dot" />
+                    <span className="w-1.5 h-1.5 bg-whg-dim rounded-full typing-dot" />
                   </span>
                 ) : (
                   msg.content
@@ -374,7 +374,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-4 py-3">
+      <div className="flex-shrink-0 bg-whg-card border-t border-whg-line px-4 py-3">
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
@@ -390,13 +390,13 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
             }
             rows={1}
             disabled={loading}
-            className="flex-1 resize-none px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-sm text-gray-800 bg-gray-50 disabled:opacity-60 transition-shadow"
+            className="flex-1 resize-none px-4 py-2.5 border border-whg-line rounded-xl focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20 text-base md:text-sm text-whg-snow placeholder:text-whg-dim/60 bg-whg-card2 disabled:opacity-60 transition-shadow"
             style={{ minHeight: '42px', maxHeight: '120px' }}
           />
           <button
             onClick={() => sendMessage()}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 w-10 h-10 bg-[#1B3A6B] hover:bg-[#2E86C1] text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-40"
+            className="flex-shrink-0 w-10 h-10 bg-whg-gold hover:bg-whg-gold2 text-whg-goldink rounded-xl flex items-center justify-center transition-colors disabled:bg-white/10 disabled:text-whg-dim/50"
           >
             <svg
               width="16"
@@ -413,7 +413,7 @@ export default function ChatInterface({ profile, pendingQuestion, onPendingQuest
             </svg>
           </button>
         </div>
-        <p className="text-center text-[10px] text-gray-400 mt-2">
+        <p className="text-center text-[10px] text-whg-dim/70 mt-2">
           {language === 'es'
             ? 'Las respuestas se basan en el manual de WHG · Shift+Enter para nueva línea'
             : 'Answers are based on the WHG handbook only · Shift+Enter for new line'}

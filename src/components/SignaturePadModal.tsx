@@ -151,22 +151,22 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-0">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0">
       {/* ── Portrait prompt: rotation suggested, never required ── */}
       {!showCanvas && (
-        <div className="bg-white w-full max-w-sm m-4 rounded-2xl shadow-xl p-6 text-center">
+        <div className="bg-whg-card border border-whg-line w-full max-w-sm m-4 rounded-2xl shadow-xl p-6 text-center">
           <div className="text-5xl mb-3">📱↻</div>
-          <h2 className="text-lg font-bold text-[#1B3A6B] mb-2">{t.rotateTitle}</h2>
-          <p className="text-sm text-gray-600 leading-relaxed mb-4">{t.rotateBody}</p>
+          <h2 className="text-lg font-bold text-whg-snow mb-2">{t.rotateTitle}</h2>
+          <p className="text-sm text-whg-dim leading-relaxed mb-4">{t.rotateBody}</p>
           <button
             onClick={() => setPortraitOverride(true)}
-            className="w-full py-3 rounded-lg text-sm font-bold bg-[#1B3A6B] text-white hover:bg-[#2C4F8A] mb-2"
+            className="w-full py-3 rounded-lg text-sm font-bold bg-whg-gold text-whg-goldink hover:bg-whg-gold2 mb-2"
           >
             {t.signUpright}
           </button>
           <button
             onClick={onCancel}
-            className="w-full py-3 text-sm text-gray-500 font-semibold hover:text-gray-700"
+            className="w-full py-3 text-sm text-whg-dim font-semibold hover:text-whg-snow"
           >
             {t.cancel}
           </button>
@@ -175,19 +175,19 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
 
       {/* ── Signing surface ── */}
       {showCanvas && (
-        <div className="bg-white w-full h-full sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl shadow-2xl flex flex-col">
+        <div className="bg-whg-card border border-whg-line w-full h-full sm:max-w-4xl sm:max-h-[90vh] sm:rounded-2xl shadow-2xl flex flex-col">
           {/* Header */}
-          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+          <div className="px-5 py-3 border-b border-whg-line flex items-center justify-between flex-shrink-0">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim">
                 {t.signingAs}
               </p>
-              <p className="text-sm font-bold text-[#1B3A6B] truncate">{employeeName}</p>
-              <p className="text-xs text-gray-500 truncate">{title}</p>
+              <p className="text-sm font-bold text-whg-snow truncate">{employeeName}</p>
+              <p className="text-xs text-whg-dim truncate">{title}</p>
             </div>
             <button
               onClick={onCancel}
-              className="text-sm text-gray-500 font-semibold hover:text-gray-700 px-4 py-3 -my-1"
+              className="text-sm text-whg-dim font-semibold hover:text-whg-snow px-4 py-3 -my-1"
             >
               {t.cancel}
             </button>
@@ -196,7 +196,7 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
           {/* Canvas area */}
           <div
             ref={containerRef}
-            className="flex-1 bg-white relative touch-none select-none"
+            className="flex-1 bg-white ring-1 ring-whg-line rounded-xl overflow-hidden relative touch-none select-none"
           >
             <canvas
               ref={canvasRef}
@@ -213,14 +213,14 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
           </div>
 
           {/* Footer actions */}
-          <div className="px-5 py-3 border-t border-gray-200 flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="px-5 py-3 border-t border-whg-line flex items-center justify-between gap-3 flex-shrink-0">
             <button
               onClick={handleClear}
               disabled={!hasSigned}
               className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
                 hasSigned
-                  ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
-                  : 'text-gray-300 bg-gray-50 cursor-not-allowed'
+                  ? 'text-whg-snow bg-white/10 hover:bg-white/20'
+                  : 'text-whg-dim/50 bg-white/5 cursor-not-allowed'
               }`}
             >
               Clear
@@ -230,8 +230,8 @@ export default function SignaturePadModal({ title, employeeName, onSigned, onCan
               disabled={!hasSigned}
               className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors ${
                 hasSigned
-                  ? 'bg-[#1B3A6B] text-white hover:bg-[#2C4F8A]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  ? 'bg-whg-gold text-whg-goldink hover:bg-whg-gold2'
+                  : 'bg-white/10 text-whg-dim/50 cursor-not-allowed'
               }`}
             >
               Done

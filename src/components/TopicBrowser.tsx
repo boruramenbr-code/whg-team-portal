@@ -131,8 +131,8 @@ export default function TopicBrowser({ handbookSource, onSelect, language }: Pro
   return (
     <div className="p-4 space-y-5">
       <div className="flex items-center gap-2">
-        <div className={`w-1.5 h-5 rounded-full ${isManager ? 'bg-amber-500' : 'bg-[#2E86C1]'}`} />
-        <h3 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider">
+        <div className={`w-1.5 h-5 rounded-full ${isManager ? 'bg-amber-500' : 'bg-sky-400'}`} />
+        <h3 className="text-xs font-bold text-whg-snow uppercase tracking-wider">
           {isManager
             ? 'Manager Topics'
             : isSpanish
@@ -144,7 +144,7 @@ export default function TopicBrowser({ handbookSource, onSelect, language }: Pro
       {groups.map((group) => (
         <div key={group.category}>
           <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${
-            isManager ? 'text-amber-600' : 'text-[#2E86C1]'
+            isManager ? 'text-amber-300' : 'text-sky-300'
           }`}>
             {group.category}
           </p>
@@ -155,8 +155,8 @@ export default function TopicBrowser({ handbookSource, onSelect, language }: Pro
                 onClick={() => onSelect(question)}
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                   isManager
-                    ? 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100 hover:border-amber-400'
-                    : 'bg-[#EBF3FB] border-[#2E86C1]/20 text-[#1B3A6B] hover:bg-[#2E86C1]/10 hover:border-[#2E86C1]'
+                    ? 'bg-amber-400/10 border-amber-400/30 text-amber-200 hover:bg-amber-400/20 hover:border-amber-400/60'
+                    : 'bg-whg-card border-whg-line text-whg-snow/90 hover:bg-whg-card2 hover:border-sky-400/40'
                 }`}
               >
                 {label}

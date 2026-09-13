@@ -77,10 +77,10 @@ export default function PoliciesTab({ language, initialPolicyId, onInitialPolicy
   };
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 text-sm">{isES ? 'Cargando...' : 'Loading...'}</div>;
+    return <div className="p-8 text-center text-whg-dim text-sm">{isES ? 'Cargando...' : 'Loading...'}</div>;
   }
   if (error) {
-    return <div className="p-8 text-center text-red-600 text-sm">{error}</div>;
+    return <div className="p-8 text-center text-red-300 text-sm">{error}</div>;
   }
 
   if (selected) {
@@ -98,12 +98,12 @@ export default function PoliciesTab({ language, initialPolicyId, onInitialPolicy
   const showManagerSection = role === 'manager' || role === 'admin' || role === 'assistant_manager' || grouped.manager.length > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#C5D3E2] via-[#CDDAE7] to-[#D5E0EB]">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] mb-1">
+        <h1 className="text-2xl md:text-3xl font-bold text-whg-snow mb-1">
           {isES ? 'Políticas' : 'Policies'}
         </h1>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-whg-dim mb-4">
           {isES
             ? 'Lea y firme cada política. Su firma queda registrada con fecha y hora.'
             : 'Read and sign each policy. Your signature is recorded with a date and time stamp.'}
@@ -135,7 +135,7 @@ export default function PoliciesTab({ language, initialPolicyId, onInitialPolicy
             <PolicyCard key={p.id} policy={p} language={language} onClick={() => setSelected(p)} />
           ))}
           {grouped.employee.length === 0 && (
-            <p className="text-sm text-gray-500 italic">
+            <p className="text-sm text-whg-dim italic">
               {isES ? 'No hay políticas de empleado por ahora.' : 'No employee policies yet.'}
             </p>
           )}
@@ -146,7 +146,7 @@ export default function PoliciesTab({ language, initialPolicyId, onInitialPolicy
             <SectionHeading>
               {isES ? 'Políticas de Gerente' : 'Manager Policies'}
             </SectionHeading>
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3 mb-3">
+            <p className="text-xs text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-md p-3 mb-3">
               {isES
                 ? 'Como gerente, acepta un deber de cuidado superior al de los empleados que supervisa.'
                 : 'As a manager, you accept a higher duty of care than the employees you supervise.'}
@@ -165,7 +165,7 @@ export default function PoliciesTab({ language, initialPolicyId, onInitialPolicy
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-6">
+    <h2 className="text-sm font-semibold text-whg-dim uppercase tracking-wider mb-2 mt-6">
       {children}
     </h2>
   );
@@ -175,23 +175,23 @@ function ProgressBar({ progress, language }: { progress: Progress; language: 'en
   const isES = language === 'es';
   const pct = progress.total === 0 ? 0 : Math.round((progress.signed / progress.total) * 100);
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+    <div className="bg-whg-card border border-whg-line rounded-lg p-4 mb-6">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold text-[#1B3A6B]">
+        <span className="text-sm font-semibold text-whg-snow">
           {isES ? 'Progreso' : 'Your progress'}
         </span>
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-whg-dim">
           {progress.signed} / {progress.total} {isES ? 'firmadas' : 'signed'}
         </span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
         <div
-          className={`h-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-[#1B3A6B]'}`}
+          className={`h-full transition-all ${pct === 100 ? 'bg-emerald-500' : 'bg-whg-gold'}`}
           style={{ width: `${pct}%` }}
         />
       </div>
       {progress.remaining > 0 && (
-        <p className="text-xs text-amber-700 mt-2">
+        <p className="text-xs text-amber-300 mt-2">
           {isES
             ? `Le faltan ${progress.remaining} por firmar.`
             : `${progress.remaining} remaining to sign.`}
@@ -227,19 +227,19 @@ function HandbookCard({
   const isES = language === 'es';
   const signed = !!policy.signed && !policy.needs_resign;
   const badge = policy.needs_resign
-    ? { label: isES ? 'Nueva versión — firme de nuevo' : 'New version — re-sign', cls: 'bg-orange-100 text-orange-800 border-orange-200' }
+    ? { label: isES ? 'Nueva versión — firme de nuevo' : 'New version — re-sign', cls: 'bg-orange-400/10 text-orange-200 border-orange-400/30' }
     : signed
-    ? { label: isES ? `Firmado ${new Date(policy.signed_at!).toLocaleDateString()}` : `Signed ${new Date(policy.signed_at!).toLocaleDateString()}`, cls: 'bg-green-100 text-green-800 border-green-200' }
-    : { label: isES ? 'Firma requerida' : 'Signature required', cls: 'bg-amber-100 text-amber-900 border-amber-200' };
+    ? { label: isES ? `Firmado ${new Date(policy.signed_at!).toLocaleDateString()}` : `Signed ${new Date(policy.signed_at!).toLocaleDateString()}`, cls: 'bg-emerald-400/10 text-emerald-200 border-emerald-400/30' }
+    : { label: isES ? 'Firma requerida' : 'Signature required', cls: 'bg-amber-400/10 text-amber-200 border-amber-400/30' };
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] rounded-2xl p-5 mb-6 shadow-lg hover:shadow-xl transition-all border border-[#1B3A6B]"
+      className="w-full text-left bg-whg-card2 rounded-2xl p-5 mb-6 shadow-lg hover:shadow-xl transition-all border border-whg-gold/30"
     >
       <div className="flex items-start justify-between gap-3 mb-1.5">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-whg-gold mb-1">
             📘 {isES ? 'Documento Fundacional' : 'Foundational document'}
           </p>
           <h3 className="font-bold text-white text-base md:text-lg leading-tight">{policy.title}</h3>
@@ -253,7 +253,7 @@ function HandbookCard({
           ? 'Lea el manual completo en la pestaña Manual, luego firme aquí para confirmar que lo entiende y acepta cumplirlo.'
           : 'Read the full handbook in the Handbook tab, then sign here to confirm you understand and agree to follow it.'}
       </p>
-      <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-amber-300">
+      <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-whg-gold">
         {signed ? '✓' : '✍️'} {signed ? (isES ? 'Firmado' : 'Signed') : (isES ? 'Tocar para firmar' : 'Tap to sign')} →
       </div>
     </button>
@@ -271,26 +271,26 @@ function PolicyCard({
 }) {
   const isES = language === 'es';
   const badge = policy.needs_resign
-    ? { label: isES ? 'Versión nueva — firme de nuevo' : 'New version — re-sign', cls: 'bg-orange-100 text-orange-800 border-orange-200' }
+    ? { label: isES ? 'Versión nueva — firme de nuevo' : 'New version — re-sign', cls: 'bg-orange-400/10 text-orange-200 border-orange-400/30' }
     : policy.signed
-    ? { label: isES ? `Firmada ${new Date(policy.signed_at!).toLocaleDateString()}` : `Signed ${new Date(policy.signed_at!).toLocaleDateString()}`, cls: 'bg-green-100 text-green-800 border-green-200' }
-    : { label: isES ? 'Firma requerida' : 'Signature required', cls: 'bg-amber-100 text-amber-800 border-amber-200' };
+    ? { label: isES ? `Firmada ${new Date(policy.signed_at!).toLocaleDateString()}` : `Signed ${new Date(policy.signed_at!).toLocaleDateString()}`, cls: 'bg-emerald-400/10 text-emerald-200 border-emerald-400/30' }
+    : { label: isES ? 'Firma requerida' : 'Signature required', cls: 'bg-amber-400/10 text-amber-200 border-amber-400/30' };
 
   const purpose = esOrEn(policy, 'purpose', language);
 
   return (
     <button
       onClick={onClick}
-      className="text-left bg-white border border-gray-200 rounded-lg p-4 hover:border-[#1B3A6B] hover:shadow-sm transition-all"
+      className="text-left bg-whg-card border border-whg-line rounded-lg p-4 hover:border-whg-dim/50 hover:shadow-sm transition-all"
     >
       <div className="flex items-start justify-between gap-3 mb-1">
-        <h3 className="font-semibold text-[#1B3A6B] text-sm md:text-base">{policy.title}</h3>
+        <h3 className="font-semibold text-whg-snow text-sm md:text-base">{policy.title}</h3>
         <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${badge.cls}`}>
           {badge.label}
         </span>
       </div>
       {purpose && (
-        <p className="text-xs md:text-sm text-gray-600 line-clamp-2">{purpose}</p>
+        <p className="text-xs md:text-sm text-whg-dim line-clamp-2">{purpose}</p>
       )}
     </button>
   );
@@ -342,25 +342,25 @@ function PolicyDetail({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-8">
         <button
           onClick={onBack}
-          className="text-sm text-[#1B3A6B] hover:underline mb-4 flex items-center gap-1"
+          className="text-sm text-sky-300 hover:underline mb-4 flex items-center gap-1"
         >
           ← {isES ? 'Volver a políticas' : 'Back to policies'}
         </button>
 
-        <h1 className="text-2xl md:text-3xl font-bold text-[#1B3A6B] mb-1">{policy.title}</h1>
-        <p className="text-xs text-gray-500 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-whg-snow mb-1">{policy.title}</h1>
+        <p className="text-xs text-whg-dim mb-6">
           {isES ? 'Versión' : 'Version'} {policy.version}
           {policy.effective_date && ` · ${isES ? 'Vigente desde' : 'Effective'} ${new Date(policy.effective_date).toLocaleDateString()}`}
         </p>
 
-        <article className="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed">
+        <article className="prose prose-sm md:prose-base prose-invert max-w-none text-whg-snow/90 leading-relaxed">
           {esOrEn(policy, 'purpose', language) && (
             <>
-              <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
+              <h2 className="text-base font-semibold text-whg-snow mt-6 mb-2">
                 {isES ? 'Propósito' : 'Purpose'}
               </h2>
               <p className="whitespace-pre-wrap">{esOrEn(policy, 'purpose', language)}</p>
@@ -368,7 +368,7 @@ function PolicyDetail({
           )}
           {esOrEn(policy, 'details', language) && (
             <>
-              <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
+              <h2 className="text-base font-semibold text-whg-snow mt-6 mb-2">
                 {isES ? 'Detalles de la Política' : 'Policy Details'}
               </h2>
               <div className="whitespace-pre-wrap">{esOrEn(policy, 'details', language)}</div>
@@ -376,7 +376,7 @@ function PolicyDetail({
           )}
           {esOrEn(policy, 'consequences', language) && (
             <>
-              <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
+              <h2 className="text-base font-semibold text-whg-snow mt-6 mb-2">
                 {isES ? 'Consecuencias' : 'Consequences'}
               </h2>
               <p className="whitespace-pre-wrap">{esOrEn(policy, 'consequences', language)}</p>
@@ -384,7 +384,7 @@ function PolicyDetail({
           )}
           {esOrEn(policy, 'location_notes', language) && (
             <>
-              <h2 className="text-base font-semibold text-[#1B3A6B] mt-6 mb-2">
+              <h2 className="text-base font-semibold text-whg-snow mt-6 mb-2">
                 {isES ? 'Notas para su Ubicación' : 'Notes for Your Location'}
               </h2>
               <p className="whitespace-pre-wrap">{esOrEn(policy, 'location_notes', language)}</p>
@@ -392,20 +392,20 @@ function PolicyDetail({
           )}
         </article>
 
-        <hr className="my-8 border-gray-200" />
+        <hr className="my-8 border-whg-line" />
 
-        <section className="bg-gray-50 border border-gray-200 rounded-lg p-5">
-          <h2 className="text-base font-semibold text-[#1B3A6B] mb-3">
+        <section className="bg-whg-card border border-whg-line rounded-lg p-5">
+          <h2 className="text-base font-semibold text-whg-snow mb-3">
             {policy.role_required === 'manager'
               ? (isES ? 'Reconocimiento del Gerente' : 'Manager Acknowledgment')
               : (isES ? 'Reconocimiento del Empleado' : 'Employee Acknowledgment')}
           </h2>
-          <p className="text-sm text-gray-800 italic whitespace-pre-wrap mb-4">
+          <p className="text-sm text-whg-snow/90 italic whitespace-pre-wrap mb-4">
             {esOrEn(policy, 'acknowledgment_text', language) || policy.acknowledgment_text}
           </p>
 
           {!needsSign ? (
-            <div className="bg-green-50 border border-green-200 rounded-md p-3 text-sm text-green-800">
+            <div className="bg-emerald-400/10 border border-emerald-400/30 rounded-md p-3 text-sm text-emerald-200">
               ✓ {isES
                 ? `Firmada el ${new Date(policy.signed_at!).toLocaleString()}`
                 : `Signed on ${new Date(policy.signed_at!).toLocaleString()}`}
@@ -413,7 +413,7 @@ function PolicyDetail({
           ) : (
             <div className="space-y-4">
               {policy.needs_resign && (
-                <div className="bg-orange-50 border border-orange-200 text-orange-800 text-xs p-2 rounded">
+                <div className="bg-orange-400/10 border border-orange-400/30 text-orange-200 text-xs p-2 rounded">
                   {isES
                     ? `Ha firmado la versión ${policy.signed_version}. La versión actual es ${policy.version}. Por favor firme de nuevo.`
                     : `You signed version ${policy.signed_version}. The current version is ${policy.version}. Please re-sign.`}
@@ -425,28 +425,28 @@ function PolicyDetail({
                   type="checkbox"
                   checked={confirmed}
                   onChange={(e) => setConfirmed(e.target.checked)}
-                  className="mt-0.5"
+                  className="mt-0.5 accent-whg-gold"
                   disabled={submitting}
                 />
-                <span className="text-sm text-gray-700">
+                <span className="text-sm text-whg-snow/90">
                   {isES
                     ? 'He leído y entiendo esta política y acepto cumplirla.'
                     : 'I have read and understand this policy and agree to follow it.'}
                 </span>
               </label>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-whg-dim">
                 {isES
                   ? `Firmará como `
                   : `Signing as `}
-                <span className="font-semibold text-[#1B3A6B]">{fullName || (isES ? 'su nombre legal' : 'your legal name')}</span>
+                <span className="font-semibold text-whg-snow">{fullName || (isES ? 'su nombre legal' : 'your legal name')}</span>
                 {isES
                   ? `. Su firma se registrará con fecha y hora.`
                   : `. Your signature will be timestamped on submission.`}
               </p>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-2 rounded">
+                <div className="bg-red-400/10 border border-red-400/30 text-red-200 text-sm p-2 rounded">
                   {error}
                 </div>
               )}
@@ -454,7 +454,7 @@ function PolicyDetail({
               <button
                 onClick={() => setShowPad(true)}
                 disabled={submitting || !confirmed}
-                className="w-full bg-[#1B3A6B] text-white font-semibold py-3 rounded-md hover:bg-[#142c50] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-whg-gold text-whg-goldink font-semibold py-3 rounded-md hover:bg-whg-gold2 disabled:bg-white/10 disabled:text-whg-dim/50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <span>{isES ? 'Enviando...' : 'Submitting...'}</span>

@@ -89,16 +89,16 @@ export default function OurStoryModal({ onAcknowledged }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
-      <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col">
+      <div className="bg-whg-card border border-whg-line w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#1B3A6B] to-[#2C4F8A] px-6 py-5 text-white">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-300 mb-1">
+        <div className="bg-whg-card2 border-b border-whg-line px-6 py-5 text-whg-snow">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-whg-gold mb-1">
             Welcome to the team
           </p>
           <h1 className="text-xl md:text-2xl font-bold">
             {data.title}
           </h1>
-          <p className="text-xs text-white/80 mt-1.5 italic leading-relaxed">
+          <p className="text-xs text-whg-dim mt-1.5 italic leading-relaxed">
             Take a few minutes to read this before you start. It's what we hold ourselves to.
           </p>
         </div>
@@ -109,14 +109,14 @@ export default function OurStoryModal({ onAcknowledged }: Props) {
         </div>
 
         {/* Footer with time-gated acknowledge button */}
-        <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+        <div className="border-t border-whg-line bg-whg-card2 px-6 py-4">
           <button
             onClick={handleAcknowledge}
             disabled={!enabled || acknowledging}
             className={`w-full py-3 rounded-xl text-sm font-bold transition-colors ${
               enabled && !acknowledging
-                ? 'bg-[#1B3A6B] text-white hover:bg-[#2C4F8A]'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? 'bg-whg-gold text-whg-goldink hover:bg-whg-gold2'
+                : 'bg-white/10 text-whg-dim cursor-not-allowed'
             }`}
           >
             {acknowledging
@@ -125,7 +125,7 @@ export default function OurStoryModal({ onAcknowledged }: Props) {
               ? "I've read this. Let's go."
               : `Please take a moment to read (${secondsLeft}s)`}
           </button>
-          <p className="text-[10px] text-gray-400 text-center mt-2">
+          <p className="text-[10px] text-whg-dim/70 text-center mt-2">
             This shows once. You can revisit it anytime in the Handbook tab.
           </p>
         </div>
@@ -203,14 +203,14 @@ function StoryBody({ body }: { body: string }) {
       {blocks.map((b, idx) => {
         if (b.kind === 'h2') {
           return (
-            <h2 key={idx} className="text-base font-bold text-[#1B3A6B] uppercase tracking-widest mt-4 pb-1 border-b border-gray-200">
+            <h2 key={idx} className="text-base font-bold text-whg-snow uppercase tracking-widest mt-4 pb-1 border-b border-whg-line">
               {b.text}
             </h2>
           );
         }
         if (b.kind === 'h3') {
           return (
-            <h3 key={idx} className="text-sm font-bold text-[#1B3A6B] mt-3">
+            <h3 key={idx} className="text-sm font-bold text-whg-snow mt-3">
               {b.text}
             </h3>
           );
@@ -219,8 +219,8 @@ function StoryBody({ body }: { body: string }) {
           return (
             <ul key={idx} className="space-y-1.5 pl-1">
               {b.items.map((it, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-700 leading-relaxed">
-                  <span className="text-[#1B3A6B] flex-shrink-0 mt-0.5">•</span>
+                <li key={i} className="flex items-start gap-2 text-sm text-whg-snow/90 leading-relaxed">
+                  <span className="text-whg-dim flex-shrink-0 mt-0.5">•</span>
                   <span>{it}</span>
                 </li>
               ))}
@@ -228,7 +228,7 @@ function StoryBody({ body }: { body: string }) {
           );
         }
         return (
-          <p key={idx} className="text-sm text-gray-700 leading-relaxed">
+          <p key={idx} className="text-sm text-whg-snow/90 leading-relaxed">
             {b.text}
           </p>
         );
