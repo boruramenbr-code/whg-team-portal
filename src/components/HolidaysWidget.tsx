@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 
-interface Holiday {
+export interface Holiday {
   id: string;
   restaurant_id: string | null;
   start_date: string;
@@ -18,6 +18,9 @@ interface Holiday {
 
 interface Props {
   language: 'en' | 'es';
+  /** From Home's bundled load: null = still loading (render nothing,
+   *  don't fetch). Omit it and the widget fetches on its own. */
+  holidays?: Holiday[] | null;
 }
 
 /**
@@ -40,12 +43,14 @@ interface Props {
  *   ⚡ busy       — heads up, busier than usual (amber)
  *   🔥 all_hands  — all hands on deck (red)
  */
-export default function HolidaysWidget({ language }: Props) {
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function HolidaysWidget({ language, holidays: provided }: Props) {
+  const selfFetch = provided === undefined;
+  const [fetched, setFetched] = useState<Holiday[]>([]);
+  const [loading, setLoading] = useState(selfFetch);
   const isES = language === 'es';
 
   useEffect(() => {
+    if (!selfFetch) return;
     let cancelled = false;
     (async () => {
       try {
@@ -56,7 +61,7 @@ export default function HolidaysWidget({ language }: Props) {
           return;
         }
         const d = await r.json();
-        if (!cancelled) setHolidays(d.holidays || []);
+        if (!cancelled) setFetched(d.holidays || []);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -64,8 +69,9 @@ export default function HolidaysWidget({ language }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selfFetch]);
 
+  const holidays = selfFetch ? fetched : provided ?? [];
   if (loading || holidays.length === 0) return null;
 
   const dayDelta = (iso: string) => {

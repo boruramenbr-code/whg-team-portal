@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-interface NewHire {
+export interface NewHire {
   id: string;
   full_name: string;
   role: string;
@@ -12,6 +12,9 @@ interface NewHire {
 
 interface Props {
   language: 'en' | 'es';
+  /** From Home's bundled load: null = still loading (render nothing,
+   *  don't fetch). Omit it and the section fetches on its own. */
+  newHires?: NewHire[] | null;
 }
 
 /**
@@ -24,12 +27,14 @@ interface Props {
  * Auto-hides if no one is in the last 30 days. Server-side cutoff also
  * protects against the initial bulk import flooding the screen.
  */
-export default function NewHiresSection({ language }: Props) {
-  const [newHires, setNewHires] = useState<NewHire[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function NewHiresSection({ language, newHires: provided }: Props) {
+  const selfFetch = provided === undefined;
+  const [fetched, setFetched] = useState<NewHire[]>([]);
+  const [loading, setLoading] = useState(selfFetch);
   const isES = language === 'es';
 
   useEffect(() => {
+    if (!selfFetch) return;
     let cancelled = false;
     (async () => {
       try {
@@ -39,7 +44,7 @@ export default function NewHiresSection({ language }: Props) {
           return;
         }
         const d = await r.json();
-        if (!cancelled) setNewHires(d.new_hires || []);
+        if (!cancelled) setFetched(d.new_hires || []);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,8 +52,9 @@ export default function NewHiresSection({ language }: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selfFetch]);
 
+  const newHires = selfFetch ? fetched : provided ?? [];
   if (loading || newHires.length === 0) return null;
 
   // For true new hires (within 30 days) we show how recent they are.

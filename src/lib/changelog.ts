@@ -31,6 +31,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'The Memories card on Home and every tile on the wall now load small preview images instead of full photos and videos — the full file only loads when you tap',
       'New videos posted to Memories get a still-frame preview automatically, so the wall never has to dig into video files just to show a tile',
       'The welcome screen on your first open of the day is now about a second instead of three',
+      'Home now loads in one trip instead of about ten — pre-shift, owner’s message, birthdays, events, training, new hires, and Memories all arrive together',
     ],
   },
   {

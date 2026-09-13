@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import WelcomeNoteModal from './WelcomeNoteModal';
 import OurStoryModal from './OurStoryModal';
-import HolidaysWidget from './HolidaysWidget';
-import NewHiresSection from './NewHiresSection';
+import HolidaysWidget, { type Holiday } from './HolidaysWidget';
+import NewHiresSection, { type NewHire } from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
 import CardingDateWidget from './CardingDateWidget';
 import TipTrackerPage from './TipTrackerPage';
@@ -208,38 +208,36 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
   // Restaurant switcher state — for admins / multi-location managers viewing
   // pre-shift notes across the brand. Persisted in localStorage so the choice
   // sticks across visits (shared key with the Positions tab).
-  const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(null);
+  // Read synchronously so Home's bundled load goes out once with the
+  // right restaurant — not once blank, then again after an effect.
+  const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try { return localStorage.getItem(VIEW_RESTAURANT_KEY); } catch { return null; }
+  });
+  const [allHolidays, setAllHolidays] = useState<Holiday[] | null>(null);
+  const [newHires, setNewHires] = useState<NewHire[] | null>(null);
   const [activeRestaurantId, setActiveRestaurantId] = useState<string | null>(null);
   const [activeRestaurantName, setActiveRestaurantName] = useState<string | null>(null);
   const [availableRestaurants, setAvailableRestaurants] = useState<{ id: string; name: string }[]>([]);
 
   const isES = language === 'es';
 
-  // Load saved restaurant preference on first render
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(VIEW_RESTAURANT_KEY);
-      if (saved) setViewRestaurantId(saved);
-    } catch {
-      // localStorage unavailable — fall through
+  const applyPreshift = useCallback((noteData: {
+    note?: PreshiftNote | null;
+    active_restaurant_id?: string | null;
+    available_restaurants?: { id: string; name: string }[];
+  }) => {
+    setNote(noteData.note || null);
+    setActiveRestaurantId(noteData.active_restaurant_id || null);
+    if (Array.isArray(noteData.available_restaurants)) {
+      setAvailableRestaurants(noteData.available_restaurants);
+      const match = noteData.available_restaurants.find((r) => r.id === noteData.active_restaurant_id);
+      setActiveRestaurantName(match?.name || null);
     }
   }, []);
 
-  // Two-loader pattern for the Home tab:
-  //
-  //   loadPreshift     — restaurant-scoped, refetches when viewRestaurantId
-  //                      changes. Doesn't toggle the global `loading` flag,
-  //                      so chip swaps don't flicker the whole card —
-  //                      we keep the prior note visible until the new one
-  //                      arrives, then swap in place.
-  //
-  //   loadGeneral      — owner messages, birthdays, holidays. None of these
-  //                      change with chip selection, so we run this ONCE on
-  //                      mount and never refetch when the user clicks a chip.
-  //
-  // Before this split, every chip click fired 4 parallel API calls (3 of
-  // them returning the same data as last time) and showed a "Loading…"
-  // state on the whole card. Now chip clicks fire 1 call and never flicker.
+  // Pre-shift alone — used to refresh 86'd items and specials when the
+  // app comes back into view, without re-running the whole Home bundle.
   const loadPreshift = useCallback(async () => {
     try {
       const preshiftUrl = viewRestaurantId
@@ -247,129 +245,76 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         : `/api/preshift-notes?t=${Date.now()}`;
       const noteRes = await fetch(preshiftUrl, { cache: 'no-store' });
       if (!noteRes.ok) return;
-      const noteData = await noteRes.json();
-      setNote(noteData.note || null);
-      setActiveRestaurantId(noteData.active_restaurant_id || null);
-      if (Array.isArray(noteData.available_restaurants)) {
-        setAvailableRestaurants(noteData.available_restaurants);
-        const match = noteData.available_restaurants.find(
-          (r: { id: string }) => r.id === noteData.active_restaurant_id
-        );
-        setActiveRestaurantName(match?.name || null);
-      }
+      applyPreshift(await noteRes.json());
     } catch {
       // ignore — keep prior content rendered rather than flickering an error
     }
-  }, [viewRestaurantId]);
+  }, [viewRestaurantId, applyPreshift]);
 
-  const loadGeneral = useCallback(async () => {
-    setLoading(true);
+  // Home's first paint in ONE request (Sept 2026 load-time pass): the
+  // server runs pre-shift, owner messages, birthdays, holidays, latest
+  // training, path summary, new hires, and the Memories preview side by
+  // side. Refetches when the restaurant chip changes; `loading` only
+  // gates the first load, so chip swaps update in place without flicker.
+  const loadHome = useCallback(async () => {
     try {
-      // Phase 1 perf (May 2026): Let the server's Cache-Control headers
-      // (60s) do their job — no cache-busters or no-store needed. Manager
-      // edits will still show within a minute, which is fine for these
-      // slow-changing surfaces (owner messages, birthdays, holidays).
-      const [ownerRes, bdayRes, holidaysRes, trainingRes] = await Promise.all([
-        fetch('/api/owner-messages?audience=staff'),
-        fetch('/api/birthdays'),
-        fetch('/api/holidays'),
-        fetch('/api/training/latest'),
-      ]);
-      if (ownerRes.ok) {
-        const ownerData = await ownerRes.json();
-        setOwnerMessages(ownerData.messages || []);
-      }
-      if (bdayRes.ok) {
-        const bdayData = await bdayRes.json();
-        setBirthdays(bdayData.birthdays || []);
-      }
-      // Filter holidays to those active today (start ≤ today ≤ end).
-      // Used to render the today's-event badge atop the pre-shift card.
-      if (holidaysRes.ok) {
-        const holidaysData = await holidaysRes.json();
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayMs = today.getTime();
-        const active = (holidaysData.holidays || []).filter((h: ActiveHoliday) => {
-          const start = new Date(h.start_date + 'T00:00:00').getTime();
-          const end = new Date(h.end_date + 'T00:00:00').getTime();
-          return start <= todayMs && end >= todayMs;
+      const url = viewRestaurantId
+        ? `/api/home?restaurant_id=${encodeURIComponent(viewRestaurantId)}`
+        : '/api/home';
+      const r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+
+      if (j.preshift) applyPreshift(j.preshift);
+      setOwnerMessages(j.owner_messages?.messages || []);
+      setBirthdays(j.birthdays?.birthdays || []);
+      setLatestTraining(j.training_latest?.video || null);
+      setMemoriesPreview(j.memories?.memories || []);
+      setNewHires(j.new_hires?.new_hires || []);
+
+      // The full holiday list feeds the Upcoming widget; the ones active
+      // today (start ≤ today ≤ end) ride the banner atop the pre-shift card.
+      const holidays: Holiday[] = j.holidays?.holidays || [];
+      setAllHolidays(holidays);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayMs = today.getTime();
+      setActiveHolidays(holidays.filter((h) => {
+        const start = new Date(h.start_date + 'T00:00:00').getTime();
+        const end = new Date(h.end_date + 'T00:00:00').getTime();
+        return start <= todayMs && end >= todayMs;
+      }));
+
+      // Continue Training card — stays hidden when there's no path yet.
+      type M = { required: boolean; done: boolean; available: boolean; title: string; title_es: string | null };
+      type T = { required_total: number; required_done: number; modules: M[] };
+      const tracks: T[] = j.training_path?.tracks || [];
+      const total = tracks.reduce((n, t) => n + t.required_total, 0);
+      const done = tracks.reduce((n, t) => n + t.required_done, 0);
+      if (total > 0) {
+        const next = tracks.flatMap((t) => t.modules.filter((m) => m.required && !m.done && m.available))[0] || null;
+        setPathSummary({
+          pct: Math.round((done / total) * 100),
+          done,
+          total,
+          nextTitle: next?.title ?? null,
+          nextTitleEs: next?.title_es ?? null,
+          floorReady: !!j.training_path?.floor_ready?.ready,
         });
-        setActiveHolidays(active);
-      }
-      // Latest training video (one card on Home → "Watch now" → Training tab).
-      if (trainingRes.ok) {
-        const trainingData = await trainingRes.json();
-        setLatestTraining(trainingData.video || null);
       }
     } catch {
-      // ignore
+      // ignore — sections that loaded stay rendered
     } finally {
       setLoading(false);
+      // Sections that never arrived resolve to "nothing to show".
+      setAllHolidays((h) => h ?? []);
+      setNewHires((n) => n ?? []);
     }
-  }, []);
+  }, [viewRestaurantId, applyPreshift]);
 
-  // Load owner messages / birthdays / holidays ONCE on mount —
-  // none of those depend on the restaurant chip selection.
   useEffect(() => {
-    loadGeneral();
-  }, [loadGeneral]);
-
-  // Load pre-shift note whenever the restaurant chip changes.
-  useEffect(() => {
-    loadPreshift();
-  }, [loadPreshift]);
-
-  // Memories preview follows the restaurant chip too: staff see THEIR
-  // restaurant's photos (scope=own resolves it server-side); admins on
-  // a chip see that restaurant's. Brand-wide WHG moments always ride
-  // along. The full cross-restaurant wall lives under Team → Memories.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const url = viewRestaurantId
-          ? `/api/memories?limit=6&restaurant_id=${encodeURIComponent(viewRestaurantId)}`
-          : '/api/memories?limit=6&scope=own';
-        const r = await fetch(url);
-        if (!r.ok || cancelled) return;
-        const j = await r.json();
-        if (!cancelled) setMemoriesPreview(j.memories || []);
-      } catch { /* card just hides */ }
-    })();
-    return () => { cancelled = true; };
-  }, [viewRestaurantId]);
-
-  // Training-path summary for the Continue Training card. Non-fatal if it
-  // fails — the card just doesn't render.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch('/api/training/path');
-        if (!r.ok || cancelled) return;
-        const j = await r.json();
-        type M = { required: boolean; done: boolean; available: boolean; title: string; title_es: string | null };
-        type T = { required_total: number; required_done: number; modules: M[] };
-        const tracks: T[] = j.tracks || [];
-        const total = tracks.reduce((n, t) => n + t.required_total, 0);
-        const done = tracks.reduce((n, t) => n + t.required_done, 0);
-        if (total === 0) return;
-        const next = tracks.flatMap((t) => t.modules.filter((m) => m.required && !m.done && m.available))[0] || null;
-        if (!cancelled) {
-          setPathSummary({
-            pct: Math.round((done / total) * 100),
-            done,
-            total,
-            nextTitle: next?.title ?? null,
-            nextTitleEs: next?.title_es ?? null,
-            floorReady: !!j.floor_ready?.ready,
-          });
-        }
-      } catch { /* card hidden */ }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    loadHome();
+  }, [loadHome]);
 
   // HomeTab now stays mounted across tab switches (perf), so refresh the
   // operational data (86'd items, specials) whenever the app comes back
@@ -803,7 +748,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         )}
 
         {/* ── Welcome New Teammates (below the operational brief) ── */}
-        <NewHiresSection language={language} />
+        <NewHiresSection language={language} newHires={newHires} />
 
         {/* ── Latest Training (only renders when a video exists) ──
             Sticky-button card that highlights the most recently added
@@ -1049,7 +994,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         )}
 
         {/* ── Upcoming Holidays and Events ── */}
-        <HolidaysWidget language={language} />
+        <HolidaysWidget language={language} holidays={allHolidays} />
 
         {/* ── Tab Guide ── */}
         <section>
