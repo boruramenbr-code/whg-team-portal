@@ -15,6 +15,8 @@ export interface GuideCard {
   quick_question: string | null;
   quick_question_es: string | null;
   image_url: string | null;
+  /** The card's own booklet source (cross-topic cards); falls back to the section's. */
+  booklet?: { title: string; sort_order: number } | null;
 }
 
 export interface GuideSection {
@@ -406,9 +408,9 @@ function CardDeck({
               </div>
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-              {section.booklet && (
+              {(card.booklet ?? section.booklet) && (
                 <button
-                  onClick={() => onOpenBooklet(section.booklet!.sort_order)}
+                  onClick={() => onOpenBooklet((card.booklet ?? section.booklet)!.sort_order)}
                   className="tap-highlight text-xs font-semibold text-sky-300 hover:underline py-1"
                 >
                   📖 {isES ? 'Leer la sección completa' : 'Read the full section'}
