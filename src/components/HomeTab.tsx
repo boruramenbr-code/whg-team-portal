@@ -113,6 +113,7 @@ interface MemoryPreview {
   photo_url: string | null;
   video_youtube_id: string | null;
   video_url?: string | null;
+  thumb_url?: string | null;
 }
 
 /* ───────── Birthday types ───────── */
@@ -911,7 +912,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               <div className="grid grid-cols-3 gap-0.5">
                 {memoriesPreview.slice(0, 6).map((m) => (
                   <div key={m.id} className="relative aspect-square bg-whg-card2 overflow-hidden">
-                    {m.video_url ? (
+                    {m.video_url && !m.thumb_url ? (
                       <video
                         src={`${m.video_url}#t=0.1`}
                         preload="metadata"
@@ -922,7 +923,8 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                     ) : (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
-                        src={m.photo_url || `https://i.ytimg.com/vi/${m.video_youtube_id}/mqdefault.jpg`}
+                        src={m.thumb_url || m.photo_url || `https://i.ytimg.com/vi/${m.video_youtube_id}/mqdefault.jpg`}
+                        decoding="async"
                         alt=""
                         className="w-full h-full object-cover"
                         loading="lazy"

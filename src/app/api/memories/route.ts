@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   const scopeRid = ridParam || (scopeOwn ? me.restaurant_id : null);
   let memoriesQuery = adminClient
     .from('memories')
-    .select('id, restaurant_id, photo_url, video_youtube_id, video_url, caption, caption_es, taken_label, featured, created_at')
+    .select('id, restaurant_id, photo_url, video_youtube_id, video_url, thumb_url, caption, caption_es, taken_label, featured, created_at')
     .eq('active', true);
   if (scopeRid) {
     memoriesQuery = memoriesQuery.or(`restaurant_id.eq.${scopeRid},restaurant_id.is.null`);
@@ -112,9 +112,22 @@ export async function POST(req: NextRequest) {
     photoUrl = adminClient.storage.from('memories').getPublicUrl(key).data.publicUrl;
   }
 
+  // Tile thumbnail (client-made, ~720px). Non-fatal: without it the
+  // tile just falls back to the full photo.
+  let thumbUrl: string | null = null;
+  const thumb = form.get('thumb') as File | null;
+  if (photo && thumb) {
+    const tkey = `thumbs/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const { error: tErr } = await adminClient.storage
+      .from('memories')
+      .upload(tkey, await thumb.arrayBuffer(), { contentType: 'image/jpeg', upsert: false });
+    if (!tErr) thumbUrl = adminClient.storage.from('memories').getPublicUrl(tkey).data.publicUrl;
+  }
+
   const { data, error } = await adminClient.from('memories').insert({
     restaurant_id: restaurantId,
     photo_url: photoUrl,
+    thumb_url: thumbUrl,
     video_youtube_id: videoId,
     caption,
     caption_es: captionEs,
@@ -136,14 +149,17 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
   const adminClient = getAdminClient();
-  const { data: row } = await adminClient.from('memories').select('photo_url').eq('id', id).single();
+  const { data: row } = await adminClient
+    .from('memories').select('photo_url, video_url, thumb_url').eq('id', id).single();
   const { error } = await adminClient.from('memories').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  // Best-effort storage cleanup so the bucket doesn't hoard orphans.
-  if (row?.photo_url) {
-    const key = row.photo_url.split('/memories/')[1];
-    if (key) adminClient.storage.from('memories').remove([decodeURIComponent(key)]).then(() => {});
-  }
+  // Storage cleanup (photo, video, and thumbnail) so the bucket doesn't
+  // hoard orphans. Awaited — serverless can freeze after the response.
+  const keys = [row?.photo_url, row?.video_url, row?.thumb_url]
+    .map((u) => u?.split('/memories/')[1])
+    .filter((k): k is string => !!k)
+    .map((k) => decodeURIComponent(k));
+  if (keys.length > 0) await adminClient.storage.from('memories').remove(keys);
   return NextResponse.json({ success: true });
 }

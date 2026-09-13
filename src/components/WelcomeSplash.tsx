@@ -26,13 +26,14 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
 
   useEffect(() => {
     // Phase 1: Fade in (already happening via CSS)
-    const holdTimer = setTimeout(() => setPhase('hold'), 100);
+    const holdTimer = setTimeout(() => setPhase('hold'), 60);
 
-    // Phase 2: Start exit after 2.5 seconds
-    const exitTimer = setTimeout(() => setPhase('exit'), 2500);
+    // Phase 2: Start exit — kept short (Sept 2026 load-time pass: the
+    // old 3.2s hold was dead time on the first open of every shift).
+    const exitTimer = setTimeout(() => setPhase('exit'), 950);
 
     // Phase 3: Remove component after exit animation
-    const completeTimer = setTimeout(() => onComplete(), 3200);
+    const completeTimer = setTimeout(() => onComplete(), 1350);
 
     return () => {
       clearTimeout(holdTimer);
@@ -44,13 +45,13 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
   return (
     <div
       onClick={skip}
-      className={`fixed inset-0 z-50 bg-[#0F1E3C] flex flex-col items-center justify-center transition-opacity duration-700 ${
+      className={`fixed inset-0 z-50 bg-[#0F1E3C] flex flex-col items-center justify-center transition-opacity duration-300 ${
         phase === 'enter' ? 'opacity-0' : phase === 'exit' ? 'opacity-0' : 'opacity-100'
       }`}
     >
       {/* WHG logo */}
       <div
-        className={`mb-4 transition-all duration-700 ${
+        className={`mb-4 transition-all duration-500 ${
           phase === 'hold' ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
         }`}
       >
@@ -65,7 +66,7 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
       {/* Restaurant logo (below WHG) */}
       {restaurantName && SPLASH_LOGO[restaurantName] && (
         <div
-          className={`mb-4 transition-all duration-700 delay-150 ${
+          className={`mb-4 transition-all duration-500 delay-75 ${
             phase === 'hold' ? 'scale-100 opacity-100' : 'scale-90 opacity-0'
           }`}
         >
@@ -80,7 +81,7 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
 
       {/* Welcome text */}
       <div
-        className={`text-center transition-all duration-700 delay-200 ${
+        className={`text-center transition-all duration-500 delay-100 ${
           phase === 'hold' ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
         }`}
       >
@@ -96,7 +97,7 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
 
       {/* Subtle tagline */}
       <p
-        className={`text-[#7BA7D3]/50 text-xs mt-8 transition-all duration-700 delay-500 ${
+        className={`text-[#7BA7D3]/50 text-xs mt-8 transition-all duration-500 delay-150 ${
           phase === 'hold' ? 'opacity-100' : 'opacity-0'
         }`}
       >

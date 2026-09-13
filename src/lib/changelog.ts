@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.12',
+    date: 'September 12, 2026',
+    title: 'Faster logins: lighter Memories + quicker welcome',
+    notes: [
+      'The Memories card on Home and every tile on the wall now load small preview images instead of full photos and videos — the full file only loads when you tap',
+      'New videos posted to Memories get a still-frame preview automatically, so the wall never has to dig into video files just to show a tile',
+      'The welcome screen on your first open of the day is now about a second instead of three',
+    ],
+  },
+  {
     version: '2026.08.09.4',
     date: 'August 9, 2026',
     title: 'Bigger play button on Memories videos',

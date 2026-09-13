@@ -44,8 +44,15 @@ export async function POST(req: NextRequest) {
   const adminClient = getAdminClient();
 
   if (body.action === 'sign') {
-    const ext = ['mp4', 'mov'].includes((body.ext || '').toLowerCase()) ? body.ext.toLowerCase() : 'mp4';
-    const path = `videos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const rand = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    // kind 'poster' = the still frame the client captured for the tile.
+    let path: string;
+    if (body.kind === 'poster') {
+      path = `thumbs/${rand}.jpg`;
+    } else {
+      const ext = ['mp4', 'mov'].includes((body.ext || '').toLowerCase()) ? body.ext.toLowerCase() : 'mp4';
+      path = `videos/${rand}.${ext}`;
+    }
     const { data, error } = await adminClient.storage.from('memories').createSignedUploadUrl(path);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ path: data.path, token: data.token });
@@ -58,9 +65,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
     }
     const url = adminClient.storage.from('memories').getPublicUrl(path).data.publicUrl;
+    const thumbPath: string = body.thumb_path || '';
+    const thumbUrl = /^thumbs\/\d+-[a-z0-9]+\.jpg$/.test(thumbPath)
+      ? adminClient.storage.from('memories').getPublicUrl(thumbPath).data.publicUrl
+      : null;
     const { error } = await adminClient.from('memories').insert({
       restaurant_id: ((body.restaurant_id as string) || '').trim() || null,
       video_url: url,
+      thumb_url: thumbUrl,
       caption: ((body.caption as string) || '').trim() || null,
       caption_es: ((body.caption_es as string) || '').trim() || null,
       taken_label: ((body.taken_label as string) || '').trim() || null,

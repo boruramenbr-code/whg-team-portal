@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { convertToJpeg } from '@/lib/client-image';
+import { convertToJpeg, makeThumbnail, captureVideoPoster } from '@/lib/client-image';
 
 /* ───────── Types (mirror /api/memories) ───────── */
 interface Memory {
@@ -11,6 +11,8 @@ interface Memory {
   video_youtube_id: string | null;
   /** Directly-uploaded video file (public bucket URL). */
   video_url: string | null;
+  /** ~720px still for tiles (photo thumbnail or video frame). */
+  thumb_url: string | null;
   caption: string | null;
   caption_es: string | null;
   taken_label: string | null;
@@ -140,9 +142,9 @@ export default function MemoriesTab({ language }: Props) {
                   onClick={() => setViewer(m)}
                   className="tap-highlight relative flex-shrink-0 w-72 aspect-video rounded-2xl overflow-hidden border border-whg-gold/40 shadow-md text-left bg-whg-card2"
                 >
-                  {m.photo_url ? (
+                  {m.thumb_url || m.photo_url ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={m.photo_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                    <img src={(m.thumb_url || m.photo_url)!} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
                   ) : m.video_url ? (
                     <video
                       src={`${m.video_url}#t=0.1`}
@@ -231,9 +233,10 @@ export default function MemoriesTab({ language }: Props) {
                 className="tap-highlight break-inside-avoid block w-full rounded-2xl overflow-hidden bg-whg-card border border-whg-line shadow-sm hover:shadow-md transition-shadow text-left"
               >
                 <div className="relative">
-                  {m.photo_url ? (
+                  {m.thumb_url || m.photo_url ? (
+                    /* Tiles show the ~720px thumbnail; the full file loads on tap. */
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={m.photo_url} alt={m.caption || ''} className="w-full h-auto" loading="lazy" />
+                    <img src={(m.thumb_url || m.photo_url)!} alt={m.caption || ''} className="w-full h-auto" loading="lazy" decoding="async" />
                   ) : m.video_url ? (
                     /* #t=0.1 nudges browsers into painting the first frame */
                     <video
@@ -442,8 +445,10 @@ function UploadModal({
       for (const f of files) {
         setProgress(`${done + 1}/${files.length}`);
         const jpeg = await convertToJpeg(f);
+        const thumb = await makeThumbnail(jpeg).catch(() => null);
         const form = new FormData();
         form.append('photo', jpeg);
+        if (thumb) form.append('thumb', thumb);
         form.append('restaurant_id', restaurantId);
         form.append('caption', caption);
         form.append('taken_label', takenLabel);
@@ -473,10 +478,31 @@ function UploadModal({
           { method: 'PUT', headers: { 'Content-Type': ext === 'mov' ? 'video/quicktime' : 'video/mp4' }, body: v }
         );
         if (!putRes.ok) throw new Error(`Video upload failed (${putRes.status}).`);
+
+        // Still frame for the tile, so the wall never has to probe the
+        // video file. Best-effort: no poster → tile falls back to video.
+        let thumbPath: string | null = null;
+        const poster = await captureVideoPoster(v);
+        if (poster) {
+          const posterSign = await fetch('/api/memories/video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'sign', kind: 'poster' }),
+          });
+          if (posterSign.ok) {
+            const { path: posterPath, token: posterToken } = await posterSign.json();
+            const posterPut = await fetch(
+              `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/upload/sign/memories/${posterPath}?token=${encodeURIComponent(posterToken)}`,
+              { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: poster }
+            );
+            if (posterPut.ok) thumbPath = posterPath;
+          }
+        }
+
         const finRes = await fetch('/api/memories/video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'finalize', path, restaurant_id: restaurantId, caption, taken_label: takenLabel, featured }),
+          body: JSON.stringify({ action: 'finalize', path, thumb_path: thumbPath, restaurant_id: restaurantId, caption, taken_label: takenLabel, featured }),
         });
         if (!finRes.ok) {
           const j = await finRes.json().catch(() => ({}));
