@@ -29,6 +29,9 @@ interface Props {
    *   • 'manager'            → Manager's Handbook Standards content (manager + 'all')
    */
   audience?: 'employee' | 'manager';
+  /** Open scrolled to the section with this sort_order (Quick Guide deep link). */
+  focusSortOrder?: number | null;
+  onFocusDone?: () => void;
 }
 
 /**
@@ -36,7 +39,7 @@ interface Props {
  * and a collapsible section list on mobile. Includes in-document search
  * that jumps to matching sections.
  */
-export default function HandbookReaderTab({ language, audience = 'employee' }: Props) {
+export default function HandbookReaderTab({ language, audience = 'employee', focusSortOrder = null, onFocusDone }: Props) {
   const [sections, setSections] = useState<HandbookSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +130,19 @@ export default function HandbookReaderTab({ language, audience = 'employee' }: P
     }
     return () => observer.disconnect();
   }, [sections]);
+
+  // Deep link from the Quick Guide: once sections are rendered, jump to
+  // the requested one (sort_order is the same in English and Spanish).
+  useEffect(() => {
+    if (focusSortOrder === null || loading || sections.length === 0) return;
+    const target = sections.find((s) => s.sort_order === focusSortOrder);
+    const frame = requestAnimationFrame(() => {
+      if (target) scrollToSection(target.id);
+      onFocusDone?.();
+    });
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSortOrder, loading, sections]);
 
   if (loading) {
     return <div className="flex-1 flex items-center justify-center text-sm text-whg-dim">Loading handbook…</div>;

@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.12.3',
+    date: 'September 12, 2026',
+    title: '📘 Handbook Quick Guide (preview)',
+    notes: [
+      'New Quick Guide in the Handbook: the handbook broken into short, friendly cards you flip through like stories — one idea per card, big text, a picture, and a heads-up when something has consequences',
+      'Search, “Most asked” questions, and a “You’re caught up” finish that links to the full handbook section or to Ask',
+      'First up: Lates, Call-Outs & Time Off, and Clocking In & Out. The owner is previewing them now; topics roll out to everyone one at a time after approval',
+      'The full handbook stays exactly as it is — it’s still the official policy',
+    ],
+  },
+  {
     version: '2026.09.12.2',
     date: 'September 12, 2026',
     title: 'One look everywhere: Handbook & Team go Midnight',

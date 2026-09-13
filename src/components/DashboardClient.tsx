@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Profile } from '@/lib/types';
 import WelcomeSplash from './WelcomeSplash';
 import HomeTab from './HomeTab';
+import type { GuideSection } from './HandbookGuideTab';
 
 // ── Lazy-loaded tabs ──────────────────────────────────────────
 // Phase 1 perf fix (May 2026): Each tab is its own chunk so first-paint
@@ -21,6 +22,7 @@ const Sidebar = dynamic(() => import('./Sidebar'), { ssr: false });
 const TrainingTab = dynamic(() => import('./TrainingTab'), { loading: TabLoader, ssr: false });
 const PoliciesTab = dynamic(() => import('./PoliciesTab'), { loading: TabLoader, ssr: false });
 const HandbookReaderTab = dynamic(() => import('./HandbookReaderTab'), { loading: TabLoader, ssr: false });
+const HandbookGuideTab = dynamic(() => import('./HandbookGuideTab'), { loading: TabLoader, ssr: false });
 const OurTeamTab = dynamic(() => import('./OurTeamTab'), { loading: TabLoader, ssr: false });
 const PositionsSection = dynamic(() => import('./PositionsSection'), { loading: TabLoader, ssr: false });
 const OnboardingChecklist = dynamic(() => import('./OnboardingChecklist'), { loading: TabLoader, ssr: false });
@@ -39,7 +41,7 @@ interface Props {
 // "Onboarding"; veterans just want the book). Positions merged into the
 // Team tab as a sub-view; Menu promoted to the freed slot.
 type TopTabKey = 'home' | 'training' | 'menu' | 'handbook' | 'ourteam';
-type HandbookSubTab = 'checklist' | 'read' | 'policies' | 'ask';
+type HandbookSubTab = 'checklist' | 'guide' | 'read' | 'policies' | 'ask';
 type TeamSubTab = 'org' | 'positions' | 'memories';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ──
@@ -106,6 +108,26 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const tabMounted = (k: TopTabKey) => activeTop === k || visitedTops.has(k);
   const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>(defaultHandbookSub);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
+
+  // Handbook Quick Guide — fetched the first time the Handbook tab opens.
+  // The sub-tab only appears when there's at least one section this person
+  // can see (drafts are admin-only previews).
+  const [guideSections, setGuideSections] = useState<GuideSection[] | null>(null);
+  const [bookletFocus, setBookletFocus] = useState<number | null>(null);
+  useEffect(() => {
+    if (guideSections !== null || !(activeTop === 'handbook' || visitedTops.has('handbook'))) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/handbook-cards');
+        const j = r.ok ? await r.json() : { sections: [] };
+        if (!cancelled) setGuideSections(j.sections || []);
+      } catch {
+        if (!cancelled) setGuideSections([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeTop, visitedTops, guideSections]);
   const [handbookSource, setHandbookSource] = useState<'employee' | 'manager'>('employee');
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
   const [mobileTopicsOpen, setMobileTopicsOpen] = useState(false);
@@ -244,6 +266,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
 
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
     { key: 'checklist', label: 'Checklist', labelEs: 'Lista', emoji: '✅' },
+    { key: 'guide', label: 'Quick Guide', labelEs: 'Guía Rápida', emoji: '📘' },
     { key: 'read', label: 'Handbook', labelEs: 'Manual', emoji: '📖' },
     { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
     { key: 'ask', label: 'Ask', labelEs: 'Chat', emoji: '💬' },
@@ -340,7 +363,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
             className="flex gap-0 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {handbookSubTabs.map((t) => {
+            {handbookSubTabs.filter((t) => t.key !== 'guide' || (guideSections?.length ?? 0) > 0).map((t) => {
               const isActive = activeHandbookSub === t.key;
               return (
                 <button
@@ -493,9 +516,28 @@ export default function DashboardClient({ profile, isManager }: Props) {
         )}
 
         {/* ONBOARDING → Handbook */}
+        {/* HANDBOOK → Quick Guide */}
+        {activeHandbookSub === 'guide' && (
+          <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
+            <HandbookGuideTab
+              language={language}
+              sections={guideSections}
+              onOpenBooklet={(sortOrder) => {
+                setBookletFocus(sortOrder);
+                setActiveHandbookSub('read');
+              }}
+              onAsk={(question) => handleSelect(question)}
+            />
+          </div>
+        )}
+
         {activeHandbookSub === 'read' && (
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <HandbookReaderTab language={language} />
+            <HandbookReaderTab
+              language={language}
+              focusSortOrder={bookletFocus}
+              onFocusDone={() => setBookletFocus(null)}
+            />
           </div>
         )}
 
