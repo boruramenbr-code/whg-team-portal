@@ -5,6 +5,9 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
+const ZONES = ['menu', 'systems', 'academy'];
+const PILLAR_KEYS = ['leadership', 'operations', 'administration'];
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function getAdminClient() {
   return createAdminClient(
@@ -48,8 +51,43 @@ async function ensureManagerWithScope() {
   return { user, allowed };
 }
 
-function canWrite(allowed: Set<string> | 'all', restaurantId: string) {
-  return allowed === 'all' || allowed.has(restaurantId);
+/** restaurantId null = a brand-wide section (every restaurant) — admins only. */
+function canWrite(allowed: Set<string> | 'all', restaurantId: string | null) {
+  return allowed === 'all' || (restaurantId !== null && allowed.has(restaurantId));
+}
+
+/**
+ * Where it shows, who sees it, pillar, and review info — shared by POST and
+ * PATCH (Manager Academy, migration 080). Academy sections are always
+ * managers-only, and lesson sections count as study sections so they stay
+ * out of the menu photo test. Returns an error message, or null.
+ */
+function applyLessonFields(body: Record<string, unknown>, row: Record<string, unknown>): string | null {
+  if (body.zone !== undefined) {
+    if (!ZONES.includes(body.zone as string)) return 'Unknown section type.';
+    row.zone = body.zone;
+    if (body.zone !== 'menu') row.is_knowledge = true;
+  }
+  if (body.audience !== undefined) row.audience = body.audience === 'mgmt' ? 'mgmt' : 'all';
+  if (row.zone === 'academy') row.audience = 'mgmt';
+  if (body.pillar !== undefined) {
+    row.pillar = PILLAR_KEYS.includes(body.pillar as string) ? body.pillar : null;
+  }
+  for (const f of ['last_reviewed_at', 'review_due_at'] as const) {
+    if (body[f] === undefined) continue;
+    const v = typeof body[f] === 'string' ? (body[f] as string).trim() : '';
+    if (v && !DATE_RE.test(v)) return 'Dates must look like 2026-09-13.';
+    row[f] = v || null;
+  }
+  if (body.version !== undefined) {
+    const n = Number(body.version);
+    if (!Number.isInteger(n) || n < 1) return 'Version must be a whole number, 1 or more.';
+    row.version = n;
+  }
+  if (body.sources !== undefined) {
+    row.sources = typeof body.sources === 'string' && body.sources.trim() ? body.sources.trim() : null;
+  }
+  return null;
 }
 
 /**
@@ -57,7 +95,8 @@ function canWrite(allowed: Set<string> | 'all', restaurantId: string) {
  * PATCH  /api/menu/categories?id=…     Update a category
  * DELETE /api/menu/categories?id=…     Hard delete (cascades to items)
  *
- * Manager+ only, scoped to restaurants they can access. Writes use the
+ * Manager+ only, scoped to restaurants they can access. scope: 'all'
+ * creates (or moves) a brand-wide section — admins only. Writes use the
  * service-role client after the check (RLS-silent-fail pattern).
  */
 export async function POST(req: NextRequest) {
@@ -65,22 +104,30 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
 
   const body = await req.json();
-  const { restaurant_id, name, name_es, sort_order } = body;
-  if (!restaurant_id || !name?.trim()) {
+  const { name, name_es, sort_order } = body;
+  const restaurantId: string | null = body.scope === 'all' ? null : body.restaurant_id || null;
+  if ((body.scope !== 'all' && !restaurantId) || !name?.trim()) {
     return NextResponse.json({ error: 'restaurant_id and name are required' }, { status: 400 });
   }
-  if (!canWrite(auth.allowed!, restaurant_id)) {
-    return NextResponse.json({ error: 'Access denied for this restaurant' }, { status: 403 });
+  if (!canWrite(auth.allowed!, restaurantId)) {
+    return NextResponse.json(
+      { error: restaurantId ? 'Access denied for this restaurant' : 'Only the owner can create sections for every restaurant.' },
+      { status: 403 }
+    );
   }
+
+  const row: Record<string, unknown> = {
+    restaurant_id: restaurantId,
+    name: name.trim(),
+    name_es: name_es?.trim() || null,
+    sort_order: typeof sort_order === 'number' ? sort_order : 100,
+  };
+  const lessonError = applyLessonFields(body, row);
+  if (lessonError) return NextResponse.json({ error: lessonError }, { status: 400 });
 
   const { data, error } = await getAdminClient()
     .from('menu_categories')
-    .insert({
-      restaurant_id,
-      name: name.trim(),
-      name_es: name_es?.trim() || null,
-      sort_order: typeof sort_order === 'number' ? sort_order : 100,
-    })
+    .insert(row)
     .select()
     .single();
 
@@ -112,9 +159,34 @@ export async function PATCH(req: NextRequest) {
   if (body.name_es !== undefined) updates.name_es = body.name_es?.trim() || null;
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
   if (body.active !== undefined) updates.active = !!body.active;
+  const lessonError = applyLessonFields(body, updates);
+  if (lessonError) return NextResponse.json({ error: lessonError }, { status: 400 });
+
+  // Moving between one restaurant and every restaurant.
+  let movedTo: string | null | undefined;
+  if (body.scope !== undefined) {
+    const target: string | null = body.scope === 'all' ? null : body.restaurant_id || existing.restaurant_id;
+    if (target !== existing.restaurant_id) {
+      if (!canWrite(auth.allowed!, target)) {
+        return NextResponse.json({ error: 'Only the owner can make a section brand-wide.' }, { status: 403 });
+      }
+      updates.restaurant_id = target;
+      movedTo = target;
+    }
+  }
 
   const { error } = await adminClient.from('menu_categories').update(updates).eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Cards carry a denormalized restaurant_id that read policies check —
+  // keep it in step with the section.
+  if (movedTo !== undefined) {
+    const { error: itemsError } = await adminClient
+      .from('menu_items')
+      .update({ restaurant_id: movedTo })
+      .eq('category_id', id);
+    if (itemsError) return NextResponse.json({ error: itemsError.message }, { status: 400 });
+  }
   return NextResponse.json({ success: true });
 }
 

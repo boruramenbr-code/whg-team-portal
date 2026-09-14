@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { MenuCategory, MenuItem, ALLERGENS } from '@/lib/menu-constants';
+import { MenuCategory, MenuItem, ALLERGENS, PILLARS, type Pillar } from '@/lib/menu-constants';
 import { convertToJpeg } from '@/lib/client-image';
 
 /* ───────── Admin Menu authoring (Admin → Training → Menu) ─────────
@@ -17,6 +17,8 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
+  // Only the owner creates brand-wide (every restaurant) sections.
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +39,7 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
       setCategories(j.categories || []);
       setRestaurants(j.available_restaurants || []);
       setRestaurantId(j.restaurant_id || null);
+      setIsAdmin(!!j.is_admin);
       setError(null);
     } finally {
       setLoading(false);
@@ -96,6 +99,20 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
           >
             + New Category
           </button>
+          <button
+            onClick={() => setEditingCategory({
+              name: '',
+              zone: 'academy',
+              audience: 'mgmt',
+              pillar: 'leadership',
+              restaurant_id: isAdmin ? null : restaurantId,
+              sort_order: (categories.length + 1) * 100,
+            })}
+            disabled={!restaurantId}
+            className="px-3 py-2 rounded-lg bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition-colors disabled:opacity-40"
+          >
+            🎓 New Academy Section
+          </button>
         </div>
       </div>
 
@@ -146,6 +163,7 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
                       #{c.sort_order}
                     </span>
                   </div>
+                  <SectionBadges c={c} />
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
@@ -234,21 +252,24 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
           // Menu sections first; Systems & Tools (OpenTable, Toast POS,
           // 7shifts…) live below their own divider — they're brand-wide
           // and render under Training → 🧰 Systems, not on the Menu tab.
-          const menuCats = categories.filter((c) => c.zone !== 'systems');
+          // 🎓 Manager Academy sections (managers only) get their own band.
+          const menuCats = categories.filter((c) => (c.zone ?? 'menu') === 'menu');
           const systemsCats = categories.filter((c) => c.zone === 'systems');
+          const academyCats = categories.filter((c) => c.zone === 'academy');
+          const divider = (label: string) => (
+            <div className="flex items-center gap-3 pt-2">
+              <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B]">{label}</span>
+              <div className="flex-1 h-px bg-[#1B3A6B]/25" />
+            </div>
+          );
           return (
             <div className="space-y-4">
               {menuCats.map(renderCategory)}
-              {systemsCats.length > 0 && (
-                <div className="flex items-center gap-3 pt-2">
-                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#1B3A6B]">
-                    🧰 Systems &amp; Tools — all restaurants
-                  </span>
-                  <div className="flex-1 h-px bg-[#1B3A6B]/25" />
-                </div>
-              )}
+              {systemsCats.length > 0 && divider('🧰 Systems & Tools')}
               {systemsCats.map(renderCategory)}
+              {academyCats.length > 0 && divider('🎓 Manager Academy — managers only')}
+              {academyCats.map(renderCategory)}
             </div>
           );
         })()
@@ -258,6 +279,7 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
         <CategoryEditor
           initial={editingCategory}
           restaurantId={restaurantId}
+          isAdmin={isAdmin}
           onClose={() => setEditingCategory(null)}
           onSaved={() => { setEditingCategory(null); load(restaurantId); }}
         />
@@ -267,6 +289,7 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
         <ItemEditor
           initial={editingItem.item}
           categoryId={editingItem.categoryId}
+          zone={categories.find((c) => c.id === editingItem.categoryId)?.zone ?? 'menu'}
           onClose={() => setEditingItem(null)}
           onSaved={() => { setEditingItem(null); load(restaurantId); }}
         />
@@ -280,6 +303,35 @@ export default function MenuAdminTab({ viewRestaurantId = null }: { viewRestaura
           onClose={() => setShowPhotoTest(false)}
         />
       )}
+    </div>
+  );
+}
+
+/* ───────── Section badges: where it shows, who sees it, review status ───────── */
+function SectionBadges({ c }: { c: MenuCategory }) {
+  const today = new Date().toLocaleDateString('en-CA');
+  const pillar = PILLARS.find((p) => p.key === c.pillar);
+  const badges: { text: string; cls: string }[] = [];
+  if (c.restaurant_id === null) badges.push({ text: '🌎 All restaurants', cls: 'bg-sky-50 text-sky-700' });
+  if (c.audience === 'mgmt') badges.push({ text: '🔒 Managers only', cls: 'bg-amber-100 text-amber-700' });
+  if (pillar) badges.push({ text: `${pillar.emoji} ${pillar.en}`, cls: 'bg-indigo-50 text-indigo-700' });
+  if (c.last_reviewed_at) {
+    badges.push({
+      text: `Reviewed ${c.last_reviewed_at}${(c.version ?? 1) > 1 ? ` · v${c.version}` : ''}`,
+      cls: 'bg-gray-100 text-gray-500',
+    });
+  }
+  if (c.review_due_at) {
+    badges.push(c.review_due_at <= today
+      ? { text: `⚠️ Review due ${c.review_due_at}`, cls: 'bg-red-50 text-red-700' }
+      : { text: `Next review ${c.review_due_at}`, cls: 'bg-gray-100 text-gray-500' });
+  }
+  if (badges.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {badges.map((b) => (
+        <span key={b.text} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${b.cls}`}>{b.text}</span>
+      ))}
     </div>
   );
 }
@@ -410,11 +462,13 @@ function PhotoTestModal({
 function CategoryEditor({
   initial,
   restaurantId,
+  isAdmin,
   onClose,
   onSaved,
 }: {
   initial: Partial<MenuCategory>;
   restaurantId: string;
+  isAdmin: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -422,6 +476,27 @@ function CategoryEditor({
   const [name, setName] = useState(initial.name || '');
   const [nameEs, setNameEs] = useState(initial.name_es || '');
   const [sortOrder, setSortOrder] = useState<string>(String(initial.sort_order ?? 100));
+  // Where it shows + who sees it (Manager Academy, Sept 2026).
+  const [zone, setZone] = useState<'menu' | 'systems' | 'academy'>(initial.zone ?? 'menu');
+  const [scope, setScope] = useState<'restaurant' | 'all'>(initial.restaurant_id === null ? 'all' : 'restaurant');
+  const [audience, setAudience] = useState<'all' | 'mgmt'>(initial.audience ?? 'all');
+  const [pillar, setPillar] = useState<Pillar | ''>(initial.pillar ?? '');
+  // Review info — for lessons on things that change (rules, software, law).
+  const [version, setVersion] = useState<string>(String(initial.version ?? 1));
+  const [lastReviewed, setLastReviewed] = useState(initial.last_reviewed_at ?? '');
+  const [reviewDue, setReviewDue] = useState(initial.review_due_at ?? '');
+  const [sources, setSources] = useState(initial.sources ?? '');
+  const isLesson = zone !== 'menu';
+  const LABEL = 'block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5';
+  const INPUT = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20';
+  const pill = (on: boolean, onCls = 'bg-[#1B3A6B] text-white shadow-sm') =>
+    `px-3 py-2 rounded-full text-xs font-bold transition-colors ${on ? onCls : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`;
+  const markReviewed = (months: number) => {
+    const now = new Date();
+    const due = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+    setLastReviewed(now.toLocaleDateString('en-CA'));
+    setReviewDue(due.toLocaleDateString('en-CA'));
+  };
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -435,9 +510,17 @@ function CategoryEditor({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         restaurant_id: restaurantId,
+        scope: isAdmin ? scope : 'restaurant',
         name: name.trim(),
         name_es: nameEs.trim() || null,
         sort_order: Number(sortOrder) || 100,
+        zone,
+        audience: zone === 'academy' ? 'mgmt' : audience,
+        pillar: zone === 'academy' ? (pillar || null) : null,
+        version: Number(version) || 1,
+        last_reviewed_at: lastReviewed || null,
+        review_due_at: reviewDue || null,
+        sources: sources.trim() || null,
       }),
     });
     setSaving(false);
@@ -478,6 +561,111 @@ function CategoryEditor({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
             />
           </div>
+          {/* Where it shows */}
+          <div>
+            <label className={LABEL}>Where it shows</label>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { key: 'menu', label: '🍣 Menu' },
+                { key: 'systems', label: '🧰 Systems' },
+                { key: 'academy', label: '🎓 Manager Academy' },
+              ] as const).map((z) => (
+                <button key={z.key} type="button" onClick={() => setZone(z.key)} className={pill(zone === z.key)}>
+                  {z.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {zone === 'academy' ? (
+            <div>
+              <label className={LABEL}>Pillar</label>
+              <div className="flex flex-wrap gap-1.5">
+                {PILLARS.map((p) => (
+                  <button key={p.key} type="button" onClick={() => setPillar(p.key)} className={pill(pillar === p.key, 'bg-amber-500 text-white shadow-sm')}>
+                    {p.emoji} {p.en}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5">Manager Academy sections are always managers-only.</p>
+            </div>
+          ) : (
+            <div>
+              <label className={LABEL}>Who sees it?</label>
+              <div className="flex gap-1.5">
+                <button type="button" onClick={() => setAudience('all')} className={pill(audience === 'all')}>
+                  👥 Whole team
+                </button>
+                <button type="button" onClick={() => setAudience('mgmt')} className={pill(audience === 'mgmt', 'bg-amber-500 text-white shadow-sm')}>
+                  🔒 Managers only
+                </button>
+              </div>
+              {audience === 'mgmt' && (
+                <p className="text-[10px] text-gray-400 mt-1.5">Only management sees this section — staff never know it exists.</p>
+              )}
+            </div>
+          )}
+
+          {isAdmin && (
+            <div>
+              <label className={LABEL}>Restaurants</label>
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => setScope('restaurant')} className={pill(scope === 'restaurant')}>
+                  This restaurant
+                </button>
+                <button type="button" onClick={() => setScope('all')} className={pill(scope === 'all')}>
+                  🌎 Every restaurant (WHG Core)
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isLesson && (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+              <div>
+                <p className="text-[11px] font-bold text-[#1B3A6B]">Review info</p>
+                <p className="text-[10px] text-gray-500 mt-0.5 leading-snug">
+                  For lessons on things that change — payroll and tax rules, software screens, labor law. Check current sources, update the lesson, then set the next review date. Mission Control flags it when it&rsquo;s due.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Last reviewed</label>
+                  <input type="date" value={lastReviewed} onChange={(e) => setLastReviewed(e.target.value)} className={INPUT} />
+                </div>
+                <div>
+                  <label className={LABEL}>Next review due</label>
+                  <input type="date" value={reviewDue} onChange={(e) => setReviewDue(e.target.value)} className={INPUT} />
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => markReviewed(6)} className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50">
+                  ✓ Reviewed today · next in 6 months
+                </button>
+                <button type="button" onClick={() => markReviewed(12)} className="px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-50">
+                  ✓ Reviewed today · next in 1 year
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className={LABEL}>Version</label>
+                  <input type="number" min={1} value={version} onChange={(e) => setVersion(e.target.value)} className={INPUT} />
+                </div>
+                <p className="col-span-2 text-[10px] text-gray-400 pb-2">Bump it when the content changes in a way that matters.</p>
+              </div>
+              <div>
+                <label className={LABEL}>Sources</label>
+                <textarea
+                  rows={3}
+                  value={sources}
+                  onChange={(e) => setSources(e.target.value)}
+                  placeholder={'IRS Publication 15 (2026)\nLouisiana Workforce Commission — UI tax rates\n7shifts Help Center — Labor Budget Tool'}
+                  className={INPUT}
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
               Sort Order <span className="text-gray-300 normal-case font-normal">(lower = first)</span>
@@ -519,14 +707,19 @@ function CategoryEditor({
 function ItemEditor({
   initial,
   categoryId,
+  zone = 'menu',
   onClose,
   onSaved,
 }: {
   initial: Partial<MenuItem>;
   categoryId: string;
+  /** Systems + Academy cards are lessons: no price, allergens, or raw/spice. */
+  zone?: 'menu' | 'systems' | 'academy';
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const lessonMode = zone !== 'menu';
+  const [widget, setWidget] = useState<string>(initial.widget ?? '');
   const [itemId, setItemId] = useState<string | null>(initial.id || null);
   const isEdit = !!itemId;
   const [name, setName] = useState(initial.name || '');
@@ -577,6 +770,7 @@ function ItemEditor({
     video_url: videoUrl,
     is_raw: rawState === 'raw' ? true : rawState === 'cooked' ? false : null,
     spice_level: spice === '' ? null : Number(spice),
+    ...(lessonMode ? { widget: widget || null } : {}),
     sort_order: Number(sortOrder) || 100,
   });
 
@@ -691,16 +885,24 @@ function ItemEditor({
             </div>
           </div>
 
-          {/* Name / price */}
+          {/* Name / price (price is dishes only) */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <label className={labelCls}>Name</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Tiger Roll" className={inputCls} />
+            <div className={lessonMode ? 'col-span-3' : 'col-span-2'}>
+              <label className={labelCls}>{lessonMode ? 'Card title' : 'Name'}</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={lessonMode ? 'e.g. 1 · What Is Labor Percentage?' : 'e.g. Tiger Roll'}
+                className={inputCls}
+              />
             </div>
-            <div>
-              <label className={labelCls}>Price</label>
-              <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$14.95" className={inputCls} />
-            </div>
+            {!lessonMode && (
+              <div>
+                <label className={labelCls}>Price</label>
+                <input type="text" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="$14.95" className={inputCls} />
+              </div>
+            )}
           </div>
           <div>
             <label className={labelCls}>Name (Spanish, optional)</label>
@@ -722,7 +924,21 @@ function ItemEditor({
             </p>
           </div>
 
-          {/* Training fields: pronunciation, raw/cooked, spice */}
+          {/* Practice calculator — lesson cards only (Manager Academy) */}
+          {lessonMode && (
+            <div>
+              <label className={labelCls}>Practice calculator (optional)</label>
+              <select value={widget} onChange={(e) => setWidget(e.target.value)} className={inputCls}>
+                <option value="">None</option>
+                <option value="true_cost">💵 True cost of an employee</option>
+                <option value="labor_budget">🧮 Sales → labor budget → hours</option>
+              </select>
+              <p className="text-[10px] text-gray-400 mt-1">Shows an interactive calculator inside this card.</p>
+            </div>
+          )}
+
+          {/* Training fields: pronunciation, raw/cooked, spice, allergens — dishes only */}
+          {!lessonMode && (<>
           <div>
             <label className={labelCls}>Pronunciation (optional) — how to say it out loud</label>
             <input
@@ -780,9 +996,11 @@ function ItemEditor({
             </div>
           </div>
 
-          {/* Description */}
+          </>)}
+
+          {/* Description — lessons: the written summary */}
           <div>
-            <label className={labelCls}>Description — what is it, how does it taste</label>
+            <label className={labelCls}>{lessonMode ? 'Lesson — the written summary' : 'Description — what is it, how does it taste'}</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls} />
           </div>
           <div>
@@ -790,7 +1008,8 @@ function ItemEditor({
             <textarea value={descriptionEs} onChange={(e) => setDescriptionEs(e.target.value)} rows={2} className={inputCls} />
           </div>
 
-          {/* Ingredients */}
+          {/* Ingredients — dishes only */}
+          {!lessonMode && (<>
           <div>
             <label className={labelCls}>Ingredients — one per line</label>
             <textarea
@@ -806,21 +1025,23 @@ function ItemEditor({
             <textarea value={ingredientsEs} onChange={(e) => setIngredientsEs(e.target.value)} rows={3} className={`${inputCls} font-mono text-xs`} />
           </div>
 
-          {/* Prep + upsell */}
+          </>)}
+
+          {/* Prep + upsell — lessons: key points + the one thing to remember */}
           <div>
-            <label className={labelCls}>Prep notes (optional)</label>
+            <label className={labelCls}>{lessonMode ? 'Key points (optional) — one per line' : 'Prep notes (optional)'}</label>
             <textarea value={prepNotes} onChange={(e) => setPrepNotes(e.target.value)} rows={2} placeholder="Torch the top before serving. No substitutions on the crab." className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>Prep notes (Spanish, optional)</label>
+            <label className={labelCls}>{lessonMode ? 'Key points (Spanish, optional)' : 'Prep notes (Spanish, optional)'}</label>
             <textarea value={prepNotesEs} onChange={(e) => setPrepNotesEs(e.target.value)} rows={2} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>How to sell it (optional)</label>
+            <label className={labelCls}>{lessonMode ? 'Remember this (optional) — the one-line takeaway or example' : 'How to sell it (optional)'}</label>
             <textarea value={upsell} onChange={(e) => setUpsell(e.target.value)} rows={2} placeholder='"Our most-photographed roll — if it&apos;s your first visit, this is the one."' className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>How to sell it (Spanish, optional)</label>
+            <label className={labelCls}>{lessonMode ? 'Remember this (Spanish, optional)' : 'How to sell it (Spanish, optional)'}</label>
             <textarea value={upsellEs} onChange={(e) => setUpsellEs(e.target.value)} rows={2} className={inputCls} />
           </div>
 

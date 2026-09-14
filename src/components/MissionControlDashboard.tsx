@@ -100,6 +100,8 @@ interface MissionControlData {
   recognition_today: RecognitionToday;
   welcome_ending_soon: WelcomeEndingItem[];
   stale_86: Stale86Item[];
+  /** Manager Academy: lessons/videos due for review within two weeks. */
+  training_reviews?: { kind: 'lesson' | 'video'; id: string; title: string; where: string; due: string; days: number }[];
   recently_archived: ArchivedItem[];
   adoption?: AdoptionData;
   is_admin: boolean;
@@ -222,6 +224,7 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     recognition_today,
     welcome_ending_soon,
     stale_86,
+    training_reviews = [],
     recently_archived,
     adoption,
     available_restaurants,
@@ -510,6 +513,27 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
       )}
 
       {/* ── POLICY COMPLIANCE (orange warning) ──────────────────────────── */}
+      {training_reviews.length > 0 && (
+        <AlertCard
+          variant={training_reviews.some((r) => r.days < 0) ? 'warning' : 'info'}
+          emoji="📚"
+          title={`${training_reviews.length} training ${training_reviews.length === 1 ? 'item' : 'items'} due for review`}
+          description="Payroll rules, software screens, and laws change. Check each one against current sources, update it, then set the next review date in its editor."
+          items={training_reviews.map((r) => ({
+            primary: r.title,
+            secondary: `${r.where} · ${
+              r.days < 0
+                ? `${Math.abs(r.days)} day${Math.abs(r.days) === 1 ? '' : 's'} overdue`
+                : r.days === 0
+                  ? 'due today'
+                  : `due in ${r.days} day${r.days === 1 ? '' : 's'}`
+            }`,
+          }))}
+          ctaLabel="Open Training →"
+          onCta={() => onNavigate('training')}
+        />
+      )}
+
       {policy_compliance.length > 0 && (
         <AlertCard
           variant="warning"

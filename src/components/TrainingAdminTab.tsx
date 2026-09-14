@@ -5,6 +5,7 @@ import MenuAdminTab from './MenuAdminTab';
 import TrainingProgressTab from './TrainingProgressTab';
 import TrackBuilderTab from './TrackBuilderTab';
 import QuizzesAdminTab from './QuizzesAdminTab';
+import { PILLARS, type Pillar } from '@/lib/menu-constants';
 
 type AdminSub = 'videos' | 'menu' | 'quizzes' | 'progress' | 'builder';
 
@@ -16,6 +17,10 @@ interface Video {
   youtube_id: string;
   duration: string | null;
   sort_order: number;
+  /** Review info (migration 080) — for videos on software, rules, or law. */
+  last_reviewed_at?: string | null;
+  review_due_at?: string | null;
+  sources?: string | null;
 }
 
 interface Series {
@@ -25,6 +30,8 @@ interface Series {
   sort_order: number;
   /** 'mgmt' = management only; 'all' = whole team (default). */
   audience?: 'all' | 'mgmt';
+  /** Manager Academy pillar (managers-only series). */
+  pillar?: Pillar | null;
   videos: Video[];
 }
 
@@ -181,6 +188,11 @@ export default function TrainingAdminTab({ viewRestaurantId = null, isAdmin = fa
                         🔒 Managers
                       </span>
                     )}
+                    {s.pillar && (
+                      <span className="text-[9px] font-bold uppercase tracking-widest bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                        🎓 {PILLARS.find((p) => p.key === s.pillar)?.en}
+                      </span>
+                    )}
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest flex-shrink-0">
                       #{s.sort_order}
                     </span>
@@ -228,6 +240,11 @@ export default function TrainingAdminTab({ viewRestaurantId = null, isAdmin = fa
                           {v.duration && (
                             <span className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">
                               {v.duration}
+                            </span>
+                          )}
+                          {v.review_due_at && v.review_due_at <= new Date().toLocaleDateString('en-CA') && (
+                            <span className="text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded flex-shrink-0">
+                              ⚠️ Review due
                             </span>
                           )}
                         </div>
@@ -341,6 +358,7 @@ function SeriesEditor({
   const [blurb, setBlurb] = useState(initial.blurb || '');
   const [sortOrder, setSortOrder] = useState<string>(String(initial.sort_order ?? 100));
   const [audience, setAudience] = useState<'all' | 'mgmt'>(initial.audience ?? 'all');
+  const [pillar, setPillar] = useState<Pillar | ''>(initial.pillar ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -361,6 +379,7 @@ function SeriesEditor({
         blurb: blurb.trim() || null,
         sort_order: Number(sortOrder) || 100,
         audience,
+        pillar: audience === 'mgmt' ? (pillar || null) : null,
       }),
     });
     setSaving(false);
@@ -429,6 +448,28 @@ function SeriesEditor({
               </p>
             )}
           </div>
+          {audience === 'mgmt' && (
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Manager Academy pillar</label>
+              <div className="flex flex-wrap gap-1.5">
+                {PILLARS.map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => setPillar(pillar === p.key ? '' : p.key)}
+                    className={`px-3 py-2 rounded-full text-xs font-bold transition-colors ${
+                      pillar === p.key ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {p.emoji} {p.en}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                Groups these videos under 🎓 Academy. Tap again to clear.
+              </p>
+            </div>
+          )}
           <div>
             <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
               Sort Order <span className="text-gray-300 normal-case font-normal">(lower = first)</span>
@@ -481,6 +522,9 @@ function VideoEditor({
   const [description, setDescription] = useState(initial.description || '');
   const [youtubeUrl, setYoutubeUrl] = useState(initial.youtube_id || '');
   const [duration, setDuration] = useState(initial.duration || '');
+  const [lastReviewed, setLastReviewed] = useState(initial.last_reviewed_at ?? '');
+  const [reviewDue, setReviewDue] = useState(initial.review_due_at ?? '');
+  const [sources, setSources] = useState(initial.sources ?? '');
   const [sortOrder, setSortOrder] = useState<string>(String(initial.sort_order ?? 100));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -504,6 +548,9 @@ function VideoEditor({
         youtube_url: youtubeUrl.trim(),
         duration: duration.trim() || null,
         sort_order: Number(sortOrder) || 100,
+        last_reviewed_at: lastReviewed || null,
+        review_due_at: reviewDue || null,
+        sources: sources.trim() || null,
       }),
     });
     setSaving(false);
@@ -581,6 +628,43 @@ function VideoEditor({
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+              />
+            </div>
+          </div>
+
+          {/* Review info — for videos on software, rules, or law */}
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-3">
+            <p className="text-[11px] font-bold text-[#1B3A6B]">
+              Review info <span className="font-normal text-gray-400">(optional — for videos on software, rules, or law)</span>
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Last reviewed</label>
+                <input
+                  type="date"
+                  value={lastReviewed}
+                  onChange={(e) => setLastReviewed(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Next review due</label>
+                <input
+                  type="date"
+                  value={reviewDue}
+                  onChange={(e) => setReviewDue(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Sources</label>
+              <textarea
+                rows={2}
+                value={sources}
+                onChange={(e) => setSources(e.target.value)}
+                placeholder="Where the facts in this video come from"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base md:text-sm focus:outline-none focus:border-[#1B3A6B] focus:ring-1 focus:ring-[#1B3A6B]/20"
               />
             </div>
           </div>

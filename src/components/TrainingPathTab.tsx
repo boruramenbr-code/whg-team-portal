@@ -11,6 +11,8 @@ export interface PathModule {
   description_es: string | null;
   module_type: 'video_series' | 'menu_category' | 'quiz' | 'photo_test' | 'skill' | 'note';
   ref_id: string | null;
+  /** Study sections: which Training sub-tab the section lives in. */
+  ref_zone?: 'menu' | 'systems' | 'academy' | null;
   completion: 'self' | 'exam' | 'manager';
   required: boolean;
   done: boolean;
@@ -47,7 +49,7 @@ interface Props {
   language: 'en' | 'es';
   /** Jump to a sibling Training sub-tab. refId deep-links (e.g. a menu
    *  module opens directly inside its category). */
-  onGoTo: (sub: 'videos' | 'menu' | 'quizzes', refId?: string | null) => void;
+  onGoTo: (sub: 'videos' | 'menu' | 'systems' | 'academy' | 'quizzes', refId?: string | null) => void;
 }
 
 const LEVEL_META: Record<PathTrack['level'], { en: string; es: string }> = {
@@ -221,7 +223,7 @@ function TrackCard({
   label: (en: string, es: string | null | undefined) => string;
   busy: string | null;
   onMarkDone: (m: PathModule) => void;
-  onGoTo: (sub: 'videos' | 'menu' | 'quizzes', refId?: string | null) => void;
+  onGoTo: (sub: 'videos' | 'menu' | 'systems' | 'academy' | 'quizzes', refId?: string | null) => void;
 }) {
   const complete = track.required_total > 0 && track.required_done === track.required_total;
   const [open, setOpen] = useState(!complete);
@@ -283,7 +285,7 @@ function ModuleRow({
   label: (en: string, es: string | null | undefined) => string;
   busy: string | null;
   onMarkDone: (m: PathModule) => void;
-  onGoTo: (sub: 'videos' | 'menu' | 'quizzes', refId?: string | null) => void;
+  onGoTo: (sub: 'videos' | 'menu' | 'systems' | 'academy' | 'quizzes', refId?: string | null) => void;
 }) {
   const [showDesc, setShowDesc] = useState(false);
 
@@ -297,7 +299,7 @@ function ModuleRow({
     if (m.done) return null;
     if (m.module_type === 'menu_category') {
       return (
-        <button onClick={() => onGoTo('menu', m.ref_id)} className="text-[11px] font-bold text-sky-300 hover:underline flex-shrink-0 px-2 py-2">
+        <button onClick={() => onGoTo(m.ref_zone === 'academy' || m.ref_zone === 'systems' ? m.ref_zone : 'menu', m.ref_id)} className="text-[11px] font-bold text-sky-300 hover:underline flex-shrink-0 px-2 py-2">
           {isES ? 'Abrir Sección →' : 'Open Section →'}
         </button>
       );

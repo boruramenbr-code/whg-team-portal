@@ -103,8 +103,14 @@ const TEXT_FIELDS = [
   'pronunciation',
 ] as const;
 
-/** is_raw: true/false/null. spice_level: 0-3 or null. */
+/** Manager Academy practice calculators a lesson card can show. */
+const WIDGETS = ['true_cost', 'labor_budget'];
+
+/** is_raw: true/false/null. spice_level: 0-3 or null. widget: a calculator key or null. */
 function cleanTrainingFields(body: Record<string, unknown>, updates: Record<string, unknown>) {
+  if (body.widget !== undefined) {
+    updates.widget = WIDGETS.includes(body.widget as string) ? body.widget : null;
+  }
   if (body.is_raw !== undefined) {
     updates.is_raw = typeof body.is_raw === 'boolean' ? body.is_raw : null;
   }

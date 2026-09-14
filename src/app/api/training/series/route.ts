@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
+const PILLAR_KEYS = ['leadership', 'operations', 'administration'];
 
 function getAdminClient() {
   return createAdminClient(
@@ -31,6 +32,11 @@ async function ensureManager() {
   return { user };
 }
 
+/** Manager Academy pillar — only meaningful on managers-only series. */
+function cleanPillar(pillar: unknown, audience: string): string | null {
+  return audience === 'mgmt' && PILLAR_KEYS.includes(pillar as string) ? (pillar as string) : null;
+}
+
 /**
  * POST /api/training/series        Create a series
  * PATCH /api/training/series?id=…  Update a series
@@ -44,20 +50,24 @@ export async function POST(req: NextRequest) {
   if (auth.error) return auth.error;
 
   const body = await req.json();
-  const { title, blurb, sort_order, audience } = body;
+  const { title, blurb, sort_order } = body;
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 });
   }
+  const audience = body.audience === 'mgmt' ? 'mgmt' : 'all';
+
+  const row: Record<string, unknown> = {
+    title: title.trim(),
+    blurb: blurb?.trim() || null,
+    sort_order: typeof sort_order === 'number' ? sort_order : 100,
+    audience,
+  };
+  if (body.pillar !== undefined) row.pillar = cleanPillar(body.pillar, audience);
 
   const adminClient = getAdminClient();
   const { data, error } = await adminClient
     .from('training_series')
-    .insert({
-      title: title.trim(),
-      blurb: blurb?.trim() || null,
-      sort_order: typeof sort_order === 'number' ? sort_order : 100,
-      audience: audience === 'mgmt' ? 'mgmt' : 'all',
-    })
+    .insert(row)
     .select()
     .single();
 
@@ -79,6 +89,9 @@ export async function PATCH(req: NextRequest) {
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
   if (body.active !== undefined) updates.active = !!body.active;
   if (body.audience !== undefined) updates.audience = body.audience === 'mgmt' ? 'mgmt' : 'all';
+  if (body.pillar !== undefined) {
+    updates.pillar = cleanPillar(body.pillar, (updates.audience as string | undefined) ?? 'mgmt');
+  }
 
   const adminClient = getAdminClient();
   const { error } = await adminClient

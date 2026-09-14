@@ -1,20 +1,32 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { MenuCategory, MenuItem, allergenMeta } from '@/lib/menu-constants';
+import dynamic from 'next/dynamic';
+import { MenuCategory, MenuItem, allergenMeta, PILLARS, type Pillar } from '@/lib/menu-constants';
+import { buildLessonUrl, copyText } from '@/lib/training-links';
+
+// Practice calculators only load when a lesson card uses one.
+const CalculatorBlock = dynamic(() => import('./ManagerCalculators').then((m) => m.CalculatorBlock), { ssr: false });
 
 interface Props {
   language: 'en' | 'es';
   /** Open directly inside this category (deep-link from a Path module —
    *  e.g. the fry cook's "Study: Hot Small Plates"). */
   initialCategoryId?: string | null;
+  /** Open this card once the sections load (shared lesson links). */
+  initialItemId?: string | null;
   /** Owner's master switcher — scopes the menu to this restaurant and
    *  hides the local switcher. */
   viewRestaurantId?: string | null;
   /** 'menu' (default) = food + knowledge bands. 'systems' = the 🧰
    *  Systems & Tools library (OpenTable, Toast POS, 7shifts…) — one
-   *  whole section per tool, rendered under Training → Systems. */
-  zone?: 'menu' | 'systems';
+   *  whole section per tool, rendered under Training → Systems.
+   *  'academy' = 🎓 Manager Academy lessons (management only). */
+  zone?: 'menu' | 'systems' | 'academy';
+  /** Academy only: one pillar, or all three as bands. */
+  pillar?: Pillar | 'all';
+  /** Management can copy a link to a lesson (for Asana tasks). */
+  canShare?: boolean;
 }
 
 interface PositionInfo {
@@ -35,9 +47,20 @@ interface PositionInfo {
  * training card (photo, description, ingredients, allergens, prep notes,
  * how-to-sell tip). Phase B hangs quizzes off this same content.
  */
-export default function MenuTab({ language, initialCategoryId = null, viewRestaurantId = null, zone = 'menu' }: Props) {
+export default function MenuTab({
+  language,
+  initialCategoryId = null,
+  initialItemId = null,
+  viewRestaurantId = null,
+  zone = 'menu',
+  pillar = 'all',
+  canShare = false,
+}: Props) {
   const isES = language === 'es';
   const systemsView = zone === 'systems';
+  const academyView = zone === 'academy';
+  // Systems + Academy sections are lessons, not dishes.
+  const lessonView = zone !== 'menu';
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [restaurants, setRestaurants] = useState<{ id: string; name: string }[]>([]);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -115,10 +138,22 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
   // Owner's master switcher drives the scope when present.
   useEffect(() => { load(viewRestaurantId ?? undefined); }, [load, viewRestaurantId]);
 
-  // Each zone only sees its own sections — the Menu tab never shows
-  // tool training, and Systems never shows food. Deep-links still work
-  // across zones because selectedCategory looks up the FULL list.
-  const zoneCats = categories.filter((c) => (c.zone === 'systems') === systemsView);
+  // Shared links can point at one card — open it once the sections land.
+  const [pendingItemId, setPendingItemId] = useState<string | null>(initialItemId);
+  useEffect(() => { if (initialItemId) setPendingItemId(initialItemId); }, [initialItemId]);
+  useEffect(() => {
+    if (!pendingItemId || loading || categories.length === 0) return;
+    const found = categories.flatMap((c) => c.items).find((i) => i.id === pendingItemId);
+    if (found) setActiveItem(found);
+    setPendingItemId(null);
+  }, [pendingItemId, loading, categories]);
+
+  // Each zone only sees its own sections — the Menu tab never shows tool
+  // training or manager lessons, and Systems never shows food. Deep-links
+  // still work across zones because selectedCategory looks up the FULL
+  // list. Academy can narrow to one pillar.
+  const zoneCats = categories.filter((c) =>
+    (c.zone ?? 'menu') === zone && (!academyView || pillar === 'all' || c.pillar === pillar));
   const totalItems = zoneCats.reduce((n, c) => n + c.items.length, 0);
   const allItems = zoneCats.flatMap((c) => c.items);
 
@@ -172,13 +207,13 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={systemsView
+              placeholder={lessonView
                 ? (isES ? 'Buscar una lección…' : 'Find a lesson…')
                 : (isES ? 'Buscar un platillo…' : 'Find a dish…')}
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-whg-line bg-whg-card text-sm text-whg-snow placeholder:text-whg-dim/70 focus:outline-none focus:border-whg-gold focus:ring-1 focus:ring-whg-gold/20"
             />
           </div>
-          {!systemsView && <button
+          {!lessonView && <button
             onClick={() => setStudyMode((v) => !v)}
             className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               studyMode
@@ -189,7 +224,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           >
             🎴<span className="hidden sm:inline"> {isES ? 'Estudiar' : 'Study'}</span>
           </button>}
-          {!systemsView && <button
+          {!lessonView && <button
             onClick={() => (exploreOpen || exploreSlug ? (setExploreOpen(false), setExploreSlug(null)) : openExplore())}
             className={`tap-highlight flex-shrink-0 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors ${
               exploreOpen || exploreSlug
@@ -227,14 +262,20 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
         </div>
       ) : totalItems === 0 ? (
         <div className="text-center py-12 bg-whg-card/60 rounded-2xl border border-whg-line">
-          <div className="text-4xl mb-3">{systemsView ? '🧰' : '🍣'}</div>
+          <div className="text-4xl mb-3">{academyView ? '🎓' : systemsView ? '🧰' : '🍣'}</div>
           <p className="text-sm text-whg-dim font-medium">
-            {systemsView
+            {academyView
+              ? (isES ? 'Las lecciones se están escribiendo.' : 'Lessons are being written.')
+              : systemsView
               ? (isES ? 'Las lecciones de sistemas vienen en camino.' : 'Systems lessons are on the way.')
               : (isES ? 'Tu menú se está construyendo.' : 'Your menu is being built.')}
           </p>
           <p className="text-xs text-whg-dim/70 mt-1">
-            {systemsView
+            {academyView
+              ? (isES
+                  ? 'Mientras tanto, mira los videos y usa las herramientas de práctica.'
+                  : 'In the meantime, watch the videos and try the practice tools.')
+              : systemsView
               ? (isES
                   ? 'Aquí aprenderás las herramientas del trabajo — OpenTable, el punto de venta y más.'
                   : 'This is where you’ll learn the tools of the job — OpenTable, the POS, and more.')
@@ -256,7 +297,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {searchResults.map((item) => (
-              <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} onOpen={() => setActiveItem(item)} />
+              <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} lessonMode={lessonView} onOpen={() => setActiveItem(item)} />
             ))}
           </div>
         )
@@ -277,7 +318,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
             </button>
             <span className="text-[11px] font-bold text-whg-dim uppercase tracking-wide">
               {selectedCategory.items.length}{' '}
-              {selectedCategory.zone === 'systems'
+              {(selectedCategory.zone ?? 'menu') !== 'menu'
                 ? (isES ? 'lecciones' : 'lessons')
                 : (isES ? 'platillos' : 'items')}
             </span>
@@ -285,9 +326,12 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           <h2 className="text-lg font-bold text-whg-snow mb-3">
             {isES && selectedCategory.name_es ? selectedCategory.name_es : selectedCategory.name}
           </h2>
+          {(selectedCategory.zone ?? 'menu') !== 'menu' && (
+            <LessonMeta category={selectedCategory} isES={isES} canShare={canShare} />
+          )}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {selectedCategory.items.map((item) => (
-              <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} onOpen={() => setActiveItem(item)} />
+              <ItemCard key={item.id} item={item} isES={isES} studyMode={studyMode} lessonMode={lessonView} onOpen={() => setActiveItem(item)} />
             ))}
           </div>
         </div>
@@ -422,7 +466,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                   <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] flex items-center justify-center text-4xl opacity-90">
-                    {systemsView ? '🧰' : '🍽️'}
+                    {academyView ? (PILLARS.find((p) => p.key === c.pillar)?.emoji ?? '🎓') : systemsView ? '🧰' : '🍽️'}
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
@@ -437,7 +481,7 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
                   </p>
                   <p className="text-white/70 text-[11px] font-semibold mt-0.5">
                     {c.items.length}{' '}
-                    {systemsView ? (isES ? 'lecciones' : 'lessons') : (isES ? 'platillos' : 'items')}
+                    {lessonView ? (isES ? 'lecciones' : 'lessons') : (isES ? 'platillos' : 'items')}
                   </p>
                 </div>
               </button>
@@ -452,6 +496,35 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
           const food = withItems.filter((c) => !c.is_knowledge);
           const mineFirst = (arr: typeof withItems) =>
             [...arr].sort((a, b) => Number(myCategoryIds.has(b.id)) - Number(myCategoryIds.has(a.id)));
+
+          // Academy: one band per pillar (Leadership / Operations /
+          // Administration) when showing all; a flat grid for one pillar.
+          if (academyView) {
+            const bands = pillar === 'all'
+              ? [
+                  ...PILLARS.map((p) => ({
+                    key: p.key as string,
+                    title: `${p.emoji} ${isES ? p.es : p.en}`,
+                    cats: withItems.filter((c) => c.pillar === p.key),
+                  })),
+                  { key: 'other', title: isES ? '📚 Más lecciones' : '📚 More lessons', cats: withItems.filter((c) => !c.pillar) },
+                ]
+              : [{ key: pillar as string, title: '', cats: withItems }];
+            return (
+              <div className="space-y-5">
+                {bands.filter((b) => b.cats.length > 0).map((b) => (
+                  <div key={b.key}>
+                    {b.title && (
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim mb-2">{b.title}</p>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      {mineFirst(b.cats).map((c) => renderTile(c, myCategoryIds.has(c.id)))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          }
 
           // Systems zone: one flat band — each tool is its own whole
           // section (OpenTable, Toast POS, 7shifts…). Your position's
@@ -520,14 +593,83 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
       )}
 
       {/* Full-screen training card */}
-      {activeItem && (
-        <ItemDetail
-          item={activeItem}
-          isES={isES}
-          studyMode={studyMode}
-          onNext={studyMode ? () => setActiveItem(nextStudyItem(activeItem)) : undefined}
-          onClose={() => setActiveItem(null)}
-        />
+      {activeItem && (() => {
+        const cat = categories.find((c) => c.items.some((i) => i.id === activeItem.id)) || null;
+        const catZone = cat?.zone ?? zone;
+        return (
+          <ItemDetail
+            item={activeItem}
+            isES={isES}
+            lessonMode={catZone !== 'menu'}
+            shareUrl={canShare && cat && catZone !== 'menu' ? buildLessonUrl(cat.id, catZone, activeItem.id) : null}
+            studyMode={studyMode}
+            onNext={studyMode ? () => setActiveItem(nextStudyItem(activeItem)) : undefined}
+            onClose={() => setActiveItem(null)}
+          />
+        );
+      })()}
+    </div>
+  );
+}
+
+/* ───────── Lesson info strip ─────────
+ * Lessons on things that change (payroll rules, software, labor law) show
+ * when they were last reviewed, their version, and their sources — so a
+ * manager knows how fresh the content is. Management can copy a link to the
+ * lesson for an Asana task. */
+function LessonMeta({ category, isES, canShare }: { category: MenuCategory; isES: boolean; canShare: boolean }) {
+  const [showSources, setShowSources] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const pillar = PILLARS.find((p) => p.key === category.pillar);
+  const today = new Date().toLocaleDateString('en-CA');
+  const overdue = !!category.review_due_at && category.review_due_at < today;
+  const fmtDate = (d: string) =>
+    new Date(`${d}T12:00:00`).toLocaleDateString(isES ? 'es-US' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const copy = async () => {
+    if (await copyText(buildLessonUrl(category.id, category.zone ?? 'menu'))) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+  if (!pillar && category.audience !== 'mgmt' && !category.last_reviewed_at && !overdue && !category.sources && !canShare) {
+    return null;
+  }
+  const chip = 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full';
+  return (
+    <div className="mb-3 -mt-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {pillar && (
+          <span className={`${chip} bg-whg-gold/15 text-whg-gold2`}>{pillar.emoji} {isES ? pillar.es : pillar.en}</span>
+        )}
+        {category.audience === 'mgmt' && (
+          <span className={`${chip} bg-white/10 text-whg-dim`}>🔒 {isES ? 'Solo gerentes' : 'Managers only'}</span>
+        )}
+        {category.last_reviewed_at && (
+          <span className={`${chip} bg-white/10 text-whg-dim`}>
+            ✓ {isES ? 'Revisado' : 'Reviewed'} {fmtDate(category.last_reviewed_at)}
+            {(category.version ?? 1) > 1 ? ` · v${category.version}` : ''}
+          </span>
+        )}
+        {overdue && (
+          <span className={`${chip} bg-amber-400/10 border border-amber-400/30 text-amber-200`}>
+            ⚠️ {isES ? 'Revisión pendiente' : 'Due for review'}
+          </span>
+        )}
+        {category.sources && (
+          <button onClick={() => setShowSources((v) => !v)} className={`tap-highlight ${chip} bg-white/10 text-sky-300 hover:bg-white/20`}>
+            📎 {isES ? 'Fuentes' : 'Sources'}
+          </button>
+        )}
+        {canShare && (
+          <button onClick={copy} className={`tap-highlight ${chip} bg-white/10 text-whg-snow/80 hover:bg-white/20`}>
+            {copied ? (isES ? '✓ Copiado' : '✓ Copied') : (isES ? '🔗 Copiar enlace' : '🔗 Copy link')}
+          </button>
+        )}
+      </div>
+      {showSources && category.sources && (
+        <p className="mt-2 text-[11px] text-whg-dim leading-relaxed whitespace-pre-wrap break-words bg-whg-card/60 border border-whg-line rounded-xl px-3 py-2">
+          {category.sources}
+        </p>
       )}
     </div>
   );
@@ -535,7 +677,13 @@ export default function MenuTab({ language, initialCategoryId = null, viewRestau
 
 /* ───────── Grid card ─────────
  * In study mode the name is hidden — the photo IS the question. */
-function ItemCard({ item, isES, studyMode, onOpen }: { item: MenuItem; isES: boolean; studyMode: boolean; onOpen: () => void }) {
+function ItemCard({ item, isES, studyMode, lessonMode = false, onOpen }: {
+  item: MenuItem;
+  isES: boolean;
+  studyMode: boolean;
+  lessonMode?: boolean;
+  onOpen: () => void;
+}) {
   return (
     <button
       onClick={onOpen}
@@ -551,7 +699,7 @@ function ItemCard({ item, isES, studyMode, onOpen }: { item: MenuItem; isES: boo
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">🍽️</div>
+          <div className="w-full h-full flex items-center justify-center text-4xl opacity-40">{lessonMode ? '📘' : '🍽️'}</div>
         )}
         {!studyMode && item.allergens.length > 0 && (
           <span className="absolute top-1.5 right-1.5 bg-white/90 text-[10px] px-1.5 py-0.5 rounded-full shadow-sm">
@@ -587,13 +735,19 @@ function ItemCard({ item, isES, studyMode, onOpen }: { item: MenuItem; isES: boo
 /* ───────── Full-screen item training card ─────────
  * studyMode: opens masked (photo only) with a reveal button; onNext jumps
  * to another random item so staff can drill the whole menu hands-free. */
-function ItemDetail({ item, isES, studyMode = false, onNext, onClose }: {
+function ItemDetail({ item, isES, lessonMode = false, shareUrl = null, studyMode = false, onNext, onClose }: {
   item: MenuItem;
   isES: boolean;
+  /** Systems + Academy cards read as lessons: "Key points" and "Remember
+   *  this" instead of prep notes and how-to-sell. */
+  lessonMode?: boolean;
+  /** Management: a link that opens this exact card (for Asana tasks). */
+  shareUrl?: string | null;
   studyMode?: boolean;
   onNext?: () => void;
   onClose: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
   const [revealed, setRevealed] = useState(!studyMode);
   // Re-mask when study mode jumps to the next item.
   useEffect(() => { setRevealed(!studyMode); }, [item.id, studyMode]);
@@ -620,20 +774,35 @@ function ItemDetail({ item, isES, studyMode = false, onNext, onClose }: {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 5l-7 7 7 7" />
           </svg>
-          {isES ? 'Volver al menú' : 'Back to menu'}
+          {lessonMode ? (isES ? 'Volver' : 'Back') : (isES ? 'Volver al menú' : 'Back to menu')}
         </button>
+        {shareUrl && (
+          <button
+            onClick={async () => {
+              if (await copyText(shareUrl)) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }
+            }}
+            className="tap-highlight ml-auto text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full px-3 py-1.5"
+          >
+            {copied ? (isES ? '✓ Copiado' : '✓ Copied') : (isES ? '🔗 Copiar enlace' : '🔗 Copy link')}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto pb-safe">
-        {/* Photo */}
-        <div className="w-full max-w-2xl mx-auto aspect-[4/3] bg-gray-100">
-          {item.photo_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={item.photo_url} alt={name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl opacity-30">🍽️</div>
-          )}
-        </div>
+        {/* Photo — lessons without one skip the empty plate */}
+        {(!lessonMode || item.photo_url) && (
+          <div className="w-full max-w-2xl mx-auto aspect-[4/3] bg-gray-100">
+            {item.photo_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={item.photo_url} alt={name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-6xl opacity-30">🍽️</div>
+            )}
+          </div>
+        )}
 
         {/* Study mode: everything below the photo is masked until revealed */}
         {!revealed ? (
@@ -740,7 +909,7 @@ function ItemDetail({ item, isES, studyMode = false, onNext, onClose }: {
           {description && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
-                {isES ? 'Descripción' : 'What it is'}
+                {lessonMode ? (isES ? 'Lección' : 'Lesson') : (isES ? 'Descripción' : 'What it is')}
               </p>
               <p className="text-base md:text-lg font-medium text-gray-900 leading-relaxed whitespace-pre-wrap">{description}</p>
             </div>
@@ -763,23 +932,34 @@ function ItemDetail({ item, isES, studyMode = false, onNext, onClose }: {
             </div>
           )}
 
-          {/* Prep notes */}
+          {/* Prep notes — lessons: key points */}
           {prepNotes && (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                🔪 {isES ? 'Notas de Preparación' : 'Prep Notes'}
+                {lessonMode
+                  ? `📌 ${isES ? 'Puntos Clave' : 'Key Points'}`
+                  : `🔪 ${isES ? 'Notas de Preparación' : 'Prep Notes'}`}
               </p>
               <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{prepNotes}</p>
             </div>
           )}
 
-          {/* Upsell tip */}
+          {/* Upsell tip — lessons: the one thing to remember */}
           {upsell && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
               <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-1.5">
-                💬 {isES ? 'Cómo Venderlo' : 'How to Sell It'}
+                {lessonMode
+                  ? `💡 ${isES ? 'Recuerda' : 'Remember This'}`
+                  : `💬 ${isES ? 'Cómo Venderlo' : 'How to Sell It'}`}
               </p>
               <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap italic">{upsell}</p>
+            </div>
+          )}
+
+          {/* Practice calculator (Manager Academy lessons) */}
+          {item.widget && (
+            <div className="border border-gray-200 rounded-2xl p-4">
+              <CalculatorBlock which={item.widget} language={isES ? 'es' : 'en'} />
             </div>
           )}
 

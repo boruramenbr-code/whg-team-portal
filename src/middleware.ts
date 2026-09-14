@@ -39,10 +39,17 @@ export async function middleware(request: NextRequest) {
   // and must not be intercepted or they fail with "failed to forward action response"
   if (isGet) {
     if (!user && isProtected) {
-      return NextResponse.redirect(new URL('/', request.url));
+      const login = new URL('/', request.url);
+      // Keep shared training links (Asana tasks, texts) alive through sign-in.
+      if (path.startsWith('/dashboard') && request.nextUrl.search) {
+        login.searchParams.set('next', path + request.nextUrl.search);
+      }
+      return NextResponse.redirect(login);
     }
     if (user && isLoginPage) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      const next = request.nextUrl.searchParams.get('next');
+      const dest = next && /^\/dashboard(\/|\?|$)/.test(next) ? next : '/dashboard';
+      return NextResponse.redirect(new URL(dest, request.url));
     }
   }
 

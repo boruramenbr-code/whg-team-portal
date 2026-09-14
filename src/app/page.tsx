@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { APP_VERSION } from '@/lib/changelog';
+import { safeNextPath } from '@/lib/training-links';
 
 interface Restaurant {
   id: string;
@@ -291,7 +292,7 @@ export default function LoginPage() {
         } catch {
           // storage unavailable — skip remembering
         }
-        window.location.href = '/dashboard';
+        window.location.href = safeNextPath(new URLSearchParams(window.location.search).get('next'));
       }
     } catch {
       setError('Connection error. Please try again.');
@@ -318,7 +319,7 @@ export default function LoginPage() {
         setError(data.error || 'Login failed. Please try again.');
         setLoading(false);
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = safeNextPath(new URLSearchParams(window.location.search).get('next'));
       }
     } catch {
       setError('Connection error. Please try again.');

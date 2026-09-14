@@ -151,6 +151,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Which zone each study section lives in — Path buttons open Systems and
+  // Manager Academy sections in their own sub-tab, not on the Menu.
+  const catRefIds = Array.from(new Set(
+    modules
+      .filter((m) => m.module_type === 'menu_category' && m.ref_id && resolved.some((t) => t.id === m.track_id))
+      .map((m) => m.ref_id as string)
+  ));
+  const zoneByCat = new Map<string, string>();
+  if (catRefIds.length > 0) {
+    const { data: cats } = await adminClient.from('menu_categories').select('id, zone').in('id', catRefIds);
+    for (const c of cats ?? []) zoneByCat.set(c.id, c.zone);
+  }
+
   const out = resolved.map((t) => {
     const mods = modules
       .filter((m) => m.track_id === t.id)
@@ -168,6 +181,7 @@ export async function GET(req: NextRequest) {
           description_es: m.description_es,
           module_type: m.module_type,
           ref_id: m.ref_id,
+          ref_zone: m.module_type === 'menu_category' && m.ref_id ? zoneByCat.get(m.ref_id) ?? 'menu' : null,
           completion: m.completion,
           required: m.required,
           sort_order: m.sort_order,

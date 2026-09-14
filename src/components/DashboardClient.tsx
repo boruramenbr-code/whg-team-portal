@@ -6,6 +6,7 @@ import { Profile } from '@/lib/types';
 import WelcomeSplash from './WelcomeSplash';
 import HomeTab from './HomeTab';
 import type { GuideSection } from './HandbookGuideTab';
+import { parseTrainingLink, type TrainingLink } from '@/lib/training-links';
 
 // ── Lazy-loaded tabs ──────────────────────────────────────────
 // Phase 1 perf fix (May 2026): Each tab is its own chunk so first-paint
@@ -169,6 +170,27 @@ export default function DashboardClient({ profile, isManager }: Props) {
   };
   const showMasterSwitcher = isAdminUser && viewRestaurants.length > 1;
   const effectiveRestaurantId = (showMasterSwitcher && viewRestaurantId) || profile.restaurant_id;
+
+  // Management sees 🎓 Academy and can copy lesson links (same rule as /api/training).
+  const isMgmt = isManager || profile.onboarding_category === 'mgmt';
+
+  // Shared training links (?lesson=… / ?video=…) — from an Asana task or a
+  // text. Open Training straight to it, skip the splash, clean the URL.
+  const [trainingLink, setTrainingLink] = useState<TrainingLink | null>(null);
+  const [trainingLinkHandled, setTrainingLinkHandled] = useState(false);
+  useEffect(() => {
+    const link = parseTrainingLink(window.location.search);
+    if (!link) return;
+    setTrainingLink(link);
+    setActiveTop('training');
+    setShowSplash(false);
+    try { window.history.replaceState(null, '', '/dashboard'); } catch { /* ignore */ }
+  }, []);
+  // Hold the link until the owner's restaurant switcher settles — it
+  // remounts the tabs once on load, which would otherwise drop the link.
+  useEffect(() => {
+    if (trainingLinkHandled && (!isAdminUser || viewRestaurantId !== null)) setTrainingLink(null);
+  }, [trainingLinkHandled, isAdminUser, viewRestaurantId]);
 
   // Splash plays once per day, not on every mount — staff who log in every
   // shift shouldn't eat a 3-second ceremony each time. Checked in an effect
@@ -649,7 +671,13 @@ export default function DashboardClient({ profile, isManager }: Props) {
         {tabMounted('training') && (
           <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 flex flex-col overflow-hidden tab-content-enter">
-            <TrainingTab language={language} viewRestaurantId={showMasterSwitcher ? viewRestaurantId : null} />
+            <TrainingTab
+              language={language}
+              viewRestaurantId={showMasterSwitcher ? viewRestaurantId : null}
+              isMgmt={isMgmt}
+              link={trainingLink}
+              onLinkHandled={() => setTrainingLinkHandled(true)}
+            />
           </div>
           </div>
         )}

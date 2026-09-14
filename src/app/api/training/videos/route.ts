@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function getAdminClient() {
   return createAdminClient(
@@ -57,6 +58,21 @@ function parseYouTubeId(raw: string): string | null {
   return null;
 }
 
+/** Review info (migration 080) — for videos on software, rules, or law.
+ *  Optional on POST and PATCH. Returns an error message, or null. */
+function applyReviewFields(body: Record<string, unknown>, row: Record<string, unknown>): string | null {
+  for (const f of ['last_reviewed_at', 'review_due_at'] as const) {
+    if (body[f] === undefined) continue;
+    const v = typeof body[f] === 'string' ? (body[f] as string).trim() : '';
+    if (v && !DATE_RE.test(v)) return 'Dates must look like 2026-09-13.';
+    row[f] = v || null;
+  }
+  if (body.sources !== undefined) {
+    row.sources = typeof body.sources === 'string' && body.sources.trim() ? body.sources.trim() : null;
+  }
+  return null;
+}
+
 async function ensureManager() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -79,7 +95,8 @@ async function ensureManager() {
  * PATCH /api/training/videos?id=…  Update a video
  * DELETE /api/training/videos?id=… Hard delete
  *
- * Body for POST: { series_id, title, description?, youtube_url, duration?, sort_order? }
+ * Body for POST: { series_id, title, description?, youtube_url, duration?, sort_order?,
+ *                  last_reviewed_at?, review_due_at?, sources? }
  *   youtube_url accepts any common YouTube URL or a bare 11-char ID.
  */
 export async function POST(req: NextRequest) {
@@ -100,17 +117,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const row: Record<string, unknown> = {
+    series_id,
+    title: title.trim(),
+    description: description?.trim() || null,
+    youtube_id,
+    duration: duration?.trim() || null,
+    sort_order: typeof sort_order === 'number' ? sort_order : 100,
+  };
+  const reviewError = applyReviewFields(body, row);
+  if (reviewError) return NextResponse.json({ error: reviewError }, { status: 400 });
+
   const adminClient = getAdminClient();
   const { data, error } = await adminClient
     .from('training_videos')
-    .insert({
-      series_id,
-      title: title.trim(),
-      description: description?.trim() || null,
-      youtube_id,
-      duration: duration?.trim() || null,
-      sort_order: typeof sort_order === 'number' ? sort_order : 100,
-    })
+    .insert(row)
     .select()
     .single();
 
@@ -133,6 +154,8 @@ export async function PATCH(req: NextRequest) {
   if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
   if (body.active !== undefined) updates.active = !!body.active;
   if (body.series_id !== undefined) updates.series_id = body.series_id;
+  const reviewError = applyReviewFields(body, updates);
+  if (reviewError) return NextResponse.json({ error: reviewError }, { status: 400 });
 
   // Re-parse YouTube URL if provided so an edit can swap the link
   if (body.youtube_url !== undefined) {

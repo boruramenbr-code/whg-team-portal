@@ -24,6 +24,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.13',
+    date: 'September 13, 2026',
+    title: '🎓 Manager Academy (foundation)',
+    notes: [
+      'New 🎓 Academy in Training, for managers only: manager videos, lessons, and practice tools grouped into Leadership, Operations, and Administration',
+      'Two practice calculators: the true cost of an employee (pay + payroll taxes + benefits), and sales → labor budget → FOH/BOH hours',
+      'Any section can now be set to managers-only — staff never see it. Manager-only videos no longer show up on the staff Home screen',
+      'Lessons and videos can carry a last-reviewed date, version, and sources; Mission Control flags anything coming due for review',
+      'Copy a link to any lesson or video (for an Asana task) — it opens right to it, even if you have to sign in first',
+      'Systems lessons now read like lessons: “Key points” and “Remember this” instead of prep notes and selling tips',
+    ],
+  },
+  {
     version: '2026.09.12.3',
     date: 'September 12, 2026',
     title: '📘 Handbook Quick Guide (preview)',

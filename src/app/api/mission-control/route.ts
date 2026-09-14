@@ -487,6 +487,56 @@ export async function GET(req: NextRequest) {
   neverSeenStaff.sort((a, b) => a.full_name.localeCompare(b.full_name));
   staleStaff.sort((a, b) => (b.days_since ?? 0) - (a.days_since ?? 0));
 
+  // ── Training due for review (Manager Academy, migration 080) ────────────
+  // Lessons and videos on things that change — payroll rules, software,
+  // labor law — carry a next-review date. Surface anything due within two
+  // weeks. Brand-wide lessons and videos are the owner's to review; managers
+  // see only their own restaurants' lessons. Before 080 runs the columns
+  // don't exist, the queries error, and this list stays empty.
+  type TrainingReviewItem = { kind: 'lesson' | 'video'; id: string; title: string; where: string; due: string; days: number };
+  const reviewCutoffISO = dateInCentralTime(14);
+  const [reviewLessonsRes, reviewVideosRes] = await Promise.all([
+    adminClient
+      .from('menu_categories')
+      .select('id, name, restaurant_id, review_due_at, restaurants(name)')
+      .eq('active', true)
+      .not('review_due_at', 'is', null)
+      .lte('review_due_at', reviewCutoffISO),
+    isAdmin
+      ? adminClient
+          .from('training_videos')
+          .select('id, title, review_due_at, training_series(title)')
+          .eq('active', true)
+          .not('review_due_at', 'is', null)
+          .lte('review_due_at', reviewCutoffISO)
+      : Promise.resolve({ data: null }),
+  ]);
+  const daysUntil = (iso: string) =>
+    Math.round((new Date(iso + 'T00:00:00Z').getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const trainingReviews: TrainingReviewItem[] = [];
+  for (const c of (reviewLessonsRes.data ?? []) as { id: string; name: string; restaurant_id: string | null; review_due_at: string; restaurants: unknown }[]) {
+    if (c.restaurant_id ? shouldScope && !effectiveRestaurantIds.has(c.restaurant_id) : !isAdmin) continue;
+    trainingReviews.push({
+      kind: 'lesson',
+      id: c.id,
+      title: c.name,
+      where: (c.restaurants as { name?: string } | null)?.name || 'All restaurants',
+      due: c.review_due_at,
+      days: daysUntil(c.review_due_at),
+    });
+  }
+  for (const v of (reviewVideosRes.data ?? []) as { id: string; title: string; review_due_at: string; training_series: unknown }[]) {
+    trainingReviews.push({
+      kind: 'video',
+      id: v.id,
+      title: v.title,
+      where: `Video · ${(v.training_series as { title?: string } | null)?.title || 'Training'}`,
+      due: v.review_due_at,
+      days: daysUntil(v.review_due_at),
+    });
+  }
+  trainingReviews.sort((a, b) => a.days - b.days);
+
   return NextResponse.json(
     {
       bar_cards: {
@@ -512,6 +562,7 @@ export async function GET(req: NextRequest) {
       },
       welcome_ending_soon: welcomeEndingSoon,
       stale_86: stale86,
+      training_reviews: trainingReviews,
       recently_archived: recentlyArchived,
       adoption: {
         total_staff: activeStaffCount,

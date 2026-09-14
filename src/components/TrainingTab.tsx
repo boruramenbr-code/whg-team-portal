@@ -1,12 +1,18 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import MenuTab from './MenuTab';
 import QuizzesTab from './QuizzesTab';
 import TrainingPathTab from './TrainingPathTab';
+import type { Pillar } from '@/lib/menu-constants';
+import { buildVideoUrl, copyText, type TrainingLink, type TrainingZone } from '@/lib/training-links';
+
+// Management only — its own chunk, so staff never download it.
+const ManagerAcademyTab = dynamic(() => import('./ManagerAcademyTab'), { ssr: false });
 
 /* ───────── Types ───────── */
-interface Video {
+export interface Video {
   id: string;
   title: string;
   description: string | null;
@@ -15,20 +21,30 @@ interface Video {
   sort_order: number;
 }
 
-interface Series {
+export interface Series {
   id: string;
   title: string;
   blurb: string | null;
   sort_order: number;
   /** 'mgmt' series only reach management — the API already filters. */
   audience?: 'all' | 'mgmt';
+  /** Manager Academy pillar (manager series). */
+  pillar?: Pillar | null;
   videos: Video[];
 }
+
+type Sub = 'path' | 'academy' | 'videos' | 'menu' | 'systems' | 'quizzes';
 
 interface Props {
   language: 'en' | 'es';
   /** Owner's master switcher — scopes the Menu sub-tab to this restaurant. */
   viewRestaurantId?: string | null;
+  /** Management (admin / manager / assistant manager, or the mgmt
+   *  onboarding category) — unlocks 🎓 Academy and lesson links. */
+  isMgmt?: boolean;
+  /** A shared link to open (?lesson=… / ?video=…), parsed by the dashboard. */
+  link?: TrainingLink | null;
+  onLinkHandled?: () => void;
 }
 
 /* ───────── Employee Training Tab ─────────
@@ -37,18 +53,18 @@ interface Props {
  * Tap a video → opens a full-screen player with the YouTube embed.
  * The series list itself is collapsible; long lists stay scannable.
  *
- * Phase 1 = browsing + playback. Phase 2 adds inline quizzes.
- * Phase 3 surfaces completion + scores to Mission Control.
+ * Management also gets 🎓 Academy — manager videos, lessons, and practice
+ * calculators grouped into Leadership / Operations / Administration.
  */
-export default function TrainingTab({ language, viewRestaurantId = null }: Props) {
+export default function TrainingTab({ language, viewRestaurantId = null, isMgmt = false, link = null, onLinkHandled }: Props) {
   const isES = language === 'es';
-  // Sub-tabs: Videos | Menu | Quizzes (Phase B live June 2026).
   // "My Path" is the landing view — each person's position-based ladder.
-  // Videos / Menu / Quizzes are the open library behind it.
-  const [sub, setSub] = useState<'path' | 'videos' | 'menu' | 'systems' | 'quizzes'>('path');
-  // Deep-link from a Path module straight into its menu section
-  // (e.g. the fry cook's "Study: Hot Small Plates").
-  const [menuCategoryId, setMenuCategoryId] = useState<string | null>(null);
+  // Videos / Menu / Systems / Quizzes are the open library behind it.
+  const [sub, setSub] = useState<Sub>('path');
+  // One section (and optionally one card) to open — from a Path module or a
+  // shared link. Cleared when you switch sub-tabs yourself.
+  const [lessonTarget, setLessonTarget] = useState<{ id: string; zone: TrainingZone; card: string | null } | null>(null);
+  const [pendingVideoId, setPendingVideoId] = useState<string | null>(null);
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState<{ video: Video; seriesTitle: string } | null>(null);
@@ -78,6 +94,40 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
     load();
   }, [load]);
 
+  // Shared links: jump to the lesson's sub-tab, or queue the video until the
+  // library has loaded. Academy links only open for management.
+  useEffect(() => {
+    if (!link) return;
+    if (link.kind === 'video') {
+      setSub('videos');
+      setPendingVideoId(link.id);
+    } else if (link.zone !== 'academy' || isMgmt) {
+      setLessonTarget({ id: link.id, zone: link.zone, card: link.card });
+      setSub(link.zone);
+    }
+    onLinkHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [link]);
+
+  useEffect(() => {
+    if (!pendingVideoId || loading) return;
+    for (const s of series) {
+      const v = s.videos.find((x) => x.id === pendingVideoId);
+      if (v) {
+        setOpenSeries((prev) => new Set(prev).add(s.id));
+        setActiveVideo({ video: v, seriesTitle: s.title });
+        break;
+      }
+    }
+    setPendingVideoId(null);
+  }, [pendingVideoId, loading, series]);
+
+  const targetFor = (z: TrainingZone) => (lessonTarget?.zone === z ? lessonTarget : null);
+  const goSub = (s: Sub) => {
+    setLessonTarget(null);
+    setSub(s);
+  };
+
   const toggleSeries = (id: string) => {
     setOpenSeries((prev) => {
       const next = new Set(prev);
@@ -98,6 +148,10 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
             ? (isES
                 ? 'Tu escalera de entrenamiento — construida para tu posición.'
                 : 'Your training ladder — built for your position.')
+            : sub === 'academy'
+            ? (isES
+                ? 'Liderazgo, operaciones y el negocio detrás del restaurante.'
+                : 'Leadership, operations, and the business behind the restaurant.')
             : sub === 'videos'
             ? (isES
                 ? 'Videos del equipo WHG y de invitados para ayudarte a crecer.'
@@ -115,25 +169,26 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
                   : 'Show what you know. Exams get you floor-ready; quizzes keep it sharp.')}
         </p>
 
-        {/* Sub-tab pills: My Path | Videos | Menu | Quizzes */}
+        {/* Sub-tab pills: My Path | Academy (mgmt) | Videos | Menu | Systems | Quizzes */}
         <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {([
             { key: 'path' as const, label: isES ? '🧗 Mi Camino' : '🧗 My Path' },
+            ...(isMgmt ? [{ key: 'academy' as const, label: isES ? '🎓 Academia' : '🎓 Academy' }] : []),
             { key: 'videos' as const, label: isES ? '🎬 Videos' : '🎬 Videos' },
             { key: 'menu' as const, label: isES ? '🍣 Menú' : '🍣 Menu' },
             { key: 'systems' as const, label: isES ? '🧰 Sistemas' : '🧰 Systems' },
             { key: 'quizzes' as const, label: isES ? '📝 Cuestionarios' : '📝 Quizzes' },
-          ]).map((t) => (
+          ]).map((tab) => (
             <button
-              key={t.key}
-              onClick={() => setSub(t.key)}
+              key={tab.key}
+              onClick={() => goSub(tab.key)}
               className={`tap-highlight flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-colors ${
-                sub === t.key
+                sub === tab.key
                   ? 'bg-whg-gold text-whg-goldink shadow-sm'
                   : 'bg-white/10 text-whg-dim hover:bg-white/20'
               }`}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -142,14 +197,42 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
           <TrainingPathTab
             language={language}
             onGoTo={(s, refId) => {
-              if (s === 'menu') setMenuCategoryId(refId || null);
-              setSub(s);
+              if (s === 'menu' || s === 'systems' || s === 'academy') {
+                setLessonTarget(refId ? { id: refId, zone: s, card: null } : null);
+                setSub(s === 'academy' && !isMgmt ? 'menu' : s);
+              } else {
+                goSub(s);
+              }
             }}
           />
+        ) : sub === 'academy' && isMgmt ? (
+          <ManagerAcademyTab
+            language={language}
+            viewRestaurantId={viewRestaurantId}
+            series={series}
+            seriesLoading={loading}
+            initialCategoryId={targetFor('academy')?.id ?? null}
+            initialItemId={targetFor('academy')?.card ?? null}
+            onPlayVideo={(video, seriesTitle) => setActiveVideo({ video, seriesTitle })}
+            onGoToPath={() => goSub('path')}
+          />
         ) : sub === 'menu' ? (
-          <MenuTab language={language} initialCategoryId={menuCategoryId} viewRestaurantId={viewRestaurantId} />
+          <MenuTab
+            language={language}
+            initialCategoryId={targetFor('menu')?.id ?? null}
+            initialItemId={targetFor('menu')?.card ?? null}
+            viewRestaurantId={viewRestaurantId}
+            canShare={isMgmt}
+          />
         ) : sub === 'systems' ? (
-          <MenuTab language={language} viewRestaurantId={viewRestaurantId} zone="systems" />
+          <MenuTab
+            language={language}
+            initialCategoryId={targetFor('systems')?.id ?? null}
+            initialItemId={targetFor('systems')?.card ?? null}
+            viewRestaurantId={viewRestaurantId}
+            zone="systems"
+            canShare={isMgmt}
+          />
         ) : sub === 'quizzes' ? (
           <QuizzesTab language={language} />
         ) : loading ? (
@@ -291,6 +374,7 @@ export default function TrainingTab({ language, viewRestaurantId = null }: Props
           video={activeVideo.video}
           seriesTitle={activeVideo.seriesTitle}
           isES={isES}
+          shareUrl={isMgmt ? buildVideoUrl(activeVideo.video.id) : null}
           onClose={() => setActiveVideo(null)}
         />
       )}
@@ -303,13 +387,17 @@ function VideoPlayer({
   video,
   seriesTitle,
   isES,
+  shareUrl = null,
   onClose,
 }: {
   video: Video;
   seriesTitle: string;
   isES: boolean;
+  /** Management: copy a link that opens this video (for Asana tasks). */
+  shareUrl?: string | null;
   onClose: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
   // rel=0 keeps suggested videos within the same channel where possible —
   // YouTube no longer guarantees zero recommendations but this is the
   // best signal we can give. modestbranding is deprecated but harmless.
@@ -335,6 +423,19 @@ function VideoPlayer({
           <p className="text-[10px] text-white/50 uppercase tracking-widest truncate">{seriesTitle}</p>
           <p className="text-sm font-semibold text-white truncate">{video.title}</p>
         </div>
+        {shareUrl && (
+          <button
+            onClick={async () => {
+              if (await copyText(shareUrl)) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }
+            }}
+            className="tap-highlight flex-shrink-0 text-xs font-semibold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full px-3 py-1.5"
+          >
+            {copied ? (isES ? '✓ Copiado' : '✓ Copied') : (isES ? '🔗 Enlace' : '🔗 Link')}
+          </button>
+        )}
       </div>
 
       {/* Player.
