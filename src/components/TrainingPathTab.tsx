@@ -9,11 +9,11 @@ export interface PathModule {
   title_es: string | null;
   description: string | null;
   description_es: string | null;
-  module_type: 'video_series' | 'menu_category' | 'quiz' | 'photo_test' | 'skill' | 'note';
+  module_type: 'video_series' | 'menu_category' | 'quiz' | 'photo_test' | 'skill' | 'note' | 'team';
   ref_id: string | null;
   /** Study sections: which Training sub-tab the section lives in. */
   ref_zone?: 'menu' | 'systems' | 'academy' | null;
-  completion: 'self' | 'exam' | 'manager';
+  completion: 'self' | 'exam' | 'manager' | 'trainer';
   required: boolean;
   done: boolean;
   completed_at: string | null;
@@ -40,7 +40,9 @@ interface PathResponse {
   tracks: PathTrack[];
   floor_ready?: {
     ready: boolean;
-    via: 'completed' | 'override' | null;
+    /** Floor-ready takes a manager's final sign-off (migration 081). */
+    via: 'signed_off' | 'override' | null;
+    ready_for_signoff?: boolean;
     override: { granted_by_name: string | null; note: string | null; created_at: string } | null;
   };
 }
@@ -159,9 +161,13 @@ export default function TrainingPathTab({ language, onGoTo }: Props) {
             </p>
             {allDone && (
               <p className="text-[11px] text-white/80 mt-0.5">
-                {isES
-                  ? 'Aquí el crecimiento no termina — sigue afilando, sigue subiendo.'
-                  : 'Growth doesn’t stop here — keep sharpening, keep climbing.'}
+                {!data.floor_ready?.ready
+                  ? (isES
+                      ? 'Todos los pasos están listos — pide a tu gerente tu firma final.'
+                      : 'Every step is done — ask your manager for your final floor-ready sign-off.')
+                  : isES
+                    ? 'Aquí el crecimiento no termina — sigue afilando, sigue subiendo.'
+                    : 'Growth doesn’t stop here — keep sharpening, keep climbing.'}
               </p>
             )}
             {!allDone && data.floor_ready?.via === 'override' && (
@@ -293,7 +299,8 @@ function ModuleRow({
     m.module_type === 'video_series' ? '🎬' :
     m.module_type === 'menu_category' ? '🍣' :
     m.module_type === 'quiz' || m.module_type === 'photo_test' ? '📝' :
-    m.module_type === 'skill' ? '🤝' : '📖';
+    m.module_type === 'skill' ? '🤝' :
+    m.module_type === 'team' ? '👥' : '📖';
 
   const action = (() => {
     if (m.done) return null;
@@ -320,10 +327,12 @@ function ModuleRow({
         <span className="text-[10px] text-whg-dim/70 flex-shrink-0">{isES ? 'Examen en camino' : 'Exam coming'}</span>
       );
     }
-    if (m.completion === 'manager') {
+    if (m.completion === 'manager' || m.completion === 'trainer') {
       return (
         <span className="text-[10px] font-semibold text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-full px-2 py-1 flex-shrink-0">
-          {isES ? 'Firma de gerente' : 'Manager sign-off'}
+          {m.completion === 'trainer'
+            ? (isES ? 'Lo marca tu entrenador' : 'Trainer marks it')
+            : (isES ? 'Firma de gerente' : 'Manager sign-off')}
         </span>
       );
     }

@@ -677,6 +677,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
               isMgmt={isMgmt}
               link={trainingLink}
               onLinkHandled={() => setTrainingLinkHandled(true)}
+              onChecklistAction={handleChecklistAction}
             />
           </div>
           </div>

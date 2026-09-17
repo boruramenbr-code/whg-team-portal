@@ -124,8 +124,10 @@ export async function GET() {
         if (isDone) done++;
       }
     }
+    // Floor-ready = a manager signed them off (migration 081). Finishing
+    // every step makes them ready for that sign-off.
     const completedAll = total > 0 && done === total;
-    const hasOverride = overrideSet.has(p.id);
+    const hasSignoff = overrideSet.has(p.id);
 
     return {
       id: p.id,
@@ -138,8 +140,9 @@ export async function GET() {
       required_total: total,
       required_done: done,
       pct: total === 0 ? 0 : Math.round((done / total) * 100),
-      floor_ready: completedAll || hasOverride,
-      floor_ready_via: completedAll ? 'completed' : hasOverride ? 'override' : null,
+      floor_ready: hasSignoff,
+      floor_ready_via: hasSignoff ? (completedAll ? 'signed_off' : 'override') : null,
+      ready_for_signoff: completedAll && !hasSignoff,
     };
   });
 

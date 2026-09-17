@@ -24,6 +24,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.16',
+    date: 'September 16, 2026',
+    title: '🧭 Guided training for new hires',
+    notes: [
+      'New hires now get a step-by-step path in Training → My Path: Welcome, Paperwork, Meet your team, Learn the job, Floor training, then Floor-ready — one step at a time, with a Continue button and a way back after every lesson',
+      'Works side by side on a computer (for walking a new hire through it at the hiring desk) and stacked on a phone',
+      'Managers: Mission Control → Training → 🧭 New Hires. Start training (position, trainer, start date), see every new hire’s step, spot anyone stuck, and copy a day-one link',
+      'Trainers see “You’re training” on their My Path and mark each shadow shift done from their phone',
+      'Floor-ready now takes a manager’s final sign-off once every step is done (or early, with a note)',
+      'The 🎓 Academy and the manager training videos moved into Mission Control → Training',
+    ],
+  },
+  {
     version: '2026.09.13',
     date: 'September 13, 2026',
     title: '🎓 Manager Academy (foundation)',

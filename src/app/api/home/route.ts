@@ -5,7 +5,7 @@ import { GET as ownerMessagesGET } from '../owner-messages/route';
 import { GET as birthdaysGET } from '../birthdays/route';
 import { GET as holidaysGET } from '../holidays/route';
 import { GET as trainingLatestGET } from '../training/latest/route';
-import { GET as trainingPathGET } from '../training/path/route';
+import { GET as trainingGuideGET } from '../training/guide/route';
 import { GET as newHiresGET } from '../new-hires/route';
 import { GET as memoriesGET } from '../memories/route';
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   };
 
   const supabase = createClient();
-  const [auth, preshift, ownerMessages, birthdays, holidays, trainingLatest, trainingPath, newHires, memories] =
+  const [auth, preshift, ownerMessages, birthdays, holidays, trainingLatest, trainingGuide, newHires, memories] =
     await Promise.all([
       supabase.auth.getUser(),
       json(preshiftGET(sub(`/api/preshift-notes?${ridQuery}`))),
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
       json(birthdaysGET()),
       json(holidaysGET(sub('/api/holidays'))),
       json(trainingLatestGET()),
-      json(trainingPathGET(sub('/api/training/path'))),
+      // Ladder for everyone; guided stages only while someone's in training.
+      json(trainingGuideGET(sub('/api/training/guide'))),
       json(newHiresGET()),
       json(memoriesGET(sub(rid ? `/api/memories?limit=6&${ridQuery}` : '/api/memories?limit=6&scope=own'))),
     ]);
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
       birthdays,
       holidays,
       training_latest: trainingLatest,
-      training_path: trainingPath,
+      training_path: trainingGuide,
       new_hires: newHires,
       memories,
     },

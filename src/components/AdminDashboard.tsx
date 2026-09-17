@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Profile, Restaurant } from '@/lib/types';
 import { CHANGELOG, APP_VERSION, ChangelogEntry } from '@/lib/changelog';
 import MissionControlDashboard from './MissionControlDashboard';
+import { parseTrainingLink, type TrainingLink } from '@/lib/training-links';
 
 // ── Lazy-loaded admin tabs ────────────────────────────────────
 // Phase 1 perf fix (May 2026): Mission Control is the admin landing tab
@@ -128,6 +129,21 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   const tabShown = (k: TopTab) => activeTop === k;
   const tabMounted = (k: TopTab) => activeTop === k || visitedTops.has(k);
 
+  // Shared Academy lesson / manager video links (?lesson=…&zone=academy,
+  // ?video=…) open Training → Academy. Cleaned from the address bar, and
+  // dropped once you leave Training so it doesn't reopen later.
+  const [trainingLink, setTrainingLink] = useState<TrainingLink | null>(null);
+  useEffect(() => {
+    const link = parseTrainingLink(window.location.search);
+    if (!link || link.kind === 'start') return;
+    setTrainingLink(link);
+    setActiveTop('training');
+    try { window.history.replaceState(null, '', '/admin'); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => {
+    if (activeTop !== 'training') setTrainingLink(null);
+  }, [activeTop]);
+
   /**
    * Central navigate helper. Accepts legacy destination keys from Mission
    * Control alert cards and routes them to the right top+sub combination.
@@ -149,6 +165,9 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
       case 'compliance':
         setActiveTop('standards');
         setStandardsSub('compliance');
+        break;
+      case 'newhires':
+        setActiveTop('training');
         break;
       case 'dashboard':
       case 'preshift':
@@ -346,7 +365,12 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
         {tabMounted('training') && (
           <div className={tabShown('training') ? 'contents' : 'hidden'}>
           <div className="flex-1 overflow-y-auto tab-content-enter">
-            <TrainingAdminTab viewRestaurantId={showRestaurantSwitcher ? viewRestaurantId : null} isAdmin={isAdmin} />
+            <TrainingAdminTab
+              viewRestaurantId={showRestaurantSwitcher ? viewRestaurantId : null}
+              isAdmin={isAdmin}
+              link={trainingLink}
+              onNavigate={navigate}
+            />
           </div>
           </div>
         )}

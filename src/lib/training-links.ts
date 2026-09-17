@@ -1,28 +1,38 @@
 /**
- * Shareable links into Training (Manager Academy, Sept 2026).
+ * Shareable links into training (Manager Academy + guided training, Sept 2026).
  *
- * An Asana task — or a text — can point straight at one lesson, one card,
- * or one video. The dashboard reads these params once, opens the target,
- * and cleans the address bar. Logged-out visitors are sent back here after
- * signing in (middleware adds ?next=, the login page honors it).
+ * An Asana task, a text, or a manager at the hiring desk can point straight
+ * at one lesson, one card, one video, or a new hire's first step. The app
+ * reads these params once, opens the target, and cleans the address bar.
+ * Logged-out visitors are sent back here after signing in (middleware adds
+ * ?next=, the login page honors it).
+ *
+ * Staff lessons and videos open in the team app (/dashboard). Manager
+ * Academy lessons and manager-only videos open in Mission Control (/admin).
  */
 
 export type TrainingZone = 'menu' | 'systems' | 'academy';
 
 export type TrainingLink =
   | { kind: 'lesson'; id: string; zone: TrainingZone; card: string | null }
-  | { kind: 'video'; id: string };
+  | { kind: 'video'; id: string }
+  | { kind: 'start' };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function buildLessonUrl(sectionId: string, zone: TrainingZone, cardId?: string | null): string {
   const q = new URLSearchParams({ lesson: sectionId, zone });
   if (cardId) q.set('card', cardId);
-  return `${window.location.origin}/dashboard?${q.toString()}`;
+  return `${window.location.origin}${zone === 'academy' ? '/admin' : '/dashboard'}?${q.toString()}`;
 }
 
-export function buildVideoUrl(videoId: string): string {
-  return `${window.location.origin}/dashboard?video=${encodeURIComponent(videoId)}`;
+export function buildVideoUrl(videoId: string, where: 'dashboard' | 'admin' = 'dashboard'): string {
+  return `${window.location.origin}/${where}?video=${encodeURIComponent(videoId)}`;
+}
+
+/** The day-one link: opens the new hire's guided training (after they sign in). */
+export function buildTrainingStartUrl(): string {
+  return `${window.location.origin}/dashboard?training=start`;
 }
 
 export function parseTrainingLink(search: string): TrainingLink | null {
@@ -36,12 +46,13 @@ export function parseTrainingLink(search: string): TrainingLink | null {
   }
   const video = q.get('video');
   if (video && UUID.test(video)) return { kind: 'video', id: video };
+  if (q.get('training') === 'start') return { kind: 'start' };
   return null;
 }
 
-/** Where to go after signing in — only ever our own /dashboard. */
+/** Where to go after signing in — only ever our own app pages. */
 export function safeNextPath(raw: string | null): string {
-  return raw && /^\/dashboard(\/|\?|$)/.test(raw) ? raw : '/dashboard';
+  return raw && /^\/(dashboard|admin)(\/|\?|$)/.test(raw) ? raw : '/dashboard';
 }
 
 export async function copyText(text: string): Promise<boolean> {

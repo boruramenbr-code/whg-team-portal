@@ -6,8 +6,11 @@ import TrainingProgressTab from './TrainingProgressTab';
 import TrackBuilderTab from './TrackBuilderTab';
 import QuizzesAdminTab from './QuizzesAdminTab';
 import { PILLARS, type Pillar } from '@/lib/menu-constants';
+import NewHiresTab from './NewHiresTab';
+import { AcademyInMissionControl } from './ManagerAcademyTab';
+import type { TrainingLink } from '@/lib/training-links';
 
-type AdminSub = 'videos' | 'menu' | 'quizzes' | 'progress' | 'builder';
+type AdminSub = 'newhires' | 'academy' | 'videos' | 'menu' | 'quizzes' | 'progress' | 'builder';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -44,9 +47,22 @@ interface Series {
  * Architecture mirrors HolidaysEditor / OwnerMessageEditor — list view +
  * inline modal forms, optimistic refetch after each save.
  */
-export default function TrainingAdminTab({ viewRestaurantId = null, isAdmin = false }: { viewRestaurantId?: string | null; isAdmin?: boolean } = {}) {
-  // Sub-tabs: Videos | Menu | Quizzes authoring (Phase B live June 2026).
-  const [sub, setSub] = useState<AdminSub>('videos');
+export default function TrainingAdminTab({
+  viewRestaurantId = null,
+  isAdmin = false,
+  link = null,
+  onNavigate,
+}: {
+  viewRestaurantId?: string | null;
+  isAdmin?: boolean;
+  /** A shared Academy lesson / manager video link — opens the Academy. */
+  link?: TrainingLink | null;
+  /** Jump to another Mission Control tab (e.g. People → Staff). */
+  onNavigate?: (target: string) => void;
+} = {}) {
+  // Sub-tabs: New Hires (landing) | Academy | Videos | Menu | Quizzes | Progress | Builder.
+  const [sub, setSub] = useState<AdminSub>(link ? 'academy' : 'newhires');
+  useEffect(() => { if (link) setSub('academy'); }, [link]);
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +112,30 @@ export default function TrainingAdminTab({ viewRestaurantId = null, isAdmin = fa
     }
     load();
   };
+
+  // Guided new-hire training — the manager's side.
+  if (sub === 'newhires') {
+    return (
+      <div>
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
+          <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
+        </div>
+        <NewHiresTab viewRestaurantId={viewRestaurantId} onAddPerson={() => onNavigate?.('staff')} />
+      </div>
+    );
+  }
+
+  // Manager Academy — videos, lessons, and practice tools for management.
+  if (sub === 'academy') {
+    return (
+      <div>
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
+          <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
+        </div>
+        <AcademyInMissionControl viewRestaurantId={viewRestaurantId} link={link} />
+      </div>
+    );
+  }
 
   // Menu authoring gets the whole surface — it renders its own header.
   if (sub === 'menu') {
@@ -321,6 +361,8 @@ function SubTabPills({ sub, onChange, showBuilder = false }: { sub: AdminSub; on
   return (
     <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
       {([
+        { key: 'newhires' as const, label: '🧭 New Hires' },
+        { key: 'academy' as const, label: '🎓 Academy' },
         { key: 'videos' as const, label: '🎬 Videos' },
         { key: 'menu' as const, label: '🍣 Menu' },
         { key: 'quizzes' as const, label: '📝 Quizzes' },

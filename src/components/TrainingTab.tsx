@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import MenuTab from './MenuTab';
 import QuizzesTab from './QuizzesTab';
 import TrainingPathTab from './TrainingPathTab';
+import GuidedTrainingTab, { TraineesCard } from './GuidedTrainingTab';
 import type { Pillar } from '@/lib/menu-constants';
 import { buildVideoUrl, copyText, type TrainingLink, type TrainingZone } from '@/lib/training-links';
-
-// Management only — its own chunk, so staff never download it.
-const ManagerAcademyTab = dynamic(() => import('./ManagerAcademyTab'), { ssr: false });
 
 /* ───────── Types ───────── */
 export interface Video {
@@ -33,37 +30,46 @@ export interface Series {
   videos: Video[];
 }
 
-type Sub = 'path' | 'academy' | 'videos' | 'menu' | 'systems' | 'quizzes';
+type Sub = 'path' | 'videos' | 'menu' | 'systems' | 'quizzes';
 
 interface Props {
   language: 'en' | 'es';
   /** Owner's master switcher — scopes the Menu sub-tab to this restaurant. */
   viewRestaurantId?: string | null;
   /** Management (admin / manager / assistant manager, or the mgmt
-   *  onboarding category) — unlocks 🎓 Academy and lesson links. */
+   *  onboarding category) — can copy lesson links; Academy links hand off
+   *  to Mission Control. */
   isMgmt?: boolean;
-  /** A shared link to open (?lesson=… / ?video=…), parsed by the dashboard. */
+  /** A shared link to open (?lesson=… / ?video=… / ?training=start), parsed by the dashboard. */
   link?: TrainingLink | null;
   onLinkHandled?: () => void;
+  /** Onboarding actions from guided training (sign handbook, policies, Our Story). */
+  onChecklistAction?: (action: string) => void;
+}
+
+/** Manager-only training lives in Mission Control → Training → Academy. */
+function goToMissionControl(params: Record<string, string>) {
+  window.location.href = `/admin?${new URLSearchParams(params).toString()}`;
 }
 
 /* ───────── Employee Training Tab ─────────
  *
- * Lists all active training series, each containing videos.
- * Tap a video → opens a full-screen player with the YouTube embed.
- * The series list itself is collapsible; long lists stay scannable.
- *
- * Management also gets 🎓 Academy — manager videos, lessons, and practice
- * calculators grouped into Leadership / Operations / Administration.
+ * My Path is the landing view. New hires in training get the guided
+ * step-by-step path (GuidedTrainingTab); everyone else gets their ladder.
+ * Videos / Menu / Systems / Quizzes are the open library behind it — when
+ * a guided step sends someone there, a "Back to your training" bar brings
+ * them straight back.
  */
-export default function TrainingTab({ language, viewRestaurantId = null, isMgmt = false, link = null, onLinkHandled }: Props) {
+export default function TrainingTab({
+  language, viewRestaurantId = null, isMgmt = false, link = null, onLinkHandled, onChecklistAction,
+}: Props) {
   const isES = language === 'es';
-  // "My Path" is the landing view — each person's position-based ladder.
-  // Videos / Menu / Systems / Quizzes are the open library behind it.
   const [sub, setSub] = useState<Sub>('path');
-  // One section (and optionally one card) to open — from a Path module or a
-  // shared link. Cleared when you switch sub-tabs yourself.
+  // One section (and optionally one card) to open — from a Path module, a
+  // guided step, or a shared link. Cleared when you switch sub-tabs yourself.
   const [lessonTarget, setLessonTarget] = useState<{ id: string; zone: TrainingZone; card: string | null } | null>(null);
+  // Came here from a guided step — show the way back.
+  const [fromGuide, setFromGuide] = useState(false);
   const [pendingVideoId, setPendingVideoId] = useState<string | null>(null);
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,9 +88,9 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
       const j = await r.json();
       const list: Series[] = j.series || [];
       setSeries(list);
-      // Default open: the first non-empty series
-      const firstWithVideos = list.find((s) => s.videos.length > 0);
-      if (firstWithVideos) setOpenSeries(new Set([firstWithVideos.id]));
+      // Default open: the first non-empty team series
+      const firstWithVideos = list.find((s) => s.audience !== 'mgmt' && s.videos.length > 0);
+      if (firstWithVideos) setOpenSeries((prev) => new Set(prev).add(firstWithVideos.id));
     } finally {
       setLoading(false);
     }
@@ -94,14 +100,20 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
     load();
   }, [load]);
 
-  // Shared links: jump to the lesson's sub-tab, or queue the video until the
-  // library has loaded. Academy links only open for management.
+  // Shared links: jump to the right sub-tab, or queue the video until the
+  // library has loaded. Manager Academy links open in Mission Control.
   useEffect(() => {
     if (!link) return;
-    if (link.kind === 'video') {
+    if (link.kind === 'start') {
+      setSub('path');
+    } else if (link.kind === 'video') {
       setSub('videos');
       setPendingVideoId(link.id);
-    } else if (link.zone !== 'academy' || isMgmt) {
+    } else if (link.zone === 'academy') {
+      if (isMgmt) {
+        goToMissionControl({ lesson: link.id, zone: 'academy', ...(link.card ? { card: link.card } : {}) });
+      }
+    } else {
       setLessonTarget({ id: link.id, zone: link.zone, card: link.card });
       setSub(link.zone);
     }
@@ -113,11 +125,14 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
     if (!pendingVideoId || loading) return;
     for (const s of series) {
       const v = s.videos.find((x) => x.id === pendingVideoId);
-      if (v) {
+      if (!v) continue;
+      if (s.audience === 'mgmt') {
+        goToMissionControl({ video: v.id });
+      } else {
         setOpenSeries((prev) => new Set(prev).add(s.id));
         setActiveVideo({ video: v, seriesTitle: s.title });
-        break;
       }
+      break;
     }
     setPendingVideoId(null);
   }, [pendingVideoId, loading, series]);
@@ -125,6 +140,7 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
   const targetFor = (z: TrainingZone) => (lessonTarget?.zone === z ? lessonTarget : null);
   const goSub = (s: Sub) => {
     setLessonTarget(null);
+    setFromGuide(false);
     setSub(s);
   };
 
@@ -137,21 +153,39 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
     });
   };
 
+  const ladder = (
+    <TrainingPathTab
+      language={language}
+      onGoTo={(s, refId) => {
+        if (s === 'academy') {
+          if (isMgmt && refId) goToMissionControl({ lesson: refId, zone: 'academy' });
+          return;
+        }
+        if (s === 'menu' || s === 'systems') {
+          setLessonTarget(refId ? { id: refId, zone: s, card: null } : null);
+          setFromGuide(false);
+          setSub(s);
+        } else {
+          goSub(s);
+        }
+      }}
+    />
+  );
+
+  // Staff-side library shows team videos only; manager videos are in Mission Control.
+  const teamSeries = series.filter((s) => s.audience !== 'mgmt');
+
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2">
-      <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
+      <div className={`${sub === 'path' ? 'max-w-5xl' : 'max-w-3xl'} mx-auto px-4 py-6 md:py-8`}>
         <h1 className="text-2xl md:text-3xl font-bold text-whg-snow">
           {isES ? 'Capacitación' : 'Training'}
         </h1>
         <p className="text-sm text-whg-dim mt-1 mb-4">
           {sub === 'path'
             ? (isES
-                ? 'Tu escalera de entrenamiento — construida para tu posición.'
-                : 'Your training ladder — built for your position.')
-            : sub === 'academy'
-            ? (isES
-                ? 'Liderazgo, operaciones y el negocio detrás del restaurante.'
-                : 'Leadership, operations, and the business behind the restaurant.')
+                ? 'Tu entrenamiento — un paso a la vez.'
+                : 'Your training — one step at a time.')
             : sub === 'videos'
             ? (isES
                 ? 'Videos del equipo WHG y de invitados para ayudarte a crecer.'
@@ -169,11 +203,10 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
                   : 'Show what you know. Exams get you floor-ready; quizzes keep it sharp.')}
         </p>
 
-        {/* Sub-tab pills: My Path | Academy (mgmt) | Videos | Menu | Systems | Quizzes */}
+        {/* Sub-tab pills: My Path | Videos | Menu | Systems | Quizzes */}
         <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {([
             { key: 'path' as const, label: isES ? '🧗 Mi Camino' : '🧗 My Path' },
-            ...(isMgmt ? [{ key: 'academy' as const, label: isES ? '🎓 Academia' : '🎓 Academy' }] : []),
             { key: 'videos' as const, label: isES ? '🎬 Videos' : '🎬 Videos' },
             { key: 'menu' as const, label: isES ? '🍣 Menú' : '🍣 Menu' },
             { key: 'systems' as const, label: isES ? '🧰 Sistemas' : '🧰 Systems' },
@@ -193,29 +226,39 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
           ))}
         </div>
 
+        {/* Came from a guided step — one tap back */}
+        {fromGuide && sub !== 'path' && (
+          <button
+            onClick={() => goSub('path')}
+            className="tap-highlight w-full mb-4 flex items-center gap-2 rounded-xl bg-whg-gold/10 border border-whg-gold/40 px-4 py-3 text-left text-sm font-bold text-whg-gold hover:bg-whg-gold/20 transition-colors"
+          >
+            ← {isES ? 'Volver a tu entrenamiento' : 'Back to your training'}
+          </button>
+        )}
+
         {sub === 'path' ? (
-          <TrainingPathTab
-            language={language}
-            onGoTo={(s, refId) => {
-              if (s === 'menu' || s === 'systems' || s === 'academy') {
-                setLessonTarget(refId ? { id: refId, zone: s, card: null } : null);
-                setSub(s === 'academy' && !isMgmt ? 'menu' : s);
-              } else {
-                goSub(s);
-              }
-            }}
-          />
-        ) : sub === 'academy' && isMgmt ? (
-          <ManagerAcademyTab
-            language={language}
-            viewRestaurantId={viewRestaurantId}
-            series={series}
-            seriesLoading={loading}
-            initialCategoryId={targetFor('academy')?.id ?? null}
-            initialItemId={targetFor('academy')?.card ?? null}
-            onPlayVideo={(video, seriesTitle) => setActiveVideo({ video, seriesTitle })}
-            onGoToPath={() => goSub('path')}
-          />
+          <>
+            <TraineesCard language={language} />
+            <GuidedTrainingTab
+              language={language}
+              fallback={ladder}
+              onOpenLesson={(zone, sectionId) => {
+                setLessonTarget({ id: sectionId, zone, card: null });
+                setFromGuide(true);
+                setSub(zone);
+              }}
+              onOpenVideos={(seriesId) => {
+                if (seriesId) setOpenSeries((prev) => new Set(prev).add(seriesId));
+                setFromGuide(true);
+                setSub('videos');
+              }}
+              onOpenQuizzes={() => {
+                setFromGuide(true);
+                setSub('quizzes');
+              }}
+              onChecklistAction={(action) => onChecklistAction?.(action)}
+            />
+          </>
         ) : sub === 'menu' ? (
           <MenuTab
             language={language}
@@ -239,7 +282,7 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
           <div className="text-center text-sm text-whg-dim py-12">
             {isES ? 'Cargando…' : 'Loading…'}
           </div>
-        ) : series.length === 0 ? (
+        ) : teamSeries.length === 0 ? (
           <div className="text-center py-12 bg-whg-card/60 rounded-2xl border border-whg-line">
             <div className="text-4xl mb-3">📺</div>
             <p className="text-sm text-whg-dim font-medium">
@@ -250,12 +293,8 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
             </p>
           </div>
         ) : (
-          (() => {
-            // Managers see their own band first — the API only sends
-            // 'mgmt' series to management, so this renders for them alone.
-            const mgmtSeries = series.filter((s) => s.audience === 'mgmt');
-            const teamSeries = series.filter((s) => s.audience !== 'mgmt');
-            const renderSeries = (s: Series) => {
+          <div className="space-y-4">
+            {teamSeries.map((s) => {
               const isOpen = openSeries.has(s.id);
               return (
                 <div
@@ -279,7 +318,7 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
                     </div>
                     <div className="flex-shrink-0 flex items-center gap-2">
                       <span className="text-[10px] font-bold text-whg-dim/70 uppercase tracking-wide">
-                        {s.videos.length} {s.videos.length === 1 ? (isES ? 'video' : 'video') : (isES ? 'videos' : 'videos')}
+                        {s.videos.length} {s.videos.length === 1 ? 'video' : 'videos'}
                       </span>
                       <svg
                         width="16" height="16" viewBox="0 0 24 24"
@@ -345,26 +384,8 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
                   )}
                 </div>
               );
-            };
-            return (
-              <div className="space-y-4">
-                {mgmtSeries.length > 0 && (
-                  <>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-whg-gold">
-                      🔒 {isES ? 'Capacitación de Gerentes' : 'Manager Training'}
-                    </p>
-                    {mgmtSeries.map(renderSeries)}
-                    {teamSeries.length > 0 && (
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim pt-2">
-                        {isES ? 'Biblioteca del Equipo' : 'Team Library'}
-                      </p>
-                    )}
-                  </>
-                )}
-                {teamSeries.map(renderSeries)}
-              </div>
-            );
-          })()
+            })}
+          </div>
         )}
       </div>
 
@@ -383,7 +404,7 @@ export default function TrainingTab({ language, viewRestaurantId = null, isMgmt 
 }
 
 /* ───────── Video player overlay ───────── */
-function VideoPlayer({
+export function VideoPlayer({
   video,
   seriesTitle,
   isES,

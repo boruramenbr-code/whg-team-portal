@@ -4,7 +4,75 @@ import { useEffect, useState } from 'react';
 import MenuTab from './MenuTab';
 import { PILLARS, type Pillar } from '@/lib/menu-constants';
 import { CALCULATORS, CalculatorSheet, type CalculatorKey } from './ManagerCalculators';
-import type { Series, Video } from './TrainingTab';
+import { VideoPlayer, type Series, type Video } from './TrainingTab';
+import { buildVideoUrl, type TrainingLink } from '@/lib/training-links';
+
+/* ───────── Mission Control → Training → 🎓 Academy ─────────
+ * Loads the video library itself and hosts the player, so the Academy
+ * lives with the rest of management in Mission Control. Opens a shared
+ * Academy lesson or manager video link when one arrives. */
+export function AcademyInMissionControl({
+  viewRestaurantId = null,
+  link = null,
+}: {
+  viewRestaurantId?: string | null;
+  link?: TrainingLink | null;
+}) {
+  const [series, setSeries] = useState<Series[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState<{ video: Video; seriesTitle: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/training');
+        if (!r.ok) return;
+        const j = await r.json();
+        if (cancelled) return;
+        const list: Series[] = j.series || [];
+        setSeries(list);
+        if (link?.kind === 'video') {
+          for (const s of list) {
+            const v = s.videos.find((x) => x.id === link.id);
+            if (v) { setActive({ video: v, seriesTitle: s.title }); break; }
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [link]);
+
+  const lesson = link?.kind === 'lesson' && link.zone === 'academy' ? link : null;
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8">
+      <div className="rounded-3xl bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2 p-4 md:p-6">
+        <ManagerAcademyTab
+          language="en"
+          viewRestaurantId={viewRestaurantId}
+          series={series}
+          seriesLoading={loading}
+          initialCategoryId={lesson?.id ?? null}
+          initialItemId={lesson?.card ?? null}
+          onPlayVideo={(video, seriesTitle) => setActive({ video, seriesTitle })}
+          onGoToPath={() => { window.location.href = '/dashboard'; }}
+        />
+      </div>
+      {active && (
+        <VideoPlayer
+          video={active.video}
+          seriesTitle={active.seriesTitle}
+          isES={false}
+          shareUrl={buildVideoUrl(active.video.id, 'admin')}
+          onClose={() => setActive(null)}
+        />
+      )}
+    </div>
+  );
+}
 
 interface Props {
   language: 'en' | 'es';

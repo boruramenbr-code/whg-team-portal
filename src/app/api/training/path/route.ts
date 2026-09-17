@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { pingLastSeen } from '@/lib/last-seen';
+import { MANAGER_ROLES, resolveTrainingPath, isAssignedTrainer } from '@/lib/training-path';
 
 export const dynamic = 'force-dynamic';
-
-const MANAGER_ROLES = ['admin', 'manager', 'assistant_manager'];
-const PHOTO_TEST_PREFIX = '📸 Menu Photo Test';
 
 function getAdminClient() {
   return createAdminClient(
@@ -16,29 +14,13 @@ function getAdminClient() {
   );
 }
 
-interface TrackRow {
-  id: string; restaurant_id: string | null;
-  title: string; title_es: string | null;
-  description: string | null; description_es: string | null;
-  emoji: string | null; level: string; applies_to: string;
-  position_slugs: string[]; sort_order: number;
-}
-interface ModuleRow {
-  id: string; track_id: string; title: string; title_es: string | null;
-  description: string | null; description_es: string | null;
-  module_type: string; ref_id: string | null; completion: string;
-  required: boolean; sort_order: number;
-}
-
 /**
  * GET /api/training/path[?user_id=<uuid>]
  *
- * Resolves the training ladder for the current user (or, for managers,
- * any user): foundations + their department core + their position track
- * (restaurant-specific track beats the global skeleton) + certifications
- * matching their department/position. Each module carries completion
- * status resolved from module_progress, quiz passes, or the live photo
- * test.
+ * Resolves the training ladder for the current user — or, for managers and
+ * the person's assigned trainer, someone else: foundations + department
+ * core + position track + certifications, each module with completion
+ * status. Resolution lives in src/lib/training-path.ts.
  */
 export async function GET(req: NextRequest) {
   const supabase = createClient();
@@ -56,206 +38,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const adminClient = getAdminClient();
   const requestedUserId = req.nextUrl.searchParams.get('user_id');
-  const isManager = MANAGER_ROLES.includes(me.role);
-  if (requestedUserId && requestedUserId !== user.id && !isManager) {
+  if (
+    requestedUserId && requestedUserId !== user.id &&
+    !MANAGER_ROLES.includes(me.role) &&
+    !(await isAssignedTrainer(adminClient, user.id, requestedUserId))
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const targetId = requestedUserId || user.id;
 
-  // Target profile drives track resolution. Admin client so managers can
-  // resolve any staff member's path.
-  const adminClient = getAdminClient();
-  const { data: target } = await adminClient
-    .from('profiles')
-    .select('id, full_name, role, restaurant_id, onboarding_category, position_slug')
-    .eq('id', targetId)
-    .single();
-  if (!target) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
-  const category: string | null = target.onboarding_category || null;
-  const slug: string | null = target.position_slug || null;
-
-  const [{ data: allTracks }, { data: allModules }, { data: progress }] = await Promise.all([
-    adminClient.from('training_tracks').select('*').eq('active', true).order('sort_order'),
-    adminClient.from('track_modules').select('*').eq('active', true).order('sort_order'),
-    adminClient.from('module_progress').select('module_id, completed_at, manager_id').eq('user_id', targetId),
-  ]);
-
-  const tracks = (allTracks ?? []) as TrackRow[];
-  const modules = (allModules ?? []) as ModuleRow[];
-
-  const audienceMatch = (t: TrackRow) =>
-    t.applies_to === 'all' || (category !== null && t.applies_to === category);
-
-  const mine: TrackRow[] = [];
-  for (const t of tracks) {
-    if (t.restaurant_id && target.restaurant_id && t.restaurant_id !== target.restaurant_id) continue;
-    if (t.level === 'foundations' || t.level === 'ongoing') { mine.push(t); continue; }
-    if (t.level === 'department') { if (audienceMatch(t)) mine.push(t); continue; }
-    if (t.level === 'position') {
-      if (slug && t.position_slugs.includes(slug)) mine.push(t);
-      continue;
-    }
-    if (t.level === 'certification') {
-      if (!audienceMatch(t)) continue;
-      if (t.position_slugs.length > 0 && (!slug || !t.position_slugs.includes(slug))) continue;
-      mine.push(t);
-    }
-  }
-
-  // Restaurant-specific position track beats the global skeleton.
-  const positionTracks = mine.filter((t) => t.level === 'position');
-  const hasSpecific = positionTracks.some((t) => t.restaurant_id !== null);
-  const resolved = mine.filter((t) =>
-    t.level !== 'position' || !hasSpecific || t.restaurant_id !== null
-  );
-
-  // ── Completion resolution ──
-  const progressByModule = new Map((progress ?? []).map((p) => [p.module_id, p]));
-
-  const quizRefIds = modules
-    .filter((m) => m.module_type === 'quiz' && m.ref_id)
-    .map((m) => m.ref_id as string);
-  const passedQuizIds = new Set<string>();
-  if (quizRefIds.length > 0) {
-    const { data: passes } = await adminClient
-      .from('quiz_attempts')
-      .select('quiz_id')
-      .eq('user_id', targetId)
-      .eq('passed', true)
-      .in('quiz_id', quizRefIds);
-    for (const p of passes ?? []) passedQuizIds.add(p.quiz_id);
-  }
-
-  // Photo test: passed ANY version of the restaurant's photo test.
-  let photoTestPassed = false;
-  let photoTestExists = false;
-  if (target.restaurant_id) {
-    const { data: photoQuizzes } = await adminClient
-      .from('quizzes')
-      .select('id, active')
-      .eq('restaurant_id', target.restaurant_id)
-      .like('title', `${PHOTO_TEST_PREFIX}%`);
-    const ids = (photoQuizzes ?? []).map((q) => q.id);
-    photoTestExists = (photoQuizzes ?? []).some((q) => q.active);
-    if (ids.length > 0) {
-      const { data: pass } = await adminClient
-        .from('quiz_attempts')
-        .select('id')
-        .eq('user_id', targetId)
-        .eq('passed', true)
-        .in('quiz_id', ids)
-        .limit(1);
-      photoTestPassed = (pass ?? []).length > 0;
-    }
-  }
-
-  // Which zone each study section lives in — Path buttons open Systems and
-  // Manager Academy sections in their own sub-tab, not on the Menu.
-  const catRefIds = Array.from(new Set(
-    modules
-      .filter((m) => m.module_type === 'menu_category' && m.ref_id && resolved.some((t) => t.id === m.track_id))
-      .map((m) => m.ref_id as string)
-  ));
-  const zoneByCat = new Map<string, string>();
-  if (catRefIds.length > 0) {
-    const { data: cats } = await adminClient.from('menu_categories').select('id, zone').in('id', catRefIds);
-    for (const c of cats ?? []) zoneByCat.set(c.id, c.zone);
-  }
-
-  const out = resolved.map((t) => {
-    const mods = modules
-      .filter((m) => m.track_id === t.id)
-      .map((m) => {
-        const prog = progressByModule.get(m.id);
-        const done =
-          m.module_type === 'quiz' ? passedQuizIds.has(m.ref_id || '') :
-          m.module_type === 'photo_test' ? photoTestPassed :
-          !!prog;
-        return {
-          id: m.id,
-          title: m.title,
-          title_es: m.title_es,
-          description: m.description,
-          description_es: m.description_es,
-          module_type: m.module_type,
-          ref_id: m.ref_id,
-          ref_zone: m.module_type === 'menu_category' && m.ref_id ? zoneByCat.get(m.ref_id) ?? 'menu' : null,
-          completion: m.completion,
-          required: m.required,
-          sort_order: m.sort_order,
-          done,
-          completed_at: prog?.completed_at ?? null,
-          signed_off: !!prog?.manager_id,
-          // Photo test module with no live test yet — the UI can say so.
-          available: m.module_type !== 'photo_test' || photoTestExists,
-        };
-      });
-    const req_ = mods.filter((m) => m.required);
-    const doneCount = req_.filter((m) => m.done).length;
-    return {
-      id: t.id,
-      title: t.title,
-      title_es: t.title_es,
-      description: t.description,
-      description_es: t.description_es,
-      emoji: t.emoji,
-      level: t.level,
-      modules: mods,
-      required_total: req_.length,
-      required_done: doneCount,
-      pct: req_.length === 0 ? 0 : Math.round((doneCount / req_.length) * 100),
-    };
-  });
-
-  const levelOrder = ['foundations', 'department', 'position', 'certification', 'ongoing'];
-  out.sort((a, b) => levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level) || a.title.localeCompare(b.title));
-
-  // ── Floor-Ready (Phase C) ──
-  // Ready = every required module across the ladder is done, OR a manager
-  // made the judgment call (override — always recorded with who granted it).
-  const requiredTotal = out.reduce((n, t) => n + t.required_total, 0);
-  const requiredDone = out.reduce((n, t) => n + t.required_done, 0);
-  const completedAll = requiredTotal > 0 && requiredDone === requiredTotal;
-
-  const { data: override } = await adminClient
-    .from('floor_ready_overrides')
-    .select('granted_by, note, created_at')
-    .eq('user_id', targetId)
-    .maybeSingle();
-  let grantedByName: string | null = null;
-  if (override) {
-    const { data: granter } = await adminClient
-      .from('profiles').select('full_name').eq('id', override.granted_by).maybeSingle();
-    grantedByName = granter?.full_name ?? null;
-  }
-
-  return NextResponse.json({
-    user: {
-      id: target.id,
-      full_name: target.full_name,
-      onboarding_category: category,
-      position_slug: slug,
-    },
-    tracks: out,
-    floor_ready: {
-      ready: completedAll || !!override,
-      via: completedAll ? 'completed' : override ? 'override' : null,
-      override: override
-        ? { granted_by_name: grantedByName, note: override.note, created_at: override.created_at }
-        : null,
-    },
-  });
+  const path = await resolveTrainingPath(adminClient, requestedUserId || user.id);
+  if (!path) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  return NextResponse.json(path);
 }
 
 /**
  * POST /api/training/path — complete a module.
  * Body: { module_id, user_id? }
  *   • 'self' modules: anyone completes their OWN.
+ *   • 'trainer' modules (shadow shifts): the assigned trainer or any manager.
  *   • 'manager' modules: manager+ signs off for the given user_id.
  *   • 'exam' modules: rejected — they complete by passing the quiz.
- * DELETE with same body undoes (own self-modules, or manager for sign-offs).
+ * DELETE with same body undoes (own self-modules; trainer for trainer
+ * modules; managers for anything).
  */
 export async function POST(req: NextRequest) {
   return handleToggle(req, 'complete');
@@ -301,10 +107,17 @@ async function handleToggle(req: NextRequest, action: 'complete' | 'undo') {
   if (module.completion === 'manager' && !isManager) {
     return NextResponse.json({ error: 'This skill needs a manager sign-off.' }, { status: 403 });
   }
+  const isTrainer =
+    module.completion === 'trainer' && !isManager && targetId !== user.id
+      ? await isAssignedTrainer(adminClient, user.id, targetId)
+      : false;
+  if (module.completion === 'trainer' && !isManager && !isTrainer) {
+    return NextResponse.json({ error: 'Only their trainer or a manager can mark this.' }, { status: 403 });
+  }
 
   if (action === 'undo') {
-    // Own self-modules, or manager for anything.
-    if (!isManager && targetId !== user.id) {
+    const ownSelf = module.completion === 'self' && targetId === user.id;
+    if (!isManager && !ownSelf && !isTrainer) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const { error } = await adminClient
@@ -323,7 +136,8 @@ async function handleToggle(req: NextRequest, action: 'complete' | 'undo') {
         user_id: targetId,
         module_id: moduleId,
         completed_at: new Date().toISOString(),
-        manager_id: module.completion === 'manager' ? user.id : null,
+        // Who signed it: the trainer or manager (null for the person's own check-offs).
+        manager_id: module.completion === 'manager' || module.completion === 'trainer' ? user.id : null,
       },
       { onConflict: 'user_id,module_id' }
     );

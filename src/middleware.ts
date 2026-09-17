@@ -41,14 +41,14 @@ export async function middleware(request: NextRequest) {
     if (!user && isProtected) {
       const login = new URL('/', request.url);
       // Keep shared training links (Asana tasks, texts) alive through sign-in.
-      if (path.startsWith('/dashboard') && request.nextUrl.search) {
+      if (request.nextUrl.search) {
         login.searchParams.set('next', path + request.nextUrl.search);
       }
       return NextResponse.redirect(login);
     }
     if (user && isLoginPage) {
       const next = request.nextUrl.searchParams.get('next');
-      const dest = next && /^\/dashboard(\/|\?|$)/.test(next) ? next : '/dashboard';
+      const dest = next && /^\/(dashboard|admin)(\/|\?|$)/.test(next) ? next : '/dashboard';
       return NextResponse.redirect(new URL(dest, request.url));
     }
   }

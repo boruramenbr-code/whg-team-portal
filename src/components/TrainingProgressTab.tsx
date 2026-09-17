@@ -20,13 +20,17 @@ interface StaffRow {
   required_total: number;
   required_done: number;
   pct: number;
+  /** A manager signed them off (migration 081). */
   floor_ready: boolean;
-  floor_ready_via: 'completed' | 'override' | null;
+  floor_ready_via: 'signed_off' | 'override' | null;
+  /** Every step done — waiting on a manager's sign-off. */
+  ready_for_signoff?: boolean;
 }
 
 interface FloorReadyInfo {
   ready: boolean;
-  via: 'completed' | 'override' | null;
+  ready_for_signoff?: boolean;
+  via: 'signed_off' | 'override' | null;
   override: { granted_by_name: string | null; note: string | null; created_at: string } | null;
 }
 
@@ -109,6 +113,10 @@ export default function TrainingProgressTab({ viewRestaurantId = null }: { viewR
                   <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">
                     🎯 {s.floor_ready_via === 'override' ? 'Ready ✻' : 'Floor-Ready'}
                   </span>
+                ) : s.ready_for_signoff ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wide">
+                    ✍️ Sign off
+                  </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wide">
                     {s.pct}%
@@ -154,7 +162,7 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
     setOverrideBusy(true);
     setError(null);
     try {
-      const isRevoke = floorReady?.via === 'override';
+      const isRevoke = !!floorReady?.ready;
       const r = await fetch('/api/training/floor-ready', {
         method: isRevoke ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -227,9 +235,11 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
               <p className="text-sm font-bold text-gray-800">
                 {floorReady?.ready
                   ? floorReady.via === 'override'
-                    ? '🎯 Floor-Ready — by manager judgment'
-                    : '🎯 Floor-Ready — path complete'
-                  : 'Not floor-ready yet'}
+                    ? '🎯 Floor-Ready — signed off early (manager judgment)'
+                    : '🎯 Floor-Ready — signed off'
+                  : floorReady?.ready_for_signoff
+                    ? '✍️ Every step is done — ready for your sign-off'
+                    : 'Not floor-ready yet'}
               </p>
               {floorReady?.override && (
                 <p className="text-[11px] text-gray-500 mt-0.5">
@@ -239,10 +249,10 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
               )}
             </div>
           </div>
-          {/* Grant / revoke override — never shown when they earned it outright */}
-          {floorReady?.via !== 'completed' && (
+          {/* Final sign-off (or an early judgment call), or take it back */}
+          {floorReady && (
             <div className="mt-3 flex gap-2">
-              {floorReady?.via !== 'override' && (
+              {!floorReady.ready && (
                 <input
                   type="text"
                   value={overrideNote}
@@ -255,12 +265,18 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
                 onClick={toggleOverride}
                 disabled={overrideBusy}
                 className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-colors disabled:opacity-40 ${
-                  floorReady?.via === 'override'
+                  floorReady.ready
                     ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     : 'bg-emerald-600 text-white hover:bg-emerald-700'
                 }`}
               >
-                {overrideBusy ? '…' : floorReady?.via === 'override' ? 'Revoke override' : '🎯 Mark Floor-Ready (override)'}
+                {overrideBusy
+                  ? '…'
+                  : floorReady.ready
+                    ? 'Undo sign-off'
+                    : floorReady.ready_for_signoff
+                      ? '🎯 Sign off floor-ready'
+                      : '🎯 Sign off early (judgment call)'}
               </button>
             </div>
           )}
@@ -301,11 +317,11 @@ function PersonPath({ person, onBack }: { person: StaffRow; onBack: () => void }
                           {!m.required && <span className="ml-1.5 text-[9px] uppercase font-bold text-gray-400">optional</span>}
                         </p>
                         <p className="text-[10px] text-gray-400">
-                          {m.completion === 'manager' ? 'Manager sign-off' : m.completion === 'exam' ? 'Exam' : 'Self check'}
+                          {m.completion === 'manager' ? 'Manager sign-off' : m.completion === 'trainer' ? 'Trainer or manager' : m.completion === 'exam' ? 'Exam' : 'Self check'}
                           {m.done && m.signed_off ? ' · signed off' : ''}
                         </p>
                       </div>
-                      {m.completion === 'manager' && (
+                      {(m.completion === 'manager' || m.completion === 'trainer') && (
                         <button
                           onClick={() => toggle(m)}
                           disabled={busy === m.id}

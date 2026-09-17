@@ -11,6 +11,7 @@ import TipTrackerPage from './TipTrackerPage';
 import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 import { getDailyMindset } from '@/lib/daily-mindset';
 import { getWeeklyInspiration } from '@/lib/weekly-inspiration';
+import { STAGE_META, type GuideSummary } from '@/lib/guided-training';
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -198,6 +199,9 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
     pct: number; done: number; total: number;
     nextTitle: string | null; nextTitleEs: string | null;
     floorReady: boolean;
+    /** New hire in guided training — nextTitle is "Step 3 of 6: Meet your team". */
+    guided: boolean;
+    readyForSignoff: boolean;
   } | null>(null);
   // Story modal gates the welcome modal — first-time users see the brand
   // story before any operational content. Default true (assume not-yet-ack'd);
@@ -288,10 +292,29 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       // Continue Training card — stays hidden when there's no path yet.
       type M = { required: boolean; done: boolean; available: boolean; title: string; title_es: string | null };
       type T = { required_total: number; required_done: number; modules: M[] };
+      // New hires in guided training see their step instead.
+      const guide = j.training_path as {
+        in_training?: boolean;
+        summary?: GuideSummary;
+        floor_ready?: { ready?: boolean; ready_for_signoff?: boolean };
+      } | null;
       const tracks: T[] = j.training_path?.tracks || [];
       const total = tracks.reduce((n, t) => n + t.required_total, 0);
       const done = tracks.reduce((n, t) => n + t.required_done, 0);
-      if (total > 0) {
+      if (guide?.in_training && guide.summary) {
+        const s = guide.summary;
+        const meta = s.current ? STAGE_META[s.current] : null;
+        setPathSummary({
+          pct: s.pct,
+          done: s.done,
+          total: s.total,
+          nextTitle: meta ? `Step ${s.step} of ${s.of}: ${meta.en}` : null,
+          nextTitleEs: meta ? `Paso ${s.step} de ${s.of}: ${meta.es}` : null,
+          floorReady: !!guide.floor_ready?.ready,
+          guided: true,
+          readyForSignoff: !!guide.floor_ready?.ready_for_signoff,
+        });
+      } else if (total > 0) {
         const next = tracks.flatMap((t) => t.modules.filter((m) => m.required && !m.done && m.available))[0] || null;
         setPathSummary({
           pct: Math.round((done / total) * 100),
@@ -300,6 +323,8 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           nextTitle: next?.title ?? null,
           nextTitleEs: next?.title_es ?? null,
           floorReady: !!j.training_path?.floor_ready?.ready,
+          guided: false,
+          readyForSignoff: !!j.training_path?.floor_ready?.ready_for_signoff,
         });
       }
     } catch {
@@ -726,7 +751,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
-                  🧗 {isES ? 'Tu Entrenamiento' : 'Your Training'}
+                  {pathSummary.guided ? '🧭' : '🧗'} {isES ? 'Tu Entrenamiento' : 'Your Training'}
                 </p>
                 {pathSummary.floorReady ? (
                   <p className="text-sm font-bold text-white mt-0.5">
@@ -735,7 +760,11 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                 ) : (
                   <>
                     <p className="text-sm font-bold text-white mt-0.5 truncate">
-                      {isES ? 'Siguiente' : 'Up next'}: {isES && pathSummary.nextTitleEs ? pathSummary.nextTitleEs : pathSummary.nextTitle}
+                      {pathSummary.readyForSignoff
+                        ? (isES ? 'Todo listo — pide tu firma final a tu gerente' : 'All done — ask your manager to sign you off')
+                        : pathSummary.guided
+                          ? (isES && pathSummary.nextTitleEs ? pathSummary.nextTitleEs : pathSummary.nextTitle)
+                          : `${isES ? 'Siguiente' : 'Up next'}: ${isES && pathSummary.nextTitleEs ? pathSummary.nextTitleEs : pathSummary.nextTitle}`}
                     </p>
                     <p className="text-[11px] text-white/60 mt-0.5">
                       {pathSummary.done}/{pathSummary.total} {isES ? 'completados' : 'done'} · {isES ? 'Continuar →' : 'Continue →'}
