@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import DashboardClient from '@/components/DashboardClient';
 import Header from '@/components/Header';
+import { HOME_PREFETCH_SCRIPT } from '@/lib/home-prefetch';
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -23,6 +24,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-whg-night">
+      {/* Starts Home's data request before the app's scripts finish loading. */}
+      <script dangerouslySetInnerHTML={{ __html: HOME_PREFETCH_SCRIPT }} />
       <Header profile={profile} showAdminLink={isManager} currentPage="chat" />
       <DashboardClient profile={profile} isManager={isManager} />
     </div>

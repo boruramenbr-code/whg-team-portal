@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient, getMyProfile } from '@/lib/supabase-server';
 import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js';
 import { pingLastSeen } from '@/lib/last-seen';
 import { getOnboardingForUser } from '@/lib/onboarding';
@@ -48,11 +48,11 @@ export async function GET(req: NextRequest) {
 
   // Your own ladder (Home, every open) loads alongside the profile check;
   // someone else's only after the permission check passes.
-  const mePromise = supabase.from('profiles').select('id, role, status').eq('id', user.id).single();
+  const mePromise = getMyProfile();
   const loadPath = () => Promise.all([resolveTrainingPath(admin, targetId), loadAssignment(admin, targetId)]);
   const selfPath = self ? loadPath() : null;
 
-  const { data: me } = await mePromise;
+  const me = await mePromise;
   if (!me || me.status === 'archived') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

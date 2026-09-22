@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-server';
+import { createClient, getMyProfile, getMyExtraLocationIds } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
@@ -95,25 +95,16 @@ export async function GET(req: NextRequest) {
   // Profile + extra locations + all restaurants — fire in parallel.
   // We don't yet know if the user is admin, so we speculatively fetch
   // every active restaurant; non-admins simply filter the list down later.
-  const [profileRes, extraLocsRes, allRestaurantsRes] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('restaurant_id, role, status')
-      .eq('id', user.id)
-      .single(),
-    supabase
-      .from('user_locations')
-      .select('restaurant_id')
-      .eq('profile_id', user.id),
+  // Profile + extra locations are shared with the rest of Home's bundle.
+  const [profile, extraLocIds, allRestaurantsRes] = await Promise.all([
+    getMyProfile(),
+    getMyExtraLocationIds(),
     supabase
       .from('restaurants')
       .select('id, name')
       .eq('is_active', true)
       .order('name', { ascending: true }),
   ]);
-
-  const profile = profileRes.data;
-  const extraLocs = extraLocsRes.data;
 
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   if (profile.status === 'archived') return NextResponse.json({ error: 'Account inactive' }, { status: 403 });
@@ -124,7 +115,7 @@ export async function GET(req: NextRequest) {
 
   const userRestaurantIds = new Set<string>([
     ...(profile.restaurant_id ? [profile.restaurant_id] : []),
-    ...((extraLocs || []).map((l) => l.restaurant_id)),
+    ...extraLocIds,
   ]);
 
   const isAdmin = profile.role === 'admin';

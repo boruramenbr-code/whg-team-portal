@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.22.2',
+    date: 'September 22, 2026',
+    title: '⚡ Faster opens, part 2',
+    notes: [
+      'Home starts loading its news, pre-shift, and training the moment the page arrives, instead of waiting for the app to finish starting up',
+      'Home checks who you are once per open instead of nine times, and reads your profile once instead of seven — much less work for the database',
+      '“Last seen” (the adoption tracker) updates at most every 5 minutes per person instead of on every screen',
+    ],
+  },
+  {
     version: '2026.09.22',
     date: 'September 22, 2026',
     title: '⚡ Faster opens',

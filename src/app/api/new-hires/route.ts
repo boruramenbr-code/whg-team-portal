@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-server';
+import { createClient, getMyProfile } from '@/lib/supabase-server';
 import { NextResponse } from 'next/server';
 import { todayInCentralTime } from '@/lib/dates';
 
@@ -21,11 +21,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id')
-    .eq('id', user.id)
-    .single();
+  const me = await getMyProfile();
 
   if (!me) return NextResponse.json({ new_hires: [] });
 

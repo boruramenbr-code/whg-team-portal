@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-server';
+import { createClient, getMyProfile, getMyExtraLocationIds } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { todayInCentralTime, dateInCentralTime } from '@/lib/dates';
@@ -31,11 +31,8 @@ export async function GET(req: NextRequest) {
 
   const showAll = req.nextUrl.searchParams.get('all') === 'true';
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, restaurant_id')
-    .eq('id', user.id)
-    .single();
+  // Profile + extra locations are shared with the rest of Home's bundle.
+  const [profile, extraLocIds] = await Promise.all([getMyProfile(), getMyExtraLocationIds()]);
 
   if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
@@ -44,15 +41,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Managers and admins only' }, { status: 403 });
   }
 
-  // Multi-location assignments
-  const { data: extraLocs } = await supabase
-    .from('user_locations')
-    .select('restaurant_id')
-    .eq('profile_id', user.id);
-
   const userRestaurantIds = new Set<string>([
     ...(profile.restaurant_id ? [profile.restaurant_id] : []),
-    ...((extraLocs || []).map((l) => l.restaurant_id)),
+    ...extraLocIds,
   ]);
 
   let query = supabase

@@ -12,6 +12,7 @@ import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 import { getDailyMindset } from '@/lib/daily-mindset';
 import { getWeeklyInspiration } from '@/lib/weekly-inspiration';
 import { STAGE_META, type GuideSummary } from '@/lib/guided-training';
+import { takeHomePrefetch } from '@/lib/home-prefetch';
 
 // Full-screen and only opened on tap — keep it out of Home's first load.
 const TipTrackerPage = dynamic(() => import('./TipTrackerPage'), { ssr: false });
@@ -268,7 +269,8 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
       const url = viewRestaurantId
         ? `/api/home?restaurant_id=${encodeURIComponent(viewRestaurantId)}`
         : '/api/home';
-      const r = await fetch(url, { cache: 'no-store' });
+      // First open: the page's HTML already started this request.
+      const r = await (takeHomePrefetch(url) ?? fetch(url, { cache: 'no-store' }));
       if (!r.ok) return;
       const j = await r.json();
 

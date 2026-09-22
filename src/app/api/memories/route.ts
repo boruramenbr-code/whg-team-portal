@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient, getMyProfile } from '@/lib/supabase-server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
@@ -32,8 +32,7 @@ export async function GET(req: NextRequest) {
   const ridParam = req.nextUrl.searchParams.get('restaurant_id');
   const scopeOwn = req.nextUrl.searchParams.get('scope') === 'own';
 
-  const { data: me } = await supabase
-    .from('profiles').select('role, restaurant_id, status').eq('id', user.id).single();
+  const me = await getMyProfile();
   if (!me || me.status === 'archived') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

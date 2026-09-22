@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase-server';
+import { createClient, getMyProfile } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,11 +17,7 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('role, onboarding_category')
-    .eq('id', user.id)
-    .single();
+  const me = await getMyProfile();
   const isMgmt =
     ['admin', 'manager', 'assistant_manager'].includes(me?.role ?? '') ||
     me?.onboarding_category === 'mgmt';
