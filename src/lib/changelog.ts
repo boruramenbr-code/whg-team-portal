@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.22.3',
+    date: 'September 22, 2026',
+    title: '📋 One WHG standard per position',
+    notes: [
+      'Position descriptions can now live at the WHG level — one version every restaurant reads, so a server trained at one restaurant meets the same standard at another',
+      'Server is the first one: rewritten around hospitality (30-second greet, a genuine recommendation at every table, knowing your regulars, and what to do when something goes wrong)',
+      'Anything restaurant-specific — POS, menu, station flow, uniform — moves into that restaurant’s own training modules',
+      'A restaurant can still show a different version of a position when it truly needs one',
+    ],
+  },
+  {
     version: '2026.09.22.2',
     date: 'September 22, 2026',
     title: '⚡ Faster opens, part 2',

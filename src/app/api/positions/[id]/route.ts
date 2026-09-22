@@ -69,9 +69,20 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // ── WHG-level description (migration 082) ──────────────────────────
+  // scope:'whg' writes the one version every restaurant reads. Restaurant
+  // rows with no local copy of their own fall back to it.
+  if (body.description !== undefined && body.scope === 'whg') {
+    const { error } = await adminClient
+      .from('positions')
+      .update({ description: body.description })
+      .eq('id', params.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
   // ── Per-restaurant description ─────────────────────────────────────
   // body.description: string sets/updates; null deletes; undefined skips.
-  if (body.description !== undefined) {
+  if (body.description !== undefined && body.scope !== 'whg') {
     const restaurantId = body.restaurant_id || me.restaurant_id;
     if (!restaurantId) {
       return NextResponse.json({ error: 'restaurant_id required for description writes' }, { status: 400 });

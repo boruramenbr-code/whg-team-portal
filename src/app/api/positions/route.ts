@@ -117,10 +117,13 @@ export async function GET(req: Request) {
   // Fetch positions joined with their per-restaurant description.
   // Inner-join semantics: only positions with a description for this
   // restaurant are returned.
+  // `description` on positions is the WHG version — one standard for every
+  // restaurant (migration 082). The per-restaurant row still decides WHICH
+  // positions a restaurant shows, and may carry a local override.
   const { data, error } = await supabase
     .from('positions')
     .select(`
-      id, slug, name, emoji, department, sort_order,
+      id, slug, name, emoji, department, sort_order, description,
       position_descriptions!inner(description, restaurant_id)
     `)
     .eq('active', true)
@@ -138,7 +141,8 @@ export async function GET(req: Request) {
     emoji: string;
     department: string;
     sort_order: number;
-    position_descriptions: { description: string; restaurant_id: string }[];
+    description: string | null;
+    position_descriptions: { description: string | null; restaurant_id: string }[];
   };
 
   const positions = (data as unknown as Row[] | null || []).map((p) => ({
@@ -148,7 +152,7 @@ export async function GET(req: Request) {
     emoji: p.emoji,
     department: p.department,
     sort_order: p.sort_order,
-    description: p.position_descriptions?.[0]?.description || null,
+    description: p.position_descriptions?.[0]?.description || p.description || null,
   }));
 
   // Cache for 60s. Position catalog changes rarely (only when an admin
