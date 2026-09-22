@@ -19,8 +19,14 @@
 export type StageKey = 'welcome' | 'paperwork' | 'team' | 'learn' | 'floor' | 'ready';
 export type StageStatus = 'done' | 'current' | 'open' | 'locked';
 
-/** How long after the hire date someone counts as "in training" without a trainer assigned. */
-export const IN_TRAINING_DAYS = 120;
+/**
+ * How long after the hire date someone counts as "in training" without a
+ * trainer assigned. 90 days matches the 90-day growth path in every position
+ * description and Home's "recent hire" window — one number, one meaning.
+ * Separate from the semi-annual evaluation, which is about improvement,
+ * corrections, and pay.
+ */
+export const IN_TRAINING_DAYS = 90;
 /** No progress for this many days flags a new hire as stuck in Mission Control. */
 export const STUCK_AFTER_DAYS = 3;
 

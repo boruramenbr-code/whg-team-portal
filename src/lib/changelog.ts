@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.22.4',
+    date: 'September 22, 2026',
+    title: '📋 Consistency pass on positions',
+    notes: [
+      'Pay is out of the staff-facing position descriptions — starting pay lives on the manager-only Pay Rates screen, where a manager sees their own restaurant and the owner sees all of them',
+      'Assistant Managers are shown with full void and comp authority, matching the handbook (servers have none — they bring a manager)',
+      '“FOH Manager” is retired in favor of Restaurant Manager, the title that actually exists',
+      'Guided training now runs for 90 days, matching the 90-day path in every description (separate from the semi-annual evaluation)',
+    ],
+  },
+  {
     version: '2026.09.22.3',
     date: 'September 22, 2026',
     title: '📋 One WHG standard per position',

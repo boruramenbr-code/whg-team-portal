@@ -15,6 +15,9 @@
 -- description, and clears the two local Server copies so Boru and Ichiban
 -- both read the same one.
 --
+-- Staff-facing descriptions carry no pay rate — starting pay lives on the
+-- manager-only Pay Rates screen (Randy's call, Sept 2026).
+--
 -- Requires the /api/positions fallback (ships with this change) — without
 -- it, a cleared local copy would render an empty description.
 -- ============================================================
@@ -24,8 +27,7 @@ alter table position_descriptions alter column description drop not null;
 update positions
 set description = $WHG$[POS_INFO]
 Reports To: Assistant Manager / Restaurant Manager
-Pay Type: Tipped Hourly | $2.15/hr + tips
-Status: Hourly, Non-Exempt
+Status: Hourly, Non-Exempt | Tipped
 Schedule: Full-time or part-time | Evenings, weekends & holidays
 [/POS_INFO]
 
@@ -39,7 +41,7 @@ Guests come back for the food. They come back again and again because of how you
 
 **Every guest gets the same experience — table one on a slow Tuesday and table forty on a packed Saturday.**
 
-- Greeted within 30 seconds of being seated — eyes and a smile first, menu second.
+- Greeted within 30 seconds of being seated — two minutes is the outside limit, and past that is a miss. Eyes and a smile first, menu second.
 
 - One personal touch at every table — something about them, not a script.
 
@@ -57,7 +59,7 @@ Guests come back for the food. They come back again and again because of how you
 
 The first 30 seconds set the whole night. "How are you?" gets "Fine, thanks" — an automatic answer and no connection. Open with something real instead: "What are you celebrating tonight?" or "First time with us?" Use your own words — the right opener is the one that sounds like you. Asking whether it is their first visit also tells you how much guidance they want.
 
-> Standard: Every table greeted within 30 seconds of seating. Missed greets reported to the manager on duty immediately.
+> Standard: Every table greeted within 30 seconds of seating, never more than 2 minutes. Missed greets reported to the manager on duty immediately.
 
 ### 2. Guide the Order Like an Expert
 
