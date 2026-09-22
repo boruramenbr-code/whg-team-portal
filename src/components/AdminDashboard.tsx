@@ -104,20 +104,31 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
   // Mission Control and Onboarding already read), and remounts the tab
   // content on switch so each surface re-scopes cleanly.
   const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(null);
+  const showRestaurantSwitcher = isAdmin && restaurants.length > 1;
+  // Remount key — bumped only when the restaurant actually changes, not on
+  // the first settle below. Mission Control already read the saved key when
+  // it mounted; remounting it there loaded it twice on every open.
+  const [scopeKey, setScopeKey] = useState(0);
   useEffect(() => {
-    let initial: string | null = null;
-    try {
-      const saved = localStorage.getItem('whg_view_restaurant_id');
-      if (saved && restaurants.some((r) => r.id === saved)) initial = saved;
-    } catch { /* private mode */ }
-    setViewRestaurantId(initial || profile.restaurant_id || restaurants[0]?.id || null);
+    let saved: string | null = null;
+    try { saved = localStorage.getItem('whg_view_restaurant_id'); } catch { /* private mode */ }
+    const initial = (saved && restaurants.some((r) => r.id === saved) ? saved : null)
+      || profile.restaurant_id || restaurants[0]?.id || null;
+    setViewRestaurantId(initial);
+    // Owner with no saved pick yet (or it's gone) — save the real one and
+    // re-scope once. Next open skips this.
+    if (showRestaurantSwitcher && initial && saved !== initial) {
+      try { localStorage.setItem('whg_view_restaurant_id', initial); } catch { /* ignore */ }
+      setScopeKey((k) => k + 1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const switchViewRestaurant = (id: string) => {
+    if (id === viewRestaurantId) return;
     setViewRestaurantId(id);
     try { localStorage.setItem('whg_view_restaurant_id', id); } catch { /* ignore */ }
+    setScopeKey((k) => k + 1);
   };
-  const showRestaurantSwitcher = isAdmin && restaurants.length > 1;
 
   // Perf: visited tabs stay MOUNTED (hidden, not unmounted) so switching
   // back is instant — mirrors DashboardClient. A tab renders when it's
@@ -315,7 +326,7 @@ export default function AdminDashboard({ profile, restaurants }: Props) {
           each surface re-scopes (Onboarding re-reads the shared key,
           Bar Cards re-inits to the new prop, etc.). */}
       <div
-        key={viewRestaurantId ?? 'boot'}
+        key={scopeKey}
         className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-[#C5D3E2] to-[#D5E0EB] pb-[72px] md:pb-0"
       >
         {tabMounted('dashboard') && (

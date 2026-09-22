@@ -154,17 +154,12 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
   // Master restaurant filter — admin/multi-loc users only.
   // null = "All WHG" (no scoping). Persisted via localStorage so the choice
   // sticks across visits, shared with Positions tab + HomeTab pre-shift.
-  const [restaurantFilter, setRestaurantFilter] = useState<string | null>(null);
-
-  // Load saved restaurant preference on first render
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(VIEW_RESTAURANT_KEY);
-      if (saved) setRestaurantFilter(saved);
-    } catch {
-      // localStorage unavailable
-    }
-  }, []);
+  // Read synchronously (same as HomeTab) so the first load goes out already
+  // scoped — not once for all of WHG, then again for the saved restaurant.
+  const [restaurantFilter, setRestaurantFilter] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try { return localStorage.getItem(VIEW_RESTAURANT_KEY); } catch { return null; }
+  });
 
   const load = useCallback(async () => {
     try {

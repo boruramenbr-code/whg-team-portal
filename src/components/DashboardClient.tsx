@@ -142,6 +142,11 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const isAdminUser = profile.role === 'admin';
   const [viewRestaurants, setViewRestaurants] = useState<{ id: string; name: string }[]>([]);
   const [viewRestaurantId, setViewRestaurantId] = useState<string | null>(null);
+  // Remount key — bumped only when the restaurant actually changes. The
+  // first settle after /api/my-locations doesn't count: Home already read
+  // the same saved key when it mounted, and remounting it there re-ran
+  // every load on every open (Sept 2026 load-time pass).
+  const [scopeKey, setScopeKey] = useState(0);
   useEffect(() => {
     if (!isAdminUser) return;
     let cancelled = false;
@@ -153,20 +158,27 @@ export default function DashboardClient({ profile, isManager }: Props) {
         const locs: { id: string; name: string }[] = j.locations || [];
         if (cancelled) return;
         setViewRestaurants(locs);
-        let initial: string | null = null;
-        try {
-          const saved = localStorage.getItem('whg_view_restaurant_id');
-          if (saved && locs.some((l) => l.id === saved)) initial = saved;
-        } catch { /* private mode */ }
-        setViewRestaurantId(initial || profile.restaurant_id || locs[0]?.id || null);
+        let saved: string | null = null;
+        try { saved = localStorage.getItem('whg_view_restaurant_id'); } catch { /* private mode */ }
+        const initial = (saved && locs.some((l) => l.id === saved) ? saved : null)
+          || profile.restaurant_id || locs[0]?.id || null;
+        setViewRestaurantId(initial);
+        // No saved pick yet (or it's gone) — Home loaded without one, so
+        // save the real pick and re-scope once. Next open skips this.
+        if (initial && saved !== initial && locs.length > 1) {
+          try { localStorage.setItem('whg_view_restaurant_id', initial); } catch { /* ignore */ }
+          setScopeKey((k) => k + 1);
+        }
       } catch { /* bar just doesn't render */ }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdminUser]);
   const switchViewRestaurant = (id: string) => {
+    if (id === viewRestaurantId) return;
     setViewRestaurantId(id);
     try { localStorage.setItem('whg_view_restaurant_id', id); } catch { /* ignore */ }
+    setScopeKey((k) => k + 1);
   };
   const showMasterSwitcher = isAdminUser && viewRestaurants.length > 1;
   const effectiveRestaurantId = (showMasterSwitcher && viewRestaurantId) || profile.restaurant_id;
@@ -464,7 +476,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
           Each visited tab stays mounted inside a display-toggled wrapper
           (`contents` when active so layout is unchanged, `hidden` when not).
           First visit lazy-loads the chunk; every revisit is instant. */}
-      <div key={viewRestaurantId ?? 'own'} className="flex flex-1 overflow-hidden pb-[72px] md:pb-0">
+      <div key={scopeKey} className="flex flex-1 overflow-hidden pb-[72px] md:pb-0">
         {/* HOME */}
         {tabMounted('home') && (
           <div className={tabShown('home') ? 'contents' : 'hidden'}>

@@ -86,21 +86,43 @@ export interface ResolvedPath {
 
 /** Resolve one person's training ladder with completion status. Pass the service-role client. */
 export async function resolveTrainingPath(admin: SupabaseClient, targetId: string): Promise<ResolvedPath | null> {
-  const { data: target } = await admin
-    .from('profiles')
-    .select('id, full_name, role, restaurant_id, onboarding_category, position_slug, hire_date')
-    .eq('id', targetId)
-    .single();
+  // One round trip for everything that only needs targetId (Sept 2026
+  // load-time pass — this used to be ~7 queries in a row, and it sits
+  // under Home on every open). Filtering happens in memory below; the
+  // extra rows are tiny (a person's passed quizzes, one photo test per
+  // restaurant, the few non-menu study sections).
+  const [
+    { data: target },
+    { data: allTracks },
+    { data: allModules },
+    { data: progress },
+    { data: passes },
+    { data: photoQuizzes },
+    { data: nonMenuCats },
+    { data: override },
+  ] = await Promise.all([
+    admin
+      .from('profiles')
+      .select('id, full_name, role, restaurant_id, onboarding_category, position_slug, hire_date')
+      .eq('id', targetId)
+      .single(),
+    admin.from('training_tracks').select('*').eq('active', true).order('sort_order'),
+    admin.from('track_modules').select('*').eq('active', true).order('sort_order'),
+    admin.from('module_progress').select('module_id, completed_at, manager_id').eq('user_id', targetId),
+    admin.from('quiz_attempts').select('quiz_id').eq('user_id', targetId).eq('passed', true),
+    admin.from('quizzes').select('id, active, restaurant_id').like('title', `${PHOTO_TEST_PREFIX}%`),
+    // Sections not on the Menu (Systems, Manager Academy); anything missing is 'menu'.
+    admin.from('menu_categories').select('id, zone').neq('zone', 'menu'),
+    admin
+      .from('floor_ready_overrides')
+      .select('granted_by, note, created_at')
+      .eq('user_id', targetId)
+      .maybeSingle(),
+  ]);
   if (!target) return null;
 
   const category: string | null = target.onboarding_category || null;
   const slug: string | null = target.position_slug || null;
-
-  const [{ data: allTracks }, { data: allModules }, { data: progress }] = await Promise.all([
-    admin.from('training_tracks').select('*').eq('active', true).order('sort_order'),
-    admin.from('track_modules').select('*').eq('active', true).order('sort_order'),
-    admin.from('module_progress').select('module_id, completed_at, manager_id').eq('user_id', targetId),
-  ]);
 
   const tracks = (allTracks ?? []) as TrackRow[];
   const modules = (allModules ?? []) as ModuleRow[];
@@ -130,60 +152,22 @@ export async function resolveTrainingPath(admin: SupabaseClient, targetId: strin
   const resolved = mine.filter((t) =>
     t.level !== 'position' || !hasSpecific || t.restaurant_id !== null
   );
-  const resolvedIds = new Set(resolved.map((t) => t.id));
 
   // ── Completion resolution ──
   const progressByModule = new Map((progress ?? []).map((p) => [p.module_id, p]));
 
-  const quizRefIds = modules
-    .filter((m) => m.module_type === 'quiz' && m.ref_id && resolvedIds.has(m.track_id))
-    .map((m) => m.ref_id as string);
-  const passedQuizIds = new Set<string>();
-  if (quizRefIds.length > 0) {
-    const { data: passes } = await admin
-      .from('quiz_attempts')
-      .select('quiz_id')
-      .eq('user_id', targetId)
-      .eq('passed', true)
-      .in('quiz_id', quizRefIds);
-    for (const p of passes ?? []) passedQuizIds.add(p.quiz_id);
-  }
+  const passedQuizIds = new Set((passes ?? []).map((p) => p.quiz_id as string));
 
   // Photo test: passed ANY version of the restaurant's photo test.
-  let photoTestPassed = false;
-  let photoTestExists = false;
-  if (target.restaurant_id) {
-    const { data: photoQuizzes } = await admin
-      .from('quizzes')
-      .select('id, active')
-      .eq('restaurant_id', target.restaurant_id)
-      .like('title', `${PHOTO_TEST_PREFIX}%`);
-    const ids = (photoQuizzes ?? []).map((q) => q.id);
-    photoTestExists = (photoQuizzes ?? []).some((q) => q.active);
-    if (ids.length > 0) {
-      const { data: pass } = await admin
-        .from('quiz_attempts')
-        .select('id')
-        .eq('user_id', targetId)
-        .eq('passed', true)
-        .in('quiz_id', ids)
-        .limit(1);
-      photoTestPassed = (pass ?? []).length > 0;
-    }
-  }
+  const myPhotoQuizzes = target.restaurant_id
+    ? (photoQuizzes ?? []).filter((q) => q.restaurant_id === target.restaurant_id)
+    : [];
+  const photoTestExists = myPhotoQuizzes.some((q) => q.active);
+  const photoTestPassed = myPhotoQuizzes.some((q) => passedQuizIds.has(q.id));
 
   // Which zone each study section lives in — Path buttons open Systems and
   // Manager Academy sections in the right place, not on the Menu.
-  const catRefIds = Array.from(new Set(
-    modules
-      .filter((m) => m.module_type === 'menu_category' && m.ref_id && resolvedIds.has(m.track_id))
-      .map((m) => m.ref_id as string)
-  ));
-  const zoneByCat = new Map<string, string>();
-  if (catRefIds.length > 0) {
-    const { data: cats } = await admin.from('menu_categories').select('id, zone').in('id', catRefIds);
-    for (const c of cats ?? []) zoneByCat.set(c.id, c.zone);
-  }
+  const zoneByCat = new Map<string, string>((nonMenuCats ?? []).map((c) => [c.id, c.zone]));
 
   const out: ResolvedTrack[] = resolved.map((t) => {
     const mods: ResolvedModule[] = modules
@@ -242,11 +226,6 @@ export async function resolveTrainingPath(admin: SupabaseClient, targetId: strin
   const requiredDone = gating.reduce((n, t) => n + t.required_done, 0);
   const completedAll = requiredTotal > 0 && requiredDone === requiredTotal;
 
-  const { data: override } = await admin
-    .from('floor_ready_overrides')
-    .select('granted_by, note, created_at')
-    .eq('user_id', targetId)
-    .maybeSingle();
   let grantedByName: string | null = null;
   if (override) {
     const { data: granter } = await admin

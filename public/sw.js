@@ -9,9 +9,9 @@
 // - Never cache auth routes, user-specific mutations, or chat responses.
 // - The activate handler auto-deletes any cache not matching current names.
 
-const CACHE_NAME = 'whg-team-v2';
-const STATIC_CACHE = 'whg-static-v2';
-const API_CACHE = 'whg-api-v2';
+const CACHE_NAME = 'whg-team-v3';
+const STATIC_CACHE = 'whg-static-v3';
+const API_CACHE = 'whg-api-v3';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [
@@ -20,7 +20,7 @@ const PRECACHE_URLS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/apple-touch-icon.png',
-  '/logos/whg.png',
+  '/logos/whg.jpg',
   '/logos/ichiban-white.png',
   '/logos/boru-white.png',
   '/logos/shokudo-white.png',

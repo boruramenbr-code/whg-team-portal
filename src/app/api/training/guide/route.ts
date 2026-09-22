@@ -41,19 +41,22 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('id, role, status')
-    .eq('id', user.id)
-    .single();
-  if (!me || me.status === 'archived') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
   const admin = getAdminClient();
   const requested = req.nextUrl.searchParams.get('user_id');
   const targetId = requested || user.id;
-  if (targetId !== user.id) {
+  const self = targetId === user.id;
+
+  // Your own ladder (Home, every open) loads alongside the profile check;
+  // someone else's only after the permission check passes.
+  const mePromise = supabase.from('profiles').select('id, role, status').eq('id', user.id).single();
+  const loadPath = () => Promise.all([resolveTrainingPath(admin, targetId), loadAssignment(admin, targetId)]);
+  const selfPath = self ? loadPath() : null;
+
+  const { data: me } = await mePromise;
+  if (!me || me.status === 'archived') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  if (!self) {
     if (!MANAGER_ROLES.includes(me.role) && !(await isAssignedTrainer(admin, user.id, targetId))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -61,10 +64,7 @@ export async function GET(req: NextRequest) {
     pingLastSeen(user.id);
   }
 
-  const [path, assignment] = await Promise.all([
-    resolveTrainingPath(admin, targetId),
-    loadAssignment(admin, targetId),
-  ]);
+  const [path, assignment] = await (selfPath ?? loadPath());
   if (!path) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
   const inTraining = isInTraining({

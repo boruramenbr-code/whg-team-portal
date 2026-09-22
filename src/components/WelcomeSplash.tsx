@@ -57,7 +57,7 @@ export default function WelcomeSplash({ firstName, restaurantName, onComplete }:
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logos/whg.png"
+          src="/logos/whg.jpg"
           alt="Wong Hospitality Group"
           className="h-32 w-auto object-contain rounded-xl mx-auto"
         />

@@ -34,19 +34,26 @@ export async function GET(req: NextRequest) {
     }
   };
 
+  // Per-section timings ride back in a Server-Timing header (browser dev
+  // tools → Network → Timing), so a slow open can be pinned on one section.
+  const started = Date.now();
+  const timings: string[] = [];
+  const timed = <T,>(name: string, p: Promise<T>) =>
+    p.finally(() => timings.push(`${name};dur=${Date.now() - started}`));
+
   const supabase = createClient();
   const [auth, preshift, ownerMessages, birthdays, holidays, trainingLatest, trainingGuide, newHires, memories] =
     await Promise.all([
-      supabase.auth.getUser(),
-      json(preshiftGET(sub(`/api/preshift-notes?${ridQuery}`))),
-      json(ownerMessagesGET(sub('/api/owner-messages?audience=staff'))),
-      json(birthdaysGET()),
-      json(holidaysGET(sub('/api/holidays'))),
-      json(trainingLatestGET()),
+      timed('auth', supabase.auth.getUser()),
+      timed('preshift', json(preshiftGET(sub(`/api/preshift-notes?${ridQuery}`)))),
+      timed('messages', json(ownerMessagesGET(sub('/api/owner-messages?audience=staff')))),
+      timed('birthdays', json(birthdaysGET())),
+      timed('holidays', json(holidaysGET(sub('/api/holidays')))),
+      timed('latest', json(trainingLatestGET())),
       // Ladder for everyone; guided stages only while someone's in training.
-      json(trainingGuideGET(sub('/api/training/guide'))),
-      json(newHiresGET()),
-      json(memoriesGET(sub(rid ? `/api/memories?limit=6&${ridQuery}` : '/api/memories?limit=6&scope=own'))),
+      timed('training', json(trainingGuideGET(sub('/api/training/guide')))),
+      timed('newhires', json(newHiresGET())),
+      timed('memories', json(memoriesGET(sub(rid ? `/api/memories?limit=6&${ridQuery}` : '/api/memories?limit=6&scope=own')))),
     ]);
 
   if (!auth.data.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,6 +70,6 @@ export async function GET(req: NextRequest) {
       memories,
     },
     // Pre-shift (86'd items) rides in this bundle — never serve it stale.
-    { headers: { 'Cache-Control': 'private, no-store' } }
+    { headers: { 'Cache-Control': 'private, no-store', 'Server-Timing': timings.join(', ') } }
   );
 }

@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import WelcomeNoteModal from './WelcomeNoteModal';
 import OurStoryModal from './OurStoryModal';
 import HolidaysWidget, { type Holiday } from './HolidaysWidget';
 import NewHiresSection, { type NewHire } from './NewHiresSection';
 import MyBarCardWidget from './MyBarCardWidget';
 import CardingDateWidget from './CardingDateWidget';
-import TipTrackerPage from './TipTrackerPage';
 import { getHolidayStyle, HolidayType } from '@/lib/holiday-types';
 import { getDailyMindset } from '@/lib/daily-mindset';
 import { getWeeklyInspiration } from '@/lib/weekly-inspiration';
 import { STAGE_META, type GuideSummary } from '@/lib/guided-training';
+
+// Full-screen and only opened on tap — keep it out of Home's first load.
+const TipTrackerPage = dynamic(() => import('./TipTrackerPage'), { ssr: false });
 
 /* ───────── Types (mirrored from PreshiftTab) ───────── */
 interface TaggedItem {
@@ -464,7 +467,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             ) : (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
-                src="/logos/whg.png"
+                src="/logos/whg.jpg"
                 alt="WHG"
                 className="h-10 md:h-14 w-auto object-contain rounded-lg"
               />

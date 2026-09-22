@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.22',
+    date: 'September 22, 2026',
+    title: '⚡ Faster opens',
+    notes: [
+      'The owner view no longer loads Home twice on every open',
+      'Mission Control loads once for your restaurant — it used to load up to four times (twice for all of WHG, twice for your restaurant)',
+      'Training progress on Home comes back in about two trips to the database instead of nine',
+      'Logos are about 98% lighter — the WHG logo went from 2.5 MB to 50 KB, which matters most on a new hire’s first open over phone data',
+      'The Tip Tracker loads when you open it instead of with Home',
+    ],
+  },
+  {
     version: '2026.09.16',
     date: 'September 16, 2026',
     title: '🧭 Guided training for new hires',

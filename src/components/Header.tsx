@@ -49,7 +49,7 @@ export default function Header({ profile, showAdminLink, currentPage }: HeaderPr
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logos/whg.png"
+            src="/logos/whg.jpg"
             alt="Wong Hospitality Group"
             className="h-10 md:h-9 w-auto object-contain rounded"
           />

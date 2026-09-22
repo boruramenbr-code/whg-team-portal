@@ -9,11 +9,19 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/');
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, restaurants(*)')
-    .eq('id', user.id)
-    .single();
+  // Profile + active restaurants (for the form dropdowns) side by side.
+  const [{ data: profile }, { data: restaurants }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('*, restaurants(*)')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('restaurants')
+      .select('*')
+      .not('is_active', 'eq', false)
+      .order('name'),
+  ]);
 
   if (!profile || !['admin', 'manager', 'assistant_manager'].includes(profile.role)) {
     redirect('/dashboard');
@@ -23,13 +31,6 @@ export default async function AdminPage() {
     await supabase.auth.signOut();
     redirect('/');
   }
-
-  // Fetch all active restaurants for the form dropdowns
-  const { data: restaurants } = await supabase
-    .from('restaurants')
-    .select('*')
-    .not('is_active', 'eq', false)
-    .order('name');
 
   return (
     <div className="flex flex-col min-h-screen bg-[#C5D3E2]">

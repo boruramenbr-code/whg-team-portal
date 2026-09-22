@@ -366,7 +366,7 @@ export default function LoginPage() {
       <div className="text-center mb-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logos/whg.png"
+          src="/logos/whg.jpg"
           alt="Wong Hospitality Group"
           className="h-36 w-auto object-contain mx-auto rounded-xl mb-3"
         />
