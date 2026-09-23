@@ -425,8 +425,8 @@ function ChecklistStep({ firstName, isES }: { firstName: string; isES: boolean }
       </p>
       <p className="text-sm text-whg-snow/90 leading-relaxed mb-5">
         {isES
-          ? 'La mayoría se marca sola cuando terminas. Tu gerente confirma el resto. Vuelve cuando quieras en la pestaña de Onboarding.'
-          : 'Most of it auto-tracks when you finish. Your manager confirms the rest. Come back anytime in the Onboarding tab.'}
+          ? 'La mayoría se marca sola cuando terminas. Tu gerente confirma el resto. Vuelve cuando quieras en la pestaña Empieza Aquí.'
+          : 'Most of it auto-tracks when you finish. Your manager confirms the rest. Come back anytime in the Start Here tab.'}
       </p>
 
       <div className="bg-whg-card backdrop-blur-sm rounded-2xl p-5 border border-whg-line space-y-3">
@@ -447,8 +447,8 @@ function ChecklistStep({ firstName, isES }: { firstName: string; isES: boolean }
         </Bullet>
         <Bullet>
           {isES
-            ? <>🏁 <strong>Siempre aquí</strong> — encuéntrala de nuevo en la pestaña de Onboarding cuando la necesites.</>
-            : <>🏁 <strong>Always here</strong> — find it again in the Onboarding tab whenever you need it.</>}
+            ? <>🏁 <strong>Siempre aquí</strong> — encuéntrala de nuevo en la pestaña Empieza Aquí cuando la necesites.</>
+            : <>🏁 <strong>Always here</strong> — find it again in the Start Here tab whenever you need it.</>}
         </Bullet>
       </div>
     </div>

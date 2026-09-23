@@ -65,9 +65,10 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
     </svg>
   ),
   handbook: (a) => (
+    // Map pin — "Start Here", where every new hire begins
     <svg width="22" height="22" viewBox="0 0 24 24" fill={a ? NAV_GOLD : 'none'} stroke={a ? NAV_GOLD : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <path d="M12 21.5s-7-6.1-7-11.8a7 7 0 0 1 14 0c0 5.7-7 11.8-7 11.8z" />
+      <circle cx="12" cy="9.7" r="2.6" fill={a ? '#0D1522' : 'none'} stroke={a ? '#0D1522' : 'currentColor'} />
     </svg>
   ),
   ourteam: (a) => (
@@ -110,7 +111,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>(defaultHandbookSub);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
 
-  // Handbook Quick Guide — fetched the first time the Handbook tab opens.
+  // Handbook Quick Guide — fetched the first time the Start Here tab opens.
   // The sub-tab only appears when there's at least one section this person
   // can see (drafts are admin-only previews).
   const [guideSections, setGuideSections] = useState<GuideSection[] | null>(null);
@@ -280,12 +281,14 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const restaurantName = (profile.restaurants as { name?: string } | null)?.name || null;
   const isES = language === 'es';
 
-  // Ordered by daily frequency (July 2026 restructure).
+  // Start Here sits right after Home (Sept 2026): it's where a new hire
+  // begins — onboarding checklist, handbook, policies — and it's where
+  // everything about working here lives. Training follows it.
   const topTabs: { key: TopTabKey; label: string; labelEs: string; emoji: string }[] = [
     { key: 'home', label: 'Home', labelEs: 'Inicio', emoji: '🏠' },
+    { key: 'handbook', label: 'Start Here', labelEs: 'Empieza Aquí', emoji: '📍' },
     { key: 'training', label: 'Training', labelEs: 'Capacitación', emoji: '🎬' },
     { key: 'menu', label: 'Menu', labelEs: 'Menú', emoji: '🍣' },
-    { key: 'handbook', label: 'Handbook', labelEs: 'Manual', emoji: '📘' },
     { key: 'ourteam', label: 'Team', labelEs: 'Equipo', emoji: '👥' },
   ];
 
@@ -294,12 +297,12 @@ export default function DashboardClient({ profile, isManager }: Props) {
     home: { en: 'Home', es: 'Inicio' },
     training: { en: 'Training', es: 'Capacitar' },
     menu: { en: 'Menu', es: 'Menú' },
-    handbook: { en: 'Handbook', es: 'Manual' },
+    handbook: { en: 'Start Here', es: 'Empieza' },
     ourteam: { en: 'Team', es: 'Equipo' },
   };
 
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
-    { key: 'checklist', label: 'Checklist', labelEs: 'Lista', emoji: '✅' },
+    { key: 'checklist', label: 'Onboarding Checklist', labelEs: 'Lista de Bienvenida', emoji: '✅' },
     { key: 'guide', label: 'Quick Guide', labelEs: 'Guía Rápida', emoji: '📘' },
     { key: 'read', label: 'Handbook', labelEs: 'Manual', emoji: '📖' },
     { key: 'policies', label: 'Policies', labelEs: 'Políticas', emoji: '✍️' },
@@ -311,7 +314,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
       {/* Welcome Wizard — first-login onboarding flow (steps: install,
           welcome, our story, checklist intro). Sits above everything else,
           including the splash. Can also be replayed manually from the
-          "Watch intro again" link in the Onboarding tab. */}
+          "Watch intro again" link on the Onboarding Checklist. */}
       {showWizard && !showSplash && (
         <WelcomeWizard
           firstName={firstName}
@@ -530,7 +533,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
             <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
               <div className="flex items-start justify-between gap-3 mb-1">
                 <h1 className="text-2xl md:text-3xl font-bold text-whg-snow">
-                  {isES ? 'Tu Lista de Bienvenida' : 'Your Onboarding'}
+                  {isES ? 'Lista de Bienvenida' : 'Onboarding Checklist'}
                 </h1>
                 <button
                   onClick={() => { setWizardReplay(true); setShowWizard(true); }}

@@ -86,11 +86,11 @@ function getRestaurantLogo(name: string | null): string | null {
 const TAB_GUIDE = [
   {
     key: 'handbook',
-    emoji: '📘',
-    title: 'Handbook & Policies',
-    titleEs: 'Manual y Políticas',
-    description: 'Read the employee handbook, review company policies, or ask questions and get instant answers.',
-    descriptionEs: 'Lee el manual del empleado, revisa las políticas de la empresa, o haz preguntas y obtén respuestas al instante.',
+    emoji: '📍',
+    title: 'Start Here',
+    titleEs: 'Empieza Aquí',
+    description: 'Your onboarding checklist, the employee handbook, company policies, and answers to your questions — everything about working here.',
+    descriptionEs: 'Tu lista de bienvenida, el manual del empleado, las políticas de la empresa y respuestas a tus preguntas — todo sobre trabajar aquí.',
   },
   {
     key: 'ourteam',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import GuideCover, { GuideTopicIcon } from './GuideCover';
 
 /* ───────── Types (mirror /api/handbook-cards) ───────── */
 export interface GuideCard {
@@ -160,8 +161,9 @@ export default function HandbookGuideTab({ language, sections, onOpenBooklet, on
                       onClick={() => openAt(section.id, card.id)}
                       className="tap-highlight w-full text-left bg-whg-card border border-whg-line rounded-2xl px-4 py-3 hover:bg-whg-card2 transition-colors"
                     >
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-whg-dim">
-                        {section.emoji} {pick(section.title, section.title_es)}
+                      <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-whg-dim">
+                        <GuideTopicIcon emoji={section.emoji} title={section.title} index={all.indexOf(section)} className="w-3.5 h-3.5 flex-shrink-0" />
+                        {pick(section.title, section.title_es)}
                       </p>
                       <p className="text-sm font-semibold text-whg-snow mt-0.5">{pick(card.headline, card.headline_es)}</p>
                     </button>
@@ -195,7 +197,7 @@ export default function HandbookGuideTab({ language, sections, onOpenBooklet, on
                   {isES ? 'Temas' : 'Topics'}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  {all.map((s) => {
+                  {all.map((s, i) => {
                     const seenCount = s.cards.filter((c) => seen[c.id]).length;
                     const done = seenCount === s.cards.length;
                     const minutes = Math.max(1, Math.round((s.cards.length * 20) / 60));
@@ -203,15 +205,10 @@ export default function HandbookGuideTab({ language, sections, onOpenBooklet, on
                       <button
                         key={s.id}
                         onClick={() => openAt(s.id)}
-                        className="tap-highlight relative text-left rounded-2xl overflow-hidden bg-whg-card border border-whg-line shadow-sm hover:shadow-md transition-shadow"
+                        className="tap-highlight relative flex flex-col text-left rounded-2xl overflow-hidden bg-whg-card border border-whg-line shadow-sm hover:shadow-md transition-shadow"
                       >
                         <div className="relative aspect-[16/10] bg-whg-card2">
-                          {s.cover_url ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={s.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                          ) : (
-                            <div className="absolute inset-0 flex items-center justify-center text-4xl">{s.emoji || '📘'}</div>
-                          )}
+                          <GuideCover emoji={s.emoji} title={s.title} index={i} />
                           {done && (
                             <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-whg-gold text-whg-goldink text-xs font-bold flex items-center justify-center shadow">
                               ✓
@@ -257,6 +254,7 @@ export default function HandbookGuideTab({ language, sections, onOpenBooklet, on
         <CardDeck
           key={activeSection.id}
           section={activeSection}
+          sectionIndex={all.indexOf(activeSection)}
           startIndex={deck.index}
           isES={isES}
           pick={pick}
@@ -278,9 +276,11 @@ export default function HandbookGuideTab({ language, sections, onOpenBooklet, on
  * "you're caught up" screen with the next topic, the Booklet, and Ask.
  */
 function CardDeck({
-  section, startIndex, isES, pick, nextSection, onSeen, onClose, onOpenSection, onOpenBooklet, onAsk,
+  section, sectionIndex, startIndex, isES, pick, nextSection, onSeen, onClose, onOpenSection, onOpenBooklet, onAsk,
 }: {
   section: GuideSection;
+  /** Position in the topic list — picks the same accent and icon as its cover. */
+  sectionIndex: number;
   startIndex: number;
   isES: boolean;
   pick: (en: string | null, es: string | null) => string;
@@ -350,8 +350,9 @@ function CardDeck({
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
-          <p className="flex-1 min-w-0 text-sm font-bold text-whg-snow truncate">
-            {section.emoji} {pick(section.title, section.title_es)}
+          <p className="flex-1 min-w-0 flex items-center gap-2 text-sm font-bold text-whg-snow">
+            <GuideTopicIcon emoji={section.emoji} title={section.title} index={sectionIndex} className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{pick(section.title, section.title_es)}</span>
           </p>
           <span className="flex-shrink-0 text-[11px] font-bold text-whg-dim">
             {finished ? '✓' : `${index + 1} / ${total}`}

@@ -250,8 +250,8 @@ function HandbookCard({
       </div>
       <p className="text-sm text-white/80 leading-relaxed mt-2">
         {isES
-          ? 'Lea el manual completo en la pestaña Manual, luego firme aquí para confirmar que lo entiende y acepta cumplirlo.'
-          : 'Read the full handbook in the Handbook tab, then sign here to confirm you understand and agree to follow it.'}
+          ? 'Lea el manual completo en Empieza Aquí → Manual, luego firme aquí para confirmar que lo entiende y acepta cumplirlo.'
+          : 'Read the full handbook in Start Here → Handbook, then sign here to confirm you understand and agree to follow it.'}
       </p>
       <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-whg-gold">
         {signed ? '✓' : '✍️'} {signed ? (isES ? 'Firmado' : 'Signed') : (isES ? 'Tocar para firmar' : 'Tap to sign')} →

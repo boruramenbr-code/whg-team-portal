@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.22.5',
+    date: 'September 22, 2026',
+    title: '📍 Start Here',
+    notes: [
+      'The Handbook tab is now “Start Here” and sits right next to Home — the first place a new hire goes for everything about working here',
+      '“Checklist” is now “Onboarding Checklist”',
+      'Quick Guide topics have new designed covers — a line icon, a Japanese pattern, and a chapter number for each topic — in place of the big emoji pictures',
+    ],
+  },
+  {
     version: '2026.09.22.4',
     date: 'September 22, 2026',
     title: '📋 Consistency pass on positions',

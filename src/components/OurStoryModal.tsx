@@ -126,7 +126,7 @@ export default function OurStoryModal({ onAcknowledged }: Props) {
               : `Please take a moment to read (${secondsLeft}s)`}
           </button>
           <p className="text-[10px] text-whg-dim/70 text-center mt-2">
-            This shows once. You can revisit it anytime in the Handbook tab.
+            This shows once. You can revisit it anytime in the Start Here tab.
           </p>
         </div>
       </div>
