@@ -24,6 +24,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.23.3',
+    date: 'September 23, 2026',
+    title: '📊 Every Quick Guide card gets an infographic',
+    notes: [
+      'All 120 Quick Guide cards across 14 topics now use drawn infographics — pay calendars, time windows, step-by-step processes, escalation ladders, do and don’t, checklists, and side-by-sides — each with why it matters and a real-shift example',
+      'New icons for safety, hygiene, cameras, bonuses, and more; red warnings can appear on any card; prohibited-behavior lists show a red ✕ instead of a checkmark',
+      'Still owner preview only — topics go live for staff when they’re published',
+    ],
+  },
+  {
     version: '2026.09.23.2',
     date: 'September 23, 2026',
     title: '📊 Infographics get context',

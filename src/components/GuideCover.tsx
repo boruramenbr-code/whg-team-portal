@@ -18,6 +18,7 @@ const ICON_KEYS = [
   'calendar', 'bulb', 'clock', 'bowl', 'cash', 'shirt', 'cup', 'phone',
   'growth', 'shield', 'alert', 'noglass', 'clipboard', 'lantern', 'book',
   'check', 'x', 'send', 'users', 'plane', 'swap', 'star', 'arrow', 'pin',
+  'hand', 'fire', 'camera', 'heart', 'firstaid', 'chat', 'gift', 'lock', 'door', 'percent',
 ] as const;
 type IconKey = (typeof ICON_KEYS)[number];
 
@@ -147,6 +148,44 @@ function IconPaths({ icon }: { icon: IconKey }) {
       return <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />;
     case 'arrow':
       return <path d="M4.5 12h15M13.5 6l6 6-6 6" />;
+    case 'hand':
+      return <path d="M8.5 13V5.5a1.5 1.5 0 0 1 3 0V11M11.5 10.5V4a1.5 1.5 0 0 1 3 0v6.5M14.5 11V5.5a1.5 1.5 0 0 1 3 0v8.2c0 4.3-2.7 7.3-6.7 7.3-2.6 0-4.3-1.4-5.6-3.5l-2.4-4a1.5 1.5 0 0 1 2.5-1.7l1.7 2.4" />;
+    case 'fire':
+      return <path d="M12 21.5c-3.6 0-6.5-2.7-6.5-6.3 0-3.2 2.2-5.1 3.5-7.2.4 1.6 1.3 2.6 2.4 3 .2-3.6 1.8-6.3 4.1-8.5.3 3 1.3 4.9 2.6 6.8 1 1.5 1.9 3.3 1.9 5.9 0 3.6-2.9 6.3-6.5 6.3z" />;
+    case 'camera':
+      return (<>
+        <rect x="2.5" y="7" width="19" height="13" rx="2.5" />
+        <path d="M8.5 7L10 4.5h4L15.5 7" />
+        <circle cx="12" cy="13.5" r="3.5" />
+      </>);
+    case 'heart':
+      return <path d="M12 20.5s-8-4.7-8-10.6A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 8 2.3c0 5.9-8 10.6-8 10.6z" />;
+    case 'firstaid':
+      return (<>
+        <rect x="3.5" y="6.5" width="17" height="14" rx="2.5" />
+        <path d="M9 6.5V4.5h6v2M12 10.5v6M9 13.5h6" />
+      </>);
+    case 'chat':
+      return <path d="M20.5 11.5a8.5 8 0 0 1-12.2 7.2L3.5 20l1.4-4.3A8.5 8 0 1 1 20.5 11.5z" />;
+    case 'gift':
+      return (<>
+        <rect x="3" y="8" width="18" height="4.5" rx="1" />
+        <rect x="4.5" y="12.5" width="15" height="8.5" rx="1" />
+        <path d="M12 8v13M12 8S10.5 3.5 8 4.5 9.2 8 12 8zM12 8s1.5-4.5 4-3.5S14.8 8 12 8z" />
+      </>);
+    case 'lock':
+      return (<>
+        <rect x="5" y="10.5" width="14" height="10.5" rx="2.5" />
+        <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5" />
+      </>);
+    case 'door':
+      return <path d="M3.5 21.5h17M6 21.5V3.5h9v18M15 5.5h3v16M12.2 12.5h.01" />;
+    case 'percent':
+      return (<>
+        <path d="M5.5 18.5l13-13" />
+        <circle cx="7" cy="7" r="2.3" />
+        <circle cx="17" cy="17" r="2.3" />
+      </>);
     case 'pin':
       return (<>
         <path d="M12 21.5s-7-6.1-7-11.8a7 7 0 0 1 14 0c0 5.7-7 11.8-7 11.8z" />

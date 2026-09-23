@@ -15,20 +15,23 @@ import { GuideIcon } from './GuideCover';
 
 export type Txt = string | { en: string; es?: string | null };
 
-type Footer = { text: Txt; icon?: string; tone?: 'warn' | 'info' };
+/** warn = a consequence (vermilion); info = a helpful aside (default). */
+type Tone = 'warn' | 'info';
+
+type Footer = { text: Txt; icon?: string; tone?: Tone };
 
 /** Shared by every shape: one line of reason, one line of real-shift example. */
 type Context = { why?: Txt; example?: Txt };
 
 export type Infographic = Context & (
   | { type: 'stat'; value: string; unit?: Txt; label: Txt; sub?: Txt; icon?: string; segments?: number; footer?: Footer }
-  | { type: 'steps'; tone?: 'process' | 'escalation'; steps: { title: Txt; sub?: Txt }[]; note?: Txt }
-  | { type: 'dodont'; do: Txt[]; dont: Txt[]; doLabel?: Txt; dontLabel?: Txt; note?: Txt }
-  | { type: 'checklist'; items: Txt[]; badge?: Txt; note?: Txt }
-  | { type: 'day'; from: string; to: string; blocks: { start: string; end: string }[]; blockLabel: Txt; openLabel?: Txt }
-  | { type: 'compare'; left: CompareSide; right: CompareSide }
-  | { type: 'periods'; periods: { range: Txt; pay: Txt }[]; note?: Txt }
-  | { type: 'icon'; icon: string; phrase: Txt; sub?: Txt }
+  | { type: 'steps'; tone?: 'process' | 'escalation'; steps: { title: Txt; sub?: Txt }[]; note?: Txt; noteTone?: Tone }
+  | { type: 'dodont'; do: Txt[]; dont: Txt[]; doLabel?: Txt; dontLabel?: Txt; note?: Txt; noteTone?: Tone }
+  | { type: 'checklist'; items: Txt[]; badge?: Txt; mark?: 'check' | 'x'; note?: Txt; noteTone?: Tone }
+  | { type: 'day'; from: string; to: string; blocks: { start: string; end: string }[]; blockLabel: Txt; openLabel?: Txt; note?: Txt; noteTone?: Tone }
+  | { type: 'compare'; left: CompareSide; right: CompareSide; note?: Txt; noteTone?: Tone }
+  | { type: 'periods'; periods: { range: Txt; pay: Txt }[]; note?: Txt; noteTone?: Tone }
+  | { type: 'icon'; icon: string; phrase: Txt; sub?: Txt; note?: Txt; noteTone?: Tone }
 );
 
 type CompareSide = { title: Txt; icon?: string; lines: Txt[] };
@@ -214,7 +217,7 @@ function Steps({ d, t, accent }: { d: Extract<Infographic, { type: 'steps' }>; t
           );
         })}
       </ol>
-      {d.note && <Note text={t(d.note)} />}
+      {d.note && <Note text={t(d.note)} tone={d.noteTone} />}
     </div>
   );
 }
@@ -242,19 +245,21 @@ function DoDont({ d, t, isES }: { d: Extract<Infographic, { type: 'dodont' }>; t
         {col(t(d.doLabel) || (isES ? 'Sí' : 'Do'), d.do, JADE, 'check')}
         {col(t(d.dontLabel) || (isES ? 'No' : "Don't"), d.dont, VERMILION, 'x')}
       </div>
-      {d.note && <Note text={t(d.note)} />}
+      {d.note && <Note text={t(d.note)} tone={d.noteTone} />}
     </div>
   );
 }
 
 /* ── 4. Checklist ── */
 function Checklist({ d, t, accent }: { d: Extract<Infographic, { type: 'checklist' }>; t: T; accent: string }) {
+  // mark 'x' lists what's never allowed — a check beside "assault" would read wrong.
+  const color = d.mark === 'x' ? VERMILION : accent;
   return (
     <div>
       {d.badge && (
         <span
           className="inline-block mb-3 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-          style={{ color: accent, background: `${accent}1A`, border: `1px solid ${accent}40` }}
+          style={{ color, background: `${color}1A`, border: `1px solid ${color}40` }}
         >
           {t(d.badge)}
         </span>
@@ -264,15 +269,15 @@ function Checklist({ d, t, accent }: { d: Extract<Infographic, { type: 'checklis
           <li key={i} className="flex items-center gap-3">
             <span
               className="w-7 h-7 flex-shrink-0 rounded-full flex items-center justify-center"
-              style={{ background: `${accent}1F`, border: `1px solid ${accent}66` }}
+              style={{ background: `${color}1F`, border: `1px solid ${color}66` }}
             >
-              <GuideIcon icon="check" className="w-4 h-4" style={{ color: accent }} strokeWidth={2.2} />
+              <GuideIcon icon={d.mark === 'x' ? 'x' : 'check'} className="w-4 h-4" style={{ color }} strokeWidth={2.2} />
             </span>
             <span className="text-[15px] font-semibold text-whg-snow leading-snug">{t(it)}</span>
           </li>
         ))}
       </ul>
-      {d.note && <Note text={t(d.note)} />}
+      {d.note && <Note text={t(d.note)} tone={d.noteTone} />}
     </div>
   );
 }
@@ -338,6 +343,7 @@ function Day({ d, t, accent }: { d: Extract<Infographic, { type: 'day' }>; t: T;
       </div>
       <p className="mt-3 text-[15px] font-bold text-whg-snow leading-snug">{t(d.blockLabel)}</p>
       {d.openLabel && <p className="mt-1 text-sm text-whg-dim leading-snug">{t(d.openLabel)}</p>}
+      {d.note && <Note text={t(d.note)} tone={d.noteTone} />}
     </div>
   );
 }
@@ -357,7 +363,12 @@ function Compare({ d, t, accent }: { d: Extract<Infographic, { type: 'compare' }
       </ul>
     </div>
   );
-  return <div className="grid gap-3 sm:grid-cols-2">{side(d.left)}{side(d.right)}</div>;
+  return (
+    <div>
+      <div className="grid gap-3 sm:grid-cols-2">{side(d.left)}{side(d.right)}</div>
+      {d.note && <Note text={t(d.note)} tone={d.noteTone} />}
+    </div>
+  );
 }
 
 /* ── 7. Pay periods → paydays ── */
@@ -379,7 +390,7 @@ function Periods({ d, t, accent, isES }: { d: Extract<Infographic, { type: 'peri
           </div>
         ))}
       </div>
-      {d.note && <Note text={t(d.note)} />}
+      {d.note && <Note text={t(d.note)} tone={d.noteTone} />}
     </div>
   );
 }
@@ -391,6 +402,7 @@ function IconCard({ d, t, accent }: { d: Extract<Infographic, { type: 'icon' }>;
       <Medallion icon={d.icon} color={accent} size="lg" />
       <p className="mt-4 text-xl md:text-2xl font-bold text-whg-snow leading-snug">{t(d.phrase)}</p>
       {d.sub && <p className="mt-1.5 text-sm md:text-[15px] text-whg-dim leading-relaxed max-w-md">{t(d.sub)}</p>}
+      {d.note && <div className="w-full text-left"><Note text={t(d.note)} tone={d.noteTone} /></div>}
     </div>
   );
 }
