@@ -423,15 +423,17 @@ function CardDeck({
               </div>
             )}
             </>)}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
-              {(card.booklet ?? section.booklet) && (
-                <button
-                  onClick={() => onOpenBooklet((card.booklet ?? section.booklet)!.sort_order)}
-                  className="tap-highlight text-xs font-semibold text-sky-300 hover:underline py-1"
-                >
-                  📖 {isES ? 'Leer la sección completa' : 'Read the full section'}
-                </button>
-              )}
+            {/* The release valve that lets cards stay short — a real button,
+                right under the content. */}
+            {(card.booklet ?? section.booklet) && (
+              <button
+                onClick={() => onOpenBooklet((card.booklet ?? section.booklet)!.sort_order)}
+                className="tap-highlight w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 text-whg-snow text-sm font-semibold transition-colors"
+              >
+                📖 {isES ? 'Leer la política completa en el Manual' : 'Read the full policy in the Handbook'} →
+              </button>
+            )}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <button
                 onClick={() => onAsk(pick(card.quick_question, card.quick_question_es) || pick(card.headline, card.headline_es))}
                 className="tap-highlight text-xs font-semibold text-sky-300 hover:underline py-1"

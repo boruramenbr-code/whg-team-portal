@@ -17,7 +17,7 @@ const PATTERNS = ['waves', 'circles', 'hexagons'] as const;
 const ICON_KEYS = [
   'calendar', 'bulb', 'clock', 'bowl', 'cash', 'shirt', 'cup', 'phone',
   'growth', 'shield', 'alert', 'noglass', 'clipboard', 'lantern', 'book',
-  'check', 'x', 'send', 'users', 'plane', 'swap', 'star', 'arrow',
+  'check', 'x', 'send', 'users', 'plane', 'swap', 'star', 'arrow', 'pin',
 ] as const;
 type IconKey = (typeof ICON_KEYS)[number];
 
@@ -147,6 +147,11 @@ function IconPaths({ icon }: { icon: IconKey }) {
       return <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />;
     case 'arrow':
       return <path d="M4.5 12h15M13.5 6l6 6-6 6" />;
+    case 'pin':
+      return (<>
+        <path d="M12 21.5s-7-6.1-7-11.8a7 7 0 0 1 14 0c0 5.7-7 11.8-7 11.8z" />
+        <circle cx="12" cy="9.7" r="2.6" />
+      </>);
     default:
       return (<>
         <path d="M3 5.5h5.5a3.5 3.5 0 0 1 3.5 3.5v11a2.5 2.5 0 0 0-2.5-2.5H3z" />

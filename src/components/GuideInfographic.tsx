@@ -17,7 +17,10 @@ export type Txt = string | { en: string; es?: string | null };
 
 type Footer = { text: Txt; icon?: string; tone?: 'warn' | 'info' };
 
-export type Infographic =
+/** Shared by every shape: one line of reason, one line of real-shift example. */
+type Context = { why?: Txt; example?: Txt };
+
+export type Infographic = Context & (
   | { type: 'stat'; value: string; unit?: Txt; label: Txt; sub?: Txt; icon?: string; segments?: number; footer?: Footer }
   | { type: 'steps'; tone?: 'process' | 'escalation'; steps: { title: Txt; sub?: Txt }[]; note?: Txt }
   | { type: 'dodont'; do: Txt[]; dont: Txt[]; doLabel?: Txt; dontLabel?: Txt; note?: Txt }
@@ -25,7 +28,8 @@ export type Infographic =
   | { type: 'day'; from: string; to: string; blocks: { start: string; end: string }[]; blockLabel: Txt; openLabel?: Txt }
   | { type: 'compare'; left: CompareSide; right: CompareSide }
   | { type: 'periods'; periods: { range: Txt; pay: Txt }[]; note?: Txt }
-  | { type: 'icon'; icon: string; phrase: Txt; sub?: Txt };
+  | { type: 'icon'; icon: string; phrase: Txt; sub?: Txt }
+);
 
 type CompareSide = { title: Txt; icon?: string; lines: Txt[] };
 
@@ -69,11 +73,30 @@ export default function GuideInfographic({ data, accent, isES }: Props) {
         aria-hidden
       />
       {body}
+      {(data.why || data.example) && (
+        <div className="mt-5 pt-4 border-t border-white/10 space-y-3">
+          {data.why && <ContextRow icon="bulb" label={isES ? 'Por qué importa' : 'Why it matters'} text={t(data.why)} color={accent} />}
+          {data.example && <ContextRow icon="pin" label={isES ? 'Ejemplo' : 'Example'} text={t(data.example)} color={accent} />}
+        </div>
+      )}
     </div>
   );
 }
 
 type T = (v: Txt | undefined | null) => string;
+
+/* ── The context strip — same place on every card ── */
+function ContextRow({ icon, label, text, color }: { icon: string; label: string; text: string; color: string }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <GuideIcon icon={icon} className="w-[18px] h-[18px] mt-0.5 flex-shrink-0" style={{ color }} strokeWidth={1.7} />
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>{label}</p>
+        <p className="text-sm md:text-[15px] text-whg-snow/85 leading-relaxed mt-0.5">{text}</p>
+      </div>
+    </div>
+  );
+}
 
 /* ── Medallion: icon in a soft ring, the same motif as the covers ── */
 function Medallion({ icon, color, size = 'md' }: { icon: string; color: string; size?: 'sm' | 'md' | 'lg' }) {

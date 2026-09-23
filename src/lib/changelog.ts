@@ -24,6 +24,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.23.2',
+    date: 'September 23, 2026',
+    title: '📊 Infographics get context',
+    notes: [
+      'Every Quick Guide infographic can now add “Why it matters” — the reason behind the rule — and an “Example” from a real shift, always in the same spot',
+      '“Read the full policy in the Handbook” is now a real button right under the card',
+    ],
+  },
+  {
     version: '2026.09.23',
     date: 'September 23, 2026',
     title: '📊 Quick Guide infographics (pilot)',
