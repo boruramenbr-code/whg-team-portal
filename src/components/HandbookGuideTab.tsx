@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import GuideCover, { GuideTopicIcon } from './GuideCover';
+import GuideCover, { GuideTopicIcon, guideAccent } from './GuideCover';
+import GuideInfographic, { type Infographic } from './GuideInfographic';
 
 /* ───────── Types (mirror /api/handbook-cards) ───────── */
 export interface GuideCard {
@@ -16,6 +17,8 @@ export interface GuideCard {
   quick_question: string | null;
   quick_question_es: string | null;
   image_url: string | null;
+  /** Drawn infographic (migration 088) — shown in place of image_url when present. */
+  infographic?: Infographic | null;
   /** The card's own booklet source (cross-topic cards); falls back to the section's. */
   booklet?: { title: string; sort_order: number } | null;
 }
@@ -374,6 +377,17 @@ function CardDeck({
       >
         {card ? (
           <div key={card.id} className="max-w-xl mx-auto px-5 py-5 space-y-5 animate-sheet-up">
+            {/* With an infographic, it carries the explanation: headline, then
+                the graphic — its data already holds the points and the heads-up.
+                Without one, the classic picture → headline → points → callout. */}
+            {card.infographic ? (
+              <>
+                <h2 className="text-2xl md:text-3xl font-bold text-whg-snow leading-tight">
+                  {pick(card.headline, card.headline_es)}
+                </h2>
+                <GuideInfographic data={card.infographic} accent={guideAccent(sectionIndex)} isES={isES} />
+              </>
+            ) : (<>
             {card.image_url && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -408,6 +422,7 @@ function CardDeck({
                 <p className="text-[15px] text-amber-100 leading-relaxed">{callout}</p>
               </div>
             )}
+            </>)}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
               {(card.booklet ?? section.booklet) && (
                 <button

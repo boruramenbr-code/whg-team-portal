@@ -47,8 +47,6 @@ export async function GET() {
     return NextResponse.json({ sections: [], is_admin: isAdmin });
   }
 
-  // Per-card source column arrived in migration 079 — fall back cleanly
-  // if it hasn't been run yet.
   const sectionIds = sections.map((s) => s.id);
   const cardsQuery = (columns: string) => adminClient
     .from('handbook_cards')
@@ -56,7 +54,10 @@ export async function GET() {
     .in('section_id', sectionIds)
     .eq('active', true)
     .order('sort_order', { ascending: true });
-  let cardsResult = await cardsQuery(`${CARD_COLUMNS}, booklet_section_id`);
+  // Newest columns first; fall back cleanly while a migration hasn't run
+  // (079 = per-card booklet source, 088 = drawn infographic).
+  let cardsResult = await cardsQuery(`${CARD_COLUMNS}, booklet_section_id, infographic`);
+  if (cardsResult.error) cardsResult = await cardsQuery(`${CARD_COLUMNS}, booklet_section_id`);
   if (cardsResult.error) cardsResult = await cardsQuery(CARD_COLUMNS);
   const cards = (cardsResult.data ?? []) as unknown as Array<{
     id: string; section_id: string; reviewed_at: string; booklet_section_id?: string | null;

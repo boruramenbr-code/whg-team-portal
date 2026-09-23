@@ -14,9 +14,12 @@ import { useId, type CSSProperties } from 'react';
 const ACCENTS = ['#D9A94E', '#5FB49C', '#E0694A', '#7FA7D9', '#B48CC8', '#E8A0B4', '#4DB6C4'];
 const PATTERNS = ['waves', 'circles', 'hexagons'] as const;
 
-type IconKey =
-  | 'calendar' | 'bulb' | 'clock' | 'bowl' | 'cash' | 'shirt' | 'cup' | 'phone'
-  | 'growth' | 'shield' | 'alert' | 'noglass' | 'clipboard' | 'lantern' | 'book';
+const ICON_KEYS = [
+  'calendar', 'bulb', 'clock', 'bowl', 'cash', 'shirt', 'cup', 'phone',
+  'growth', 'shield', 'alert', 'noglass', 'clipboard', 'lantern', 'book',
+  'check', 'x', 'send', 'users', 'plane', 'swap', 'star', 'arrow',
+] as const;
+type IconKey = (typeof ICON_KEYS)[number];
 
 /** Topic emoji → icon (the emoji is the stable key already on every topic). */
 const BY_EMOJI: Record<string, IconKey> = {
@@ -124,12 +127,47 @@ function IconPaths({ icon }: { icon: IconKey }) {
         <path d="M6.6 8.5h10.8M6.3 12h11.4M6.6 15.5h10.8" />
         <path d="M10.5 19.5v2h3v-2" />
       </>);
+    case 'check':
+      return <path d="M5 12.5l4.5 4.5L19 7.5" />;
+    case 'x':
+      return <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />;
+    case 'send':
+      return <path d="M21.5 3L10.5 14M21.5 3l-7 18.5-4-7.5L3 10z" />;
+    case 'users':
+      return (<>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20.5c0-3.4 2.9-5.8 6.5-5.8s6.5 2.4 6.5 5.8" />
+        <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M17.8 14.9c2.2.7 3.7 2.8 3.7 5.6" />
+      </>);
+    case 'plane':
+      return <path d="M12 2.5c.8 0 1.5.7 1.5 1.5v5.2l7.5 4.3v2l-7.5-2.3v4.5l2.2 1.6v1.6L12 20l-3.7.9v-1.6l2.2-1.6v-4.5L3 15.5v-2l7.5-4.3V4c0-.8.7-1.5 1.5-1.5z" />;
+    case 'swap':
+      return <path d="M4 8h15.5l-3.5-3.5M20 16H4.5L8 19.5" />;
+    case 'star':
+      return <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" />;
+    case 'arrow':
+      return <path d="M4.5 12h15M13.5 6l6 6-6 6" />;
     default:
       return (<>
         <path d="M3 5.5h5.5a3.5 3.5 0 0 1 3.5 3.5v11a2.5 2.5 0 0 0-2.5-2.5H3z" />
         <path d="M21 5.5h-5.5A3.5 3.5 0 0 0 12 9v11a2.5 2.5 0 0 1 2.5-2.5H21z" />
       </>);
   }
+}
+
+/** Any icon from the set, by name (unknown names fall back to a book). */
+export function GuideIcon({
+  icon, className = 'w-5 h-5', style, strokeWidth = 1.6,
+}: { icon: string; className?: string; style?: CSSProperties; strokeWidth?: number }) {
+  const key = (ICON_KEYS as readonly string[]).includes(icon) ? (icon as IconKey) : 'book';
+  return (
+    <svg
+      viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth}
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className} style={style}
+    >
+      <IconPaths icon={key} />
+    </svg>
+  );
 }
 
 /** The topic's line icon — for small spots like headers and search results. */

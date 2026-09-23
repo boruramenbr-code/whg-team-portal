@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.23',
+    date: 'September 23, 2026',
+    title: '📊 Quick Guide infographics (pilot)',
+    notes: [
+      'Quick Guide cards can now show a drawn infographic in place of the old emoji pictures — key numbers, escalation steps, step-by-step processes, time windows on the clock, do and don’t, checklists, side-by-sides, and pay calendars',
+      'Each one uses its topic’s color and switches to Spanish with the rest of the app',
+      'When a card has an infographic, it carries the explanation: headline first, then the graphic',
+      'First up (owner preview): Lates, Call-Outs & Time Off, and the no-eating windows in Meals & Perks',
+    ],
+  },
+  {
     version: '2026.09.22.5',
     date: 'September 22, 2026',
     title: '📍 Start Here',
