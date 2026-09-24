@@ -5,8 +5,8 @@ import Header from '@/components/Header';
 
 /**
  * Manager Resources — the learning half of the manager zone (Manager Bible,
- * Academy, calculators). Same people as Mission Control: Managers, AMs, KMs
- * and Assistant KMs (by role), plus ownership.
+ * Academy, calculators). Same people as Mission Control: Managers, AMs, KMs,
+ * Assistant KMs and Sushi Managers (by role), plus ownership.
  */
 export default async function ResourcesPage() {
   const supabase = createClient();

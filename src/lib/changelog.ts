@@ -24,6 +24,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.24.4',
+    date: 'September 24, 2026',
+    title: '🍣 Sushi Managers join the manager zone',
+    notes: [
+      'Sushi Managers now count as kitchen-manager level: they get the Managers button (Mission Control and Manager Resources), same as KMs',
+    ],
+  },
+  {
     version: '2026.09.24.3',
     date: 'September 24, 2026',
     title: '🗝️ The manager zone — Mission Control gets its own look',
@@ -32,7 +40,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Mission Control has its own Charcoal & Gold look with a gold Mission Control band on every screen, so you always know you’re in the manager side',
       'New: Manager Resources — the Manager Bible (read or ask), Manager Academy lessons and videos, and the manager calculators, all in one place',
       'Compliance moved under People; the Standards tab is gone (the Manager Bible lives in Manager Resources). Old Academy links still work and open in Manager Resources',
-      'The manager zone is for Managers, AMs, KMs, and Assistant KMs',
+      'The manager zone is for Managers, AMs, KMs, Assistant KMs, and Sushi Managers',
     ],
   },
   {

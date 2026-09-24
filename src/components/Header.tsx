@@ -13,7 +13,7 @@ const HEADER_LOGO: Record<string, { src: string; mobileH: string; desktopH: stri
 
 interface HeaderProps {
   profile: Profile & { restaurants?: { name: string } };
-  /** Managers, AMs, KMs and Assistant KMs — shows the Managers button. */
+  /** Managers, AMs, KMs, Assistant KMs and Sushi Managers — shows the Managers button. */
   showAdminLink?: boolean;
   /** 'admin' = Mission Control, 'resources' = Manager Resources (the manager zone). */
   currentPage?: 'chat' | 'admin' | 'resources';
