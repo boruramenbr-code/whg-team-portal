@@ -51,12 +51,15 @@ function clearSavedLogin() {
   }
 }
 
-const RESTAURANT_COLORS: Record<string, string> = {
-  'Ichiban Sushi': 'from-red-600 to-red-800',
-  'Boru Ramen': 'from-orange-500 to-orange-700',
-  'Shokudo': 'from-emerald-600 to-emerald-800',
-  'Central Hub': 'from-[#1B3A6B] to-[#0F1E3C]',
+// Each restaurant keeps its color as a quiet accent (Sept 2026 reskin):
+// staff still spot "the red one," but the screen reads as one WHG brand.
+const RESTAURANT_ACCENT: Record<string, string> = {
+  'Ichiban Sushi': '#DC2626',
+  'Boru Ramen': '#F97316',
+  'Shokudo': '#10B981',
+  'Central Hub': '#D9A94E',
 };
+const accentFor = (name?: string | null) => (name && RESTAURANT_ACCENT[name]) || '#D9A94E';
 
 const RESTAURANT_EMOJI: Record<string, string> = {
   'Ichiban Sushi': '🍣',
@@ -65,17 +68,11 @@ const RESTAURANT_EMOJI: Record<string, string> = {
   'Central Hub': '☕',
 };
 
-// White logos for dark gradient cards; black logos for light surfaces
+// White logos sit on the dark restaurant cards.
 const RESTAURANT_LOGO_WHITE: Record<string, string> = {
   'Ichiban Sushi': '/logos/ichiban-white.png',
   'Boru Ramen': '/logos/boru-white.png',
   'Shokudo': '/logos/shokudo-white.png',
-};
-
-const RESTAURANT_LOGO_BLACK: Record<string, string> = {
-  'Ichiban Sushi': '/logos/ichiban-black.png',
-  'Boru Ramen': '/logos/boru-black.png',
-  'Shokudo': '/logos/shokudo-black.png',
 };
 
 /**
@@ -90,8 +87,8 @@ function PinDots({ pin }: { pin: string }) {
           key={i}
           className={`w-3 h-3 rounded-full border-2 transition-all duration-150 ${
             i < pin.length
-              ? 'bg-white border-white scale-110'
-              : 'bg-transparent border-white/40'
+              ? 'bg-whg-gold border-whg-gold scale-110'
+              : 'bg-transparent border-whg-dim/50'
           }`}
         />
       ))}
@@ -127,12 +124,13 @@ function PinPad({
             key={k}
             onClick={() => onKey(k)}
             disabled={isDisabled}
-            className={`h-14 rounded-2xl text-lg font-bold transition-all active:scale-95 disabled:opacity-30 ${
+            aria-label={isBackspace ? 'Delete' : isConfirm ? 'Sign in' : k}
+            className={`h-14 rounded-2xl text-xl font-semibold tabular-nums transition-all active:scale-95 disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-whg-gold ${
               isBackspace
-                ? 'bg-white/10 text-white hover:bg-white/20'
+                ? 'bg-transparent text-whg-dim hover:text-whg-snow'
                 : isConfirm
-                ? 'bg-white text-[#1B3A6B] hover:bg-white/90'
-                : 'bg-white/20 text-white hover:bg-white/30'
+                ? 'bg-whg-gold text-whg-goldink hover:bg-whg-gold2'
+                : 'bg-whg-card2 text-whg-snow border border-whg-line hover:border-whg-gold/40'
             }`}
           >
             {k}
@@ -360,53 +358,69 @@ export default function LoginPage() {
 
   const firstName = selectedStaff?.full_name.split(' ')[0];
 
+  const initials = (name: string) => name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  // Past the restaurant grid the logo shrinks, so the whole PIN pad fits on a phone without scrolling.
+  const compact = mode === 'staff' && step > 1;
+
   return (
-    <div className="min-h-screen bg-[#0F1E3C] flex flex-col items-center justify-center px-4 py-8">
+    <div className="relative min-h-screen bg-whg-night flex flex-col items-center justify-center px-4 py-8 overflow-hidden">
+      {/* Seigaiha waves in faint gold behind the logo — the same pattern family as the Quick Guide covers. */}
+      <svg aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[420px] w-full" preserveAspectRatio="none">
+        <defs>
+          <pattern id="login-waves" patternUnits="userSpaceOnUse" width="48" height="24">
+            <g fill="none" stroke="#D9A94E" strokeWidth="1">
+              {[[24, 0], [24, 24], [0, 12], [48, 12]].map(([cx, cy]) =>
+                [11.5, 8, 4.5].map((r) => <circle key={`${cx}-${cy}-${r}`} cx={cx} cy={cy} r={r} />))}
+            </g>
+          </pattern>
+          <linearGradient id="login-fade" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fff" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </linearGradient>
+          <mask id="login-mask"><rect width="100%" height="100%" fill="url(#login-fade)" /></mask>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#login-waves)" mask="url(#login-mask)" opacity="0.09" />
+      </svg>
+      <div aria-hidden className="pointer-events-none absolute top-24 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full bg-whg-gold/10 blur-3xl" />
+
       {/* Brand header */}
-      <div className="text-center mb-6">
+      <div className={`relative text-center transition-all ${compact ? 'mb-4' : 'mb-7'}`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/logos/whg.jpg"
           alt="Wong Hospitality Group"
-          className="h-36 w-auto object-contain mx-auto rounded-xl mb-3"
+          className={`object-cover mx-auto ring-1 ring-whg-gold/40 shadow-[0_18px_40px_rgba(0,0,0,0.5)] transition-all ${compact ? 'h-16 w-16 rounded-xl' : 'h-32 w-32 rounded-2xl'}`}
         />
-        <p className="text-[#7BA7D3] text-xs mt-1 tracking-widest uppercase">
+        <p className={`text-whg-gold text-[11px] font-bold tracking-[0.3em] uppercase ${compact ? 'mt-2.5' : 'mt-4'}`}>
           Team Portal
         </p>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex bg-white/10 rounded-xl p-1 mb-6 gap-1">
-        <button
-          onClick={() => switchMode('staff')}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-            mode === 'staff'
-              ? 'bg-white text-[#1B3A6B] shadow-sm'
-              : 'text-white/60 hover:text-white'
-          }`}
-        >
-          Staff Login
-        </button>
-        <button
-          onClick={() => switchMode('manager')}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-            mode === 'manager'
-              ? 'bg-white text-[#1B3A6B] shadow-sm'
-              : 'text-white/60 hover:text-white'
-          }`}
-        >
-          Manager / Owner
-        </button>
+      <div className={`relative flex bg-whg-card border border-whg-line rounded-xl p-1 gap-1 ${compact ? 'mb-4' : 'mb-7'}`} role="tablist">
+        {([['staff', 'Staff Login'], ['manager', 'Manager / Owner']] as const).map(([m, label]) => (
+          <button
+            key={m}
+            role="tab"
+            aria-selected={mode === m}
+            onClick={() => switchMode(m)}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-whg-gold ${
+              mode === m ? 'bg-whg-gold text-whg-goldink shadow-sm' : 'text-whg-dim hover:text-whg-snow'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* ─── STAFF FLOW ─── */}
       {mode === 'staff' && (
-        <div className="w-full max-w-sm">
+        <div className="relative w-full max-w-sm">
           {/* Step header */}
           {step > 1 && (
             <button
               onClick={goBack}
-              className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm mb-4 transition-colors"
+              className="flex items-center gap-1.5 text-whg-dim hover:text-whg-snow text-sm mb-4 transition-colors"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" />
@@ -418,9 +432,11 @@ export default function LoginPage() {
           {/* STEP 1: Restaurant Selection */}
           {step === 1 && (
             <div>
-              <p className="text-white/70 text-sm text-center mb-4">Select your restaurant</p>
+              <p className="text-whg-snow/80 text-sm text-center mb-4">Select your restaurant</p>
               {restaurantsLoading ? (
-                <div className="text-center text-white/40 py-8 text-sm">Loading...</div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[0, 1, 2, 3].map((i) => <div key={i} className="aspect-square rounded-2xl bg-whg-card/60 animate-pulse" />)}
+                </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   {restaurants.map((r) => {
@@ -429,29 +445,25 @@ export default function LoginPage() {
                       <button
                         key={r.id}
                         onClick={() => handleRestaurantSelect(r)}
-                        className={`bg-gradient-to-br ${
-                          RESTAURANT_COLORS[r.name] || 'from-[#1B3A6B] to-[#0F1E3C]'
-                        } rounded-2xl shadow-lg hover:scale-105 transition-all active:scale-95 border border-white/10 flex items-center justify-center ${
-                          logoSrc ? 'p-3 aspect-square' : 'p-4 flex-col'
-                        }`}
+                        className="group relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-b from-whg-card2 to-whg-card border border-whg-line hover:border-whg-gold/50 shadow-lg transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-whg-gold flex flex-col items-center justify-center p-4"
                       >
+                        <span aria-hidden className="absolute inset-x-0 top-0 h-1" style={{ background: accentFor(r.name) }} />
                         {logoSrc ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
                             src={logoSrc}
-                            alt={`${r.name} logo`}
-                            className={`w-full h-full object-contain drop-shadow-md ${
-                              r.name === 'Shokudo' ? 'scale-125' : 'p-1'
-                            }`}
+                            alt=""
+                            className={`w-full flex-1 min-h-0 object-contain opacity-90 group-hover:opacity-100 transition-opacity ${r.name === 'Shokudo' ? 'scale-125' : 'p-1'}`}
                           />
                         ) : (
-                          <>
-                            <div className="text-2xl mb-2">
-                              {RESTAURANT_EMOJI[r.name] || '🍽️'}
-                            </div>
-                            <p className="text-white font-bold text-sm leading-tight text-center">{r.name}</p>
-                          </>
+                          <div className="flex-1 flex items-center justify-center text-whg-gold/90 group-hover:text-whg-gold transition-colors">
+                            {/* No logo yet (e.g. Central Hub) — a gold building mark instead of a tiny emoji. */}
+                            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 11h.01M15 11h.01" />
+                            </svg>
+                          </div>
                         )}
+                        <p className="mt-2 text-[11px] font-semibold uppercase tracking-widest text-whg-dim group-hover:text-whg-snow transition-colors">{r.name}</p>
                       </button>
                     );
                   })}
@@ -462,94 +474,107 @@ export default function LoginPage() {
 
           {/* STEP 2: Staff Name Selection */}
           {step === 2 && selectedRestaurant && (
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                {RESTAURANT_LOGO_WHITE[selectedRestaurant.name] ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={RESTAURANT_LOGO_WHITE[selectedRestaurant.name]}
-                    alt={`${selectedRestaurant.name} logo`}
-                    className="h-7 w-auto object-contain"
-                  />
-                ) : (
-                  <span className="text-lg">{RESTAURANT_EMOJI[selectedRestaurant.name] || '🍽️'}</span>
-                )}
-                <p className="text-white font-semibold">{selectedRestaurant.name}</p>
-              </div>
-              <p className="text-white/60 text-sm mb-3">Select your name</p>
-
-              <input
-                type="text"
-                value={staffSearch}
-                onChange={(e) => setStaffSearch(e.target.value)}
-                placeholder="Search..."
-                className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 mb-3"
-              />
-
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {staffLoading ? (
-                  <div className="text-center text-white/40 py-6 text-sm">Loading...</div>
-                ) : filteredStaff.length === 0 ? (
-                  <div className="text-center text-white/40 py-6 text-sm">
-                    {staffSearch ? 'No matches found.' : 'No staff found for this location.'}
+            <div className="rounded-3xl bg-whg-card border border-whg-line overflow-hidden">
+              <span aria-hidden className="block h-1" style={{ background: accentFor(selectedRestaurant.name) }} />
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  {RESTAURANT_LOGO_WHITE[selectedRestaurant.name] ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={RESTAURANT_LOGO_WHITE[selectedRestaurant.name]}
+                      alt=""
+                      className="h-8 w-auto object-contain"
+                    />
+                  ) : (
+                    <span className="text-lg">{RESTAURANT_EMOJI[selectedRestaurant.name] || '🍽️'}</span>
+                  )}
+                  <div>
+                    <p className="text-whg-snow font-semibold leading-tight">{selectedRestaurant.name}</p>
+                    <p className="text-whg-dim text-xs">Tap your name</p>
                   </div>
-                ) : (
-                  filteredStaff.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => handleStaffSelect(s)}
-                      className="w-full text-left px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white font-medium text-sm transition-all active:scale-98"
-                    >
-                      {s.full_name}
-                    </button>
-                  ))
-                )}
+                </div>
+
+                <div className="relative mb-3">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-whg-dim" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                    <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={staffSearch}
+                    onChange={(e) => setStaffSearch(e.target.value)}
+                    placeholder="Search your name"
+                    aria-label="Search your name"
+                    className="w-full pl-10 pr-4 py-2.5 bg-whg-night border border-whg-line rounded-xl text-whg-snow placeholder-whg-dim/70 text-sm focus:outline-none focus:ring-2 focus:ring-whg-gold/60"
+                  />
+                </div>
+
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {staffLoading ? (
+                    <div className="text-center text-whg-dim py-6 text-sm">Loading…</div>
+                  ) : filteredStaff.length === 0 ? (
+                    <div className="text-center text-whg-dim py-6 text-sm">
+                      {staffSearch ? 'No matches found.' : 'No staff found for this location.'}
+                    </div>
+                  ) : (
+                    filteredStaff.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleStaffSelect(s)}
+                        className="w-full flex items-center gap-3 text-left px-3 py-2.5 bg-whg-night/60 hover:bg-whg-card2 border border-whg-line hover:border-whg-gold/40 rounded-xl text-whg-snow font-medium text-sm transition-all active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-whg-gold"
+                      >
+                        <span className="w-8 h-8 flex-shrink-0 rounded-full bg-whg-gold/12 border border-whg-gold/30 text-whg-gold text-[11px] font-bold flex items-center justify-center">
+                          {initials(s.full_name)}
+                        </span>
+                        {s.full_name}
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}
 
           {/* STEP 3: PIN Pad */}
           {step === 3 && selectedStaff && (
-            <div className={`bg-gradient-to-br ${
-              RESTAURANT_COLORS[selectedRestaurant?.name || ''] || 'from-[#1B3A6B] to-[#0F1E3C]'
-            } rounded-3xl p-6 border border-white/10 shadow-2xl`}>
-              <div className="text-center">
-                <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-white text-xl font-bold">
-                    {selectedStaff.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                  </span>
+            <div className="rounded-3xl bg-whg-card border border-whg-line shadow-2xl overflow-hidden">
+              <span aria-hidden className="block h-1" style={{ background: accentFor(selectedRestaurant?.name) }} />
+              <div className="p-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-whg-night border-2 border-whg-gold/60 flex items-center justify-center mx-auto mb-3">
+                    <span className="text-whg-gold text-xl font-bold">{initials(selectedStaff.full_name)}</span>
+                  </div>
+                  <p className="text-whg-snow font-bold text-lg">
+                    {isRemembered ? `Welcome back, ${firstName}` : `Hey, ${firstName}!`}
+                  </p>
+                  <p className="text-whg-dim text-xs mt-0.5">{selectedRestaurant?.name}</p>
+                  {isRemembered && (
+                    <button
+                      onClick={forgetSavedLogin}
+                      className="text-whg-dim hover:text-whg-snow underline underline-offset-2 text-sm min-h-[44px] px-3 -mb-2 transition-colors"
+                    >
+                      Not you? Switch person
+                    </button>
+                  )}
                 </div>
-                <p className="text-white font-bold text-lg">
-                  {isRemembered ? `Welcome back, ${firstName}` : `Hey, ${firstName}!`}
+
+                <p className="text-whg-snow/75 text-sm text-center mt-4">
+                  Enter your clock-in code, then tap ✓
                 </p>
-                <p className="text-white/60 text-xs mt-0.5">{selectedRestaurant?.name}</p>
-                {isRemembered && (
-                  <button
-                    onClick={forgetSavedLogin}
-                    className="text-white/60 hover:text-white underline underline-offset-2 text-sm min-h-[44px] px-3 -mb-2 transition-colors"
-                  >
-                    Not you? Switch person
-                  </button>
+
+                <PinDots pin={pin} />
+
+                {error && (
+                  <div role="alert" className="bg-red-500/15 border border-red-400/30 text-red-200 text-sm text-center px-4 py-2.5 rounded-xl mb-4">
+                    {error}
+                  </div>
+                )}
+
+                <PinPad pin={pin} onKey={handlePinKey} loading={loading} />
+
+                {loading && (
+                  <p className="text-whg-dim text-xs text-center mt-4">Signing in…</p>
                 )}
               </div>
-
-              <p className="text-white/70 text-sm text-center mt-4">
-                Enter your clock-in code, then tap ✓
-              </p>
-
-              <PinDots pin={pin} />
-
-              {error && (
-                <div className="bg-red-500/20 border border-red-400/30 text-red-200 text-sm text-center px-4 py-2.5 rounded-xl mb-4">
-                  {error}
-                </div>
-              )}
-
-              <PinPad pin={pin} onKey={handlePinKey} loading={loading} />
-
-              {loading && (
-                <p className="text-white/50 text-xs text-center mt-4">Signing in...</p>
-              )}
             </div>
           )}
         </div>
@@ -557,67 +582,72 @@ export default function LoginPage() {
 
       {/* ─── MANAGER / OWNER FLOW ─── */}
       {mode === 'manager' && (
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-[#1B3A6B] text-lg font-bold mb-1 text-center">Manager Login</h2>
-          <p className="text-gray-400 text-xs text-center mb-6">Use your email and password</p>
+        <div className="relative w-full max-w-sm rounded-3xl bg-whg-card border border-whg-line shadow-2xl overflow-hidden">
+          <span aria-hidden className="block h-1 bg-gradient-to-r from-whg-gold to-[#B8893A]" />
+          <div className="p-7">
+            <h2 className="text-whg-snow text-lg font-bold mb-1 text-center">Manager &amp; Owner sign-in</h2>
+            <p className="text-whg-dim text-xs text-center mb-6">Use your email and password</p>
 
-          <form onSubmit={handleManagerLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-gray-800 text-sm"
-                placeholder="your@email.com"
-                autoComplete="email"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E86C1] text-gray-800 text-sm"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-sm px-4 py-3 rounded-xl">
-                {error}
+            <form onSubmit={handleManagerLogin} className="space-y-4">
+              <div>
+                <label htmlFor="login-email" className="block text-[11px] font-semibold text-whg-dim mb-1.5 uppercase tracking-widest">
+                  Email address
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-whg-night border border-whg-line rounded-xl text-whg-snow placeholder-whg-dim/60 text-sm focus:outline-none focus:ring-2 focus:ring-whg-gold/60"
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  required
+                />
               </div>
-            )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#1B3A6B] hover:bg-[#2E86C1] text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60 text-sm mt-1"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : 'Sign In'}
-            </button>
-          </form>
+              <div>
+                <label htmlFor="login-password" className="block text-[11px] font-semibold text-whg-dim mb-1.5 uppercase tracking-widest">
+                  Password
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-whg-night border border-whg-line rounded-xl text-whg-snow placeholder-whg-dim/60 text-sm focus:outline-none focus:ring-2 focus:ring-whg-gold/60"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div role="alert" className="bg-red-500/15 border border-red-400/30 text-red-200 text-sm px-4 py-3 rounded-xl">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-whg-gold hover:bg-whg-gold2 text-whg-goldink font-bold py-3 rounded-xl transition-colors disabled:opacity-60 text-sm mt-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-whg-gold2 focus-visible:ring-offset-2 focus-visible:ring-offset-whg-card"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Signing in…
+                  </span>
+                ) : 'Sign In'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
-      <p className="text-[#7BA7D3]/40 text-xs mt-8 text-center">
+      <p className="relative text-whg-dim/60 text-xs mt-10 text-center">
         © {new Date().getFullYear()} Wong Hospitality Group · Baton Rouge, LA · {APP_VERSION}
       </p>
     </div>

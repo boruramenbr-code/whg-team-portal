@@ -9,9 +9,9 @@
 // - Never cache auth routes, user-specific mutations, or chat responses.
 // - The activate handler auto-deletes any cache not matching current names.
 
-const CACHE_NAME = 'whg-team-v4';
-const STATIC_CACHE = 'whg-static-v4';
-const API_CACHE = 'whg-api-v4';
+const CACHE_NAME = 'whg-team-v5';
+const STATIC_CACHE = 'whg-static-v5';
+const API_CACHE = 'whg-api-v5';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [

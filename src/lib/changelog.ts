@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.24.5',
+    date: 'September 24, 2026',
+    title: '🔑 A new login screen',
+    notes: [
+      'The login screen now matches the app: midnight navy and gold, with faint gold waves behind the WHG logo',
+      'Restaurant cards are dark with each restaurant’s logo and a thin line in its own color, so you can still spot yours at a glance',
+      'Your name list shows initials, and the PIN pad has gold dots and a gold ✓. The logo shrinks after you pick your restaurant, so the whole PIN pad fits on your phone without scrolling',
+      'Manager & Owner sign-in and the offline screen match too',
+    ],
+  },
+  {
     version: '2026.09.24.4',
     date: 'September 24, 2026',
     title: '🍣 Sushi Managers join the manager zone',
