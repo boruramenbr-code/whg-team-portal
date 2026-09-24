@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import WelcomeVideo from './WelcomeVideo';
 import {
   STAGE_META,
   type GuideStage,
@@ -27,6 +28,8 @@ interface GuideResponse {
   position?: { slug: string; name: string; emoji: string | null } | null;
   assignment?: { trainer_id: string | null; trainer_name: string | null; start_date: string } | null;
   team?: TeamPerson[];
+  /** The owner's welcome video (YouTube id) — opens the Welcome step. */
+  welcome_video_id?: string | null;
 }
 
 interface Props {
@@ -321,6 +324,10 @@ function StagePanel({
         <p className="mt-3 text-xs text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-xl px-3 py-2">
           🔒 {t('Finish', 'Termina')} “{isES ? STAGE_META[firstOpen.key].es : STAGE_META[firstOpen.key].en}” {t('first — this opens right after.', 'primero — esto se abre justo después.')}
         </p>
+      )}
+
+      {stage.key === 'welcome' && data.welcome_video_id && (
+        <div className="mt-4"><WelcomeVideo id={data.welcome_video_id} isES={isES} /></div>
       )}
 
       {stage.key === 'team' && <TeamGallery data={data} isES={isES} />}

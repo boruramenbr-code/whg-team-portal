@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.23.4',
+    date: 'September 23, 2026',
+    title: '👋 Start Here gets a Welcome page',
+    notes: [
+      'New hires now land on a Welcome page in Start Here: Randy’s welcome video, where they are in training with one Continue button, their first steps, their first weeks, their restaurant, their people, the apps they’ll use, and the four Quick Guide topics to read first',
+      'First steps match Randy’s Telegram welcome message — and remind new hires to bring their I-9 originals on day one and never send ID photos over Telegram',
+      'Randy’s welcome video also opens step 1 of guided training, with Spanish captions turned on for Spanish speakers',
+      'Managers: add your restaurant’s address, parking, where to enter, and first-day notes (English + Spanish) in Mission Control → Pre-Shift → 📍 Start Here',
+    ],
+  },
+  {
     version: '2026.09.23.3',
     date: 'September 23, 2026',
     title: '📊 Every Quick Guide card gets an infographic',

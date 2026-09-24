@@ -27,6 +27,7 @@ const HandbookGuideTab = dynamic(() => import('./HandbookGuideTab'), { loading: 
 const OurTeamTab = dynamic(() => import('./OurTeamTab'), { loading: TabLoader, ssr: false });
 const PositionsSection = dynamic(() => import('./PositionsSection'), { loading: TabLoader, ssr: false });
 const OnboardingChecklist = dynamic(() => import('./OnboardingChecklist'), { loading: TabLoader, ssr: false });
+const StartHereWelcome = dynamic(() => import('./StartHereWelcome'), { loading: TabLoader, ssr: false });
 const MenuTab = dynamic(() => import('./MenuTab'), { loading: TabLoader, ssr: false });
 const MemoriesTab = dynamic(() => import('./MemoriesTab'), { loading: TabLoader, ssr: false });
 const WelcomeWizard = dynamic(() => import('./WelcomeWizard'), { ssr: false });
@@ -42,7 +43,7 @@ interface Props {
 // "Onboarding"; veterans just want the book). Positions merged into the
 // Team tab as a sub-view; Menu promoted to the freed slot.
 type TopTabKey = 'home' | 'training' | 'menu' | 'handbook' | 'ourteam';
-type HandbookSubTab = 'checklist' | 'guide' | 'read' | 'policies' | 'ask';
+type HandbookSubTab = 'welcome' | 'checklist' | 'guide' | 'read' | 'policies' | 'ask';
 type TeamSubTab = 'org' | 'positions' | 'memories';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ──
@@ -89,14 +90,14 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
 };
 
 export default function DashboardClient({ profile, isManager }: Props) {
-  // Smart default for the Onboarding sub-tab:
-  //   • New hires (welcome_until still in the future, or hired in the last 90 days) → land on Checklist
-  //   • Everyone else → land on Handbook (the old default)
+  // Smart default for the Start Here sub-tab:
+  //   • New hires (welcome_until still in the future, or hired in the last 90 days) → land on Welcome
+  //   • Everyone else → land on Handbook
   const todayMs = Date.now();
   const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
   const isWelcomeActive = profile.welcome_until && new Date(profile.welcome_until).getTime() >= todayMs;
   const isRecentHire = profile.hire_date && (todayMs - new Date(profile.hire_date).getTime()) <= ninetyDaysMs;
-  const defaultHandbookSub: HandbookSubTab = (isWelcomeActive || isRecentHire) ? 'checklist' : 'read';
+  const defaultHandbookSub: HandbookSubTab = (isWelcomeActive || isRecentHire) ? 'welcome' : 'read';
 
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');
   // Perf: visited tabs stay MOUNTED (hidden, not unmounted) so switching
@@ -116,6 +117,9 @@ export default function DashboardClient({ profile, isManager }: Props) {
   // can see (drafts are admin-only previews).
   const [guideSections, setGuideSections] = useState<GuideSection[] | null>(null);
   const [bookletFocus, setBookletFocus] = useState<number | null>(null);
+  // Welcome → "Know these first" opens a Quick Guide topic directly.
+  const [guideOpenSectionId, setGuideOpenSectionId] = useState<string | null>(null);
+  const clearGuideOpenSection = useCallback(() => setGuideOpenSectionId(null), []);
   useEffect(() => {
     if (guideSections !== null || !(activeTop === 'handbook' || visitedTops.has('handbook'))) return;
     let cancelled = false;
@@ -302,6 +306,7 @@ export default function DashboardClient({ profile, isManager }: Props) {
   };
 
   const handbookSubTabs: { key: HandbookSubTab; label: string; labelEs: string; emoji: string }[] = [
+    { key: 'welcome', label: 'Welcome', labelEs: 'Bienvenida', emoji: '👋' },
     { key: 'checklist', label: 'Onboarding Checklist', labelEs: 'Lista de Bienvenida', emoji: '✅' },
     { key: 'guide', label: 'Quick Guide', labelEs: 'Guía Rápida', emoji: '📘' },
     { key: 'read', label: 'Handbook', labelEs: 'Manual', emoji: '📖' },
@@ -528,6 +533,27 @@ export default function DashboardClient({ profile, isManager }: Props) {
             Sub-tabs themselves still mount on first open only. */}
         {tabMounted('handbook') && (
         <div className={tabShown('handbook') ? 'contents' : 'hidden'}>
+        {/* START HERE → Welcome — the new hire's front door */}
+        {activeHandbookSub === 'welcome' && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <StartHereWelcome
+              language={language}
+              restaurantId={showMasterSwitcher ? viewRestaurantId : null}
+              guideSections={guideSections}
+              onContinueTraining={() => setActiveTop('training')}
+              onOpenChecklist={() => setActiveHandbookSub('checklist')}
+              onOpenTopic={(id) => {
+                setGuideOpenSectionId(id);
+                setActiveHandbookSub('guide');
+              }}
+              onOpenTeam={() => {
+                setTeamSub('org');
+                setActiveTop('ourteam');
+              }}
+            />
+          </div>
+        )}
+
         {activeHandbookSub === 'checklist' && (
           <div className="flex-1 overflow-y-auto bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2 tab-content-enter">
             <div className="max-w-3xl mx-auto px-4 py-6 md:py-8">
@@ -564,6 +590,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
                 setActiveHandbookSub('read');
               }}
               onAsk={(question) => handleSelect(question)}
+              openSectionId={guideOpenSectionId}
+              onSectionOpened={clearGuideOpenSection}
             />
           </div>
         )}

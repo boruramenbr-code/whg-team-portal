@@ -6,13 +6,14 @@ import PreshiftEditor from './PreshiftEditor';
 import OwnerMessageEditor from './OwnerMessageEditor';
 import WelcomeNoteEditor from './WelcomeNoteEditor';
 import HolidaysEditor from './HolidaysEditor';
+import StartHereEditor from './StartHereEditor';
 
 interface Props {
   isAdmin: boolean;
   restaurants: Restaurant[];
 }
 
-type SubTab = 'preshift' | 'owner' | 'welcome' | 'holidays';
+type SubTab = 'preshift' | 'owner' | 'welcome' | 'starthere' | 'holidays';
 
 interface Pill {
   key: SubTab;
@@ -26,6 +27,7 @@ const PILLS: Pill[] = [
   { key: 'preshift',  label: 'Pre-Shift Notes', emoji: '📋', description: 'Daily specials, 86\'d items, focus' },
   { key: 'owner',     label: "Owner's Message", emoji: '💙', adminOnly: true, description: 'Rotating leadership notes from ownership' },
   { key: 'welcome',   label: 'Welcome Note',    emoji: '📌', description: 'Yellow sticky note shown on every staff member\'s first login' },
+  { key: 'starthere', label: 'Start Here',      emoji: '📍', description: 'The new hire\'s Welcome page — your welcome video and each restaurant\'s first-day details' },
   { key: 'holidays',  label: 'Holidays & Events', emoji: '📅', description: 'Closures, busy/slow days, and upcoming events. Shown on the home tab.' },
 ];
 
@@ -91,6 +93,7 @@ export default function PreshiftAdminContent({ isAdmin, restaurants }: Props) {
       )}
       {activeKey === 'owner' && isAdmin && <OwnerMessageEditor />}
       {activeKey === 'welcome' && <WelcomeNoteEditor />}
+      {activeKey === 'starthere' && <StartHereEditor isAdmin={isAdmin} />}
       {activeKey === 'holidays' && <HolidaysEditor restaurants={restaurants} />}
     </div>
   );

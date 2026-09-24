@@ -46,6 +46,10 @@ interface Props {
   onOpenBooklet: (sortOrder: number) => void;
   /** Send a question to Ask. */
   onAsk: (question: string) => void;
+  /** Open this topic's deck straight away (Start Here → Welcome's "Know these first"). */
+  openSectionId?: string | null;
+  /** Called once the requested topic has opened, so it doesn't reopen. */
+  onSectionOpened?: () => void;
 }
 
 const SEEN_KEY = 'whg_guide_seen';
@@ -61,7 +65,7 @@ const SEEN_KEY = 'whg_guide_seen';
  * "Seen" progress is per device (localStorage): a friendly checkmark,
  * not a compliance record.
  */
-export default function HandbookGuideTab({ language, sections, onOpenBooklet, onAsk }: Props) {
+export default function HandbookGuideTab({ language, sections, onOpenBooklet, onAsk, openSectionId, onSectionOpened }: Props) {
   const isES = language === 'es';
   const pick = useCallback((en: string | null, es: string | null) => (isES && es ? es : en || ''), [isES]);
 
@@ -88,6 +92,15 @@ export default function HandbookGuideTab({ language, sections, onOpenBooklet, on
     const index = cardId ? Math.max(0, section?.cards.findIndex((c) => c.id === cardId) ?? 0) : 0;
     setDeck({ sectionId, index });
   };
+
+  // Deep link from the Welcome page: open that topic once the cards are in.
+  useEffect(() => {
+    if (!openSectionId || !sections) return;
+    if (sections.some((s) => s.id === openSectionId && s.cards.length > 0)) {
+      setDeck({ sectionId: openSectionId, index: 0 });
+    }
+    onSectionOpened?.();
+  }, [openSectionId, sections, onSectionOpened]);
 
   const q = search.trim().toLowerCase();
   const results = q

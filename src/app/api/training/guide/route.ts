@@ -5,6 +5,7 @@ import { pingLastSeen } from '@/lib/last-seen';
 import { getOnboardingForUser } from '@/lib/onboarding';
 import { MANAGER_ROLES, resolveTrainingPath, isAssignedTrainer } from '@/lib/training-path';
 import { buildGuideStages, guideSummary, isInTraining } from '@/lib/guided-training';
+import { youtubeId } from '@/lib/youtube';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
 
   const rid = path.user.restaurant_id;
   const slug = path.user.position_slug;
-  const [onboarding, trainerRes, restaurantRes, positionRes, teamRes] = await Promise.all([
+  const [onboarding, trainerRes, restaurantRes, positionRes, teamRes, videoRes] = await Promise.all([
     getOnboardingForUser(admin, targetId),
     assignment?.trainer_id
       ? admin.from('profiles').select('full_name').eq('id', assignment.trainer_id).maybeSingle()
@@ -104,6 +105,8 @@ export async function GET(req: NextRequest) {
           .order('role_level', { ascending: true })
           .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [] }),
+    // The owner's welcome video opens the first step (migration 094).
+    admin.from('whg_settings').select('value').eq('key', 'welcome_video_url').maybeSingle(),
   ]);
 
   const stages = buildGuideStages({
@@ -133,6 +136,7 @@ export async function GET(req: NextRequest) {
           }
         : null,
       team: teamRes.data ?? [],
+      welcome_video_id: youtubeId((videoRes.data as { value?: string } | null)?.value),
     },
     { headers: { 'Cache-Control': 'private, no-store' } }
   );
