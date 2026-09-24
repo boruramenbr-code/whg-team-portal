@@ -99,6 +99,8 @@ interface MissionControlData {
   anniversaries: AnniversaryItem[];
   recognition_today: RecognitionToday;
   welcome_ending_soon: WelcomeEndingItem[];
+  /** New hires (3+ days in) with no onboarding item confirmed by a manager. */
+  onboarding_unconfirmed?: { profile_id: string; full_name: string; restaurant_name: string; days_since_hire: number }[];
   stale_86: Stale86Item[];
   /** Manager Academy: lessons/videos due for review within two weeks. */
   training_reviews?: { kind: 'lesson' | 'video'; id: string; title: string; where: string; due: string; days: number }[];
@@ -220,6 +222,7 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
     welcome_ending_soon,
     stale_86,
     training_reviews = [],
+    onboarding_unconfirmed = [],
     recently_archived,
     adoption,
     available_restaurants,
@@ -505,6 +508,22 @@ export default function MissionControlDashboard({ onNavigate }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── ONBOARDING — new hires waiting on a manager's confirmation ──── */}
+      {onboarding_unconfirmed.length > 0 && (
+        <AlertCard
+          variant="warning"
+          emoji="🧭"
+          title={`${onboarding_unconfirmed.length} new ${onboarding_unconfirmed.length === 1 ? 'hire has' : 'hires have'} no checklist items confirmed`}
+          description="Every onboarding item needs your check after theirs — until you confirm, nothing on their checklist counts as done. Sit down with each one, walk their list, and check off what’s finished."
+          items={onboarding_unconfirmed.map((h) => ({
+            primary: h.full_name,
+            secondary: `${h.restaurant_name} · hired ${h.days_since_hire} day${h.days_since_hire === 1 ? '' : 's'} ago`,
+          }))}
+          ctaLabel="Open Onboarding →"
+          onCta={() => onNavigate('onboarding')}
+        />
       )}
 
       {/* ── POLICY COMPLIANCE (orange warning) ──────────────────────────── */}

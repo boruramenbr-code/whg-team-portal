@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server';
+import { isOnboarding } from '@/lib/onboarding-window';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { todayInCentralTime, dateInCentralTime, todayMidnightUTC } from '@/lib/dates';
@@ -114,7 +115,7 @@ export async function GET(req: NextRequest) {
 
   let staffQ = adminClient
     .from('profiles')
-    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, date_of_birth, last_seen_at, welcome_dismissed_at, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
+    .select('id, full_name, restaurant_id, requires_bar_card, hire_date, welcome_until, date_of_birth, last_seen_at, welcome_dismissed_at, restaurants(name), bar_cards!profile_id(id, expiration_date, archived)')
     .eq('status', 'active');
   if (shouldScope) staffQ = staffQ.in('restaurant_id', scopedIds);
 
@@ -152,6 +153,7 @@ export async function GET(req: NextRequest) {
     upcomingHolidaysRes,
     activePoliciesRes,
     signaturesRes,
+    managerChecksRes,
   ] = await Promise.all([
     staffQ,
     restaurantsQ,
@@ -176,6 +178,8 @@ export async function GET(req: NextRequest) {
       .order('start_date', { ascending: true }),
     adminClient.from('policies').select('id, version, role_required').eq('active', true),
     adminClient.from('policy_signatures').select('user_id, policy_id, policy_version'),
+    // Who has at least one onboarding item confirmed by a manager.
+    adminClient.from('employee_onboarding_progress').select('user_id').not('manager_checked_at', 'is', null),
   ]);
 
   const staff = staffRes.data;
@@ -187,6 +191,22 @@ export async function GET(req: NextRequest) {
   const upcomingHolidays = upcomingHolidaysRes.data;
   const activePolicies = activePoliciesRes.data;
   const signatures = signaturesRes.data;
+
+  // ── New hires whose checklist no manager has confirmed yet ──
+  // Every onboarding item needs the manager's check after the employee's;
+  // without it nothing ever completes (Sept 2026: 0 of 19 new hires had a
+  // single confirmed item). Give them 3 days before flagging.
+  const confirmedUserIds = new Set(((managerChecksRes.data ?? []) as { user_id: string }[]).map((r) => r.user_id));
+  const onboardingUnconfirmed = (staff || [])
+    .filter((s) => isOnboarding(s) && !!s.hire_date && !confirmedUserIds.has(s.id))
+    .map((s) => ({
+      profile_id: s.id,
+      full_name: s.full_name,
+      restaurant_name: (s.restaurants as { name?: string } | null)?.name || '',
+      days_since_hire: Math.round((new Date(todayISO + 'T00:00:00').getTime() - new Date(s.hire_date + 'T00:00:00').getTime()) / 86400000),
+    }))
+    .filter((h) => h.days_since_hire >= 3)
+    .sort((a, b) => b.days_since_hire - a.days_since_hire);
 
   const expired: BarCardAlertItem[] = [];
   const critical: BarCardAlertItem[] = [];
@@ -561,6 +581,7 @@ export async function GET(req: NextRequest) {
         anniversaries: anniversariesToday,
       },
       welcome_ending_soon: welcomeEndingSoon,
+      onboarding_unconfirmed: onboardingUnconfirmed,
       stale_86: stale86,
       training_reviews: trainingReviews,
       recently_archived: recentlyArchived,

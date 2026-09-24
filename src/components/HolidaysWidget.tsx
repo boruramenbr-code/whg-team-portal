@@ -102,8 +102,8 @@ export default function HolidaysWidget({ language, holidays: provided }: Props) 
       {/* ── Section: Happening Today ── */}
       {todayHolidays.length > 0 && (
         <>
-          <h3 className="text-[11px] font-bold uppercase tracking-widest text-amber-300 flex items-center gap-1.5 mb-2 mt-1">
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <h3 className="text-[11px] font-bold uppercase tracking-widest text-whg-gold flex items-center gap-1.5 mb-2 mt-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-whg-gold animate-pulse" />
             {isES ? 'Sucediendo Hoy' : 'Happening Today'}
           </h3>
           <div className="space-y-2 mb-4">
@@ -118,7 +118,7 @@ export default function HolidaysWidget({ language, holidays: provided }: Props) 
       {upcomingHolidays.length > 0 && (
         <>
           <h3 className="text-[11px] font-bold uppercase tracking-widest text-whg-dim flex items-center gap-1.5 mb-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />
+            <span className="inline-block w-2 h-2 rounded-full bg-whg-dim" />
             {isES ? 'Próximamente' : 'Coming Up'}
           </h3>
           <div className="space-y-2">
@@ -143,7 +143,7 @@ function HolidayCard({
   dayDelta: (iso: string) => number;
 }) {
   const isES = language === 'es';
-  const style = getHolidayStyle(h.type);
+  const style = { ...getHolidayStyle(h.type), ...getHolidayStyle(h.type).dark };
   const isMultiDay = h.start_date !== h.end_date;
   const startDelta = dayDelta(h.start_date);
   const endDelta = dayDelta(h.end_date);
@@ -197,27 +197,27 @@ function HolidayCard({
   const monthAbbr = monthNames[startDate.getMonth()];
   const dayNum = startDate.getDate();
 
-  let calBg = 'bg-white border-gray-200';
-  let calMonth = 'text-gray-400';
-  let calDay = 'text-gray-700';
+  let calBg = 'bg-whg-night border-whg-line';
+  let calMonth = 'text-whg-dim';
+  let calDay = 'text-whg-snow';
   if (isActive) {
-    calBg = 'bg-amber-100 border-amber-400';
-    calMonth = 'text-amber-700';
-    calDay = 'text-amber-800';
+    calBg = 'bg-whg-gold/15 border-whg-gold';
+    calMonth = 'text-whg-gold';
+    calDay = 'text-whg-gold2';
   } else if (isTomorrow) {
-    calBg = 'bg-red-50 border-red-400';
-    calMonth = 'text-red-600';
-    calDay = 'text-red-700';
+    calBg = 'bg-rose-400/10 border-rose-400';
+    calMonth = 'text-rose-300';
+    calDay = 'text-rose-100';
   } else if (isPast) {
-    calBg = 'bg-gray-50 border-gray-200 opacity-70';
-    calMonth = 'text-gray-400';
-    calDay = 'text-gray-500';
+    calBg = 'bg-whg-night border-whg-line opacity-60';
+    calMonth = 'text-whg-dim';
+    calDay = 'text-whg-dim';
   }
 
   // Active "today" cards get a slightly stronger shadow + ring so they
   // pop above the surrounding feed content.
   const cardClass = isActive
-    ? `rounded-2xl px-3 py-3 border-l-4 shadow-md ring-2 ring-amber-200 flex items-center gap-3 ${style.bgClass} ${style.borderClass}`
+    ? `rounded-2xl px-3 py-3 border-l-4 shadow-md ring-1 ring-whg-gold/40 flex items-center gap-3 ${style.bgClass} ${style.borderClass}`
     : `rounded-2xl px-3 py-3 border-l-4 shadow-sm flex items-center gap-3 ${style.bgClass} ${style.borderClass}`;
 
   return (
@@ -246,7 +246,7 @@ function HolidayCard({
           </p>
           {/* Multi-day pill — only for events spanning more than one day */}
           {isMultiDay && (
-            <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-white/60 ${style.subTextClass}`}>
+            <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-white/10 ${style.subTextClass}`}>
               {isES ? 'Varios días' : 'Multi-day'}
             </span>
           )}
@@ -258,12 +258,12 @@ function HolidayCard({
           {style.emoji} {isES ? style.bannerEs : style.bannerEn}
         </p>
         {h.restaurants && h.restaurant_id && (
-          <p className="text-[10px] text-gray-500 mt-0.5">
+          <p className="text-[10px] text-whg-dim mt-0.5">
             {h.restaurants.name}
           </p>
         )}
         {(isES && h.notes_es ? h.notes_es : h.notes) && (
-          <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+          <p className="text-xs text-whg-snow/80 mt-1 leading-relaxed">
             {isES && h.notes_es ? h.notes_es : h.notes}
           </p>
         )}

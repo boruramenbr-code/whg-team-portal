@@ -380,7 +380,7 @@ export default function MenuTab({
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                         ) : (
-                          <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] flex items-center justify-center text-4xl opacity-90">🍽️</div>
+                          <div className="absolute inset-0 bg-gradient-to-br from-whg-card2 to-whg-night flex items-center justify-center text-4xl opacity-90">🍽️</div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                         <div className="absolute bottom-0 left-0 right-0 p-3">
@@ -465,7 +465,7 @@ export default function MenuTab({
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                 ) : (
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#1B3A6B] to-[#2C4F8A] flex items-center justify-center text-4xl opacity-90">
+                  <div className="absolute inset-0 bg-gradient-to-br from-whg-card2 to-whg-night flex items-center justify-center text-4xl opacity-90">
                     {academyView ? (PILLARS.find((p) => p.key === c.pillar)?.emoji ?? '🎓') : systemsView ? '🧰' : '🍽️'}
                   </div>
                 )}

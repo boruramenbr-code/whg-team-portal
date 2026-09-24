@@ -83,32 +83,39 @@ function getRestaurantLogo(name: string | null): string | null {
 }
 
 /* ───────── Tab guide data ───────── */
+// Mirrors the bottom nav, in the same order (Sept 2026).
 const TAB_GUIDE = [
   {
     key: 'handbook',
     emoji: '📍',
     title: 'Start Here',
     titleEs: 'Empieza Aquí',
-    description: 'Your onboarding checklist, the employee handbook, company policies, and answers to your questions — everything about working here.',
-    descriptionEs: 'Tu lista de bienvenida, el manual del empleado, las políticas de la empresa y respuestas a tus preguntas — todo sobre trabajar aquí.',
+    description: 'Your welcome, your onboarding checklist, the Quick Guide, the handbook, and policies — everything about working here.',
+    descriptionEs: 'Tu bienvenida, tu lista de bienvenida, la Guía Rápida, el manual y las políticas — todo sobre trabajar aquí.',
   },
   {
-    key: 'ourteam',
-    emoji: '👥',
-    title: 'Our Team',
-    titleEs: 'Nuestro Equipo',
-    description: 'See the org chart — who does what, who reports to whom, and how the team is structured.',
-    descriptionEs: 'Ve el organigrama — quién hace qué, quién reporta a quién y cómo está estructurado el equipo.',
-  },
-  {
-    // Pre-Shift left the staff bottom nav in June 2026 — this card now
-    // points at Training so it can't navigate to a tab that no longer renders.
     key: 'training',
     emoji: '🎬',
     title: 'Training',
     titleEs: 'Capacitación',
-    description: 'Watch training videos from your leadership team — service, hospitality, and how we do things here.',
-    descriptionEs: 'Mira videos de capacitación de tu equipo de liderazgo — servicio, hospitalidad y cómo hacemos las cosas aquí.',
+    description: 'Your training path, videos, systems, and quizzes — how we do things here.',
+    descriptionEs: 'Tu camino de capacitación, videos, sistemas y cuestionarios — cómo hacemos las cosas aquí.',
+  },
+  {
+    key: 'menu',
+    emoji: '🍣',
+    title: 'Menu',
+    titleEs: 'Menú',
+    description: 'Every dish — photo, ingredients, and allergens.',
+    descriptionEs: 'Cada platillo — foto, ingredientes y alérgenos.',
+  },
+  {
+    key: 'ourteam',
+    emoji: '👥',
+    title: 'Team',
+    titleEs: 'Equipo',
+    description: 'Who’s who, what every position does, and the Memories wall.',
+    descriptionEs: 'Quién es quién, qué hace cada posición y el muro de Recuerdos.',
   },
 ];
 
@@ -531,6 +538,10 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
           );
         })()}
 
+        {/* ── Personal Bar Card alert — only renders when actionable (expired,
+            expiring, or missing), and it's legal: it goes above everything. ── */}
+        <MyBarCardWidget language={language} />
+
         {/* ── Pre-Shift Notes (live) — the operational brief owns the top of
             the feed. 86'd items and specials must be readable before a shift
             without scrolling past celebration content. ── */}
@@ -589,7 +600,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
               {activeHolidays.length > 0 && (
                 <div className="border-b border-whg-line">
                   {activeHolidays.map((h) => {
-                    const style = getHolidayStyle(h.type);
+                    const style = getHolidayStyle(h.type).dark;
                     const today = new Date();
                     const dateLabel = today.toLocaleDateString(isES ? 'es-MX' : undefined, {
                       weekday: 'short',
@@ -604,7 +615,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
                         className={`px-4 py-2 ${style.bgClass}`}
                       >
                         <div className="flex items-center gap-2 text-xs">
-                          <span aria-hidden>{style.emoji}</span>
+                          <span aria-hidden>{getHolidayStyle(h.type).emoji}</span>
                           <span className={`font-semibold ${style.textClass}`}>{dateLabel}</span>
                           <span className={style.subTextClass}>·</span>
                           <span className={`font-semibold ${style.textClass} truncate`}>{name}</span>
@@ -934,8 +945,6 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
         {/* ── Age-verification cutoff (only renders for staff who serve alcohol) ── */}
         <CardingDateWidget language={language} />
 
-        {/* ── Personal Bar Card alert (only renders when actionable) ── */}
-        <MyBarCardWidget language={language} />
 
         {/* ── Upcoming Birthdays ── */}
         {birthdays.length > 0 && (
@@ -1036,7 +1045,7 @@ export default function HomeTab({ firstName, restaurantName, language, onboardin
             <span className="text-base">🧭</span>
             {isES ? 'Explora el Portal' : 'Explore the Portal'}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {TAB_GUIDE.map((tab) => (
               <button
                 key={tab.key}

@@ -4,8 +4,8 @@
   "description": "Wong Hospitality Group — Team Management & Communication Portal",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#1B3A6B",
-  "theme_color": "#1B3A6B",
+  "background_color": "#0D1522",
+  "theme_color": "#0D1522",
   "scope": "/",
   "icons": [
     { "src": "/icons/icon-72x72.png", "sizes": "72x72", "type": "image/png" },

@@ -7,6 +7,7 @@ import WelcomeSplash from './WelcomeSplash';
 import HomeTab from './HomeTab';
 import type { GuideSection } from './HandbookGuideTab';
 import { parseTrainingLink, type TrainingLink } from '@/lib/training-links';
+import { isOnboarding } from '@/lib/onboarding-window';
 
 // ── Lazy-loaded tabs ──────────────────────────────────────────
 // Phase 1 perf fix (May 2026): Each tab is its own chunk so first-paint
@@ -96,15 +97,8 @@ export default function DashboardClient({ profile, isManager }: Props) {
   //   • New hires → Welcome the first time, then the Onboarding Checklist
   //     on every open until every item is complete (employee + manager).
   //   • Once it's complete — and for veterans — → Handbook.
-  // "New hire" = welcome period active, hired in the last 90 days, or hired
-  // since ONBOARDING_SINCE (so nobody drops off the checklist at day 90
-  // just because the clock ran out).
-  const todayMs = Date.now();
-  const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
-  const ONBOARDING_SINCE = '2026-06-26'; // 90 days before the Welcome page launched
-  const isWelcomeActive = !!profile.welcome_until && new Date(profile.welcome_until).getTime() >= todayMs;
-  const isRecentHire = !!profile.hire_date && (todayMs - new Date(profile.hire_date).getTime()) <= ninetyDaysMs;
-  const isNewHire = isWelcomeActive || isRecentHire || (!!profile.hire_date && profile.hire_date >= ONBOARDING_SINCE);
+  // "New hire" is the shared onboarding rule (src/lib/onboarding-window.ts).
+  const isNewHire = isOnboarding(profile);
   const defaultHandbookSub: HandbookSubTab = isNewHire ? 'welcome' : 'read';
 
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');

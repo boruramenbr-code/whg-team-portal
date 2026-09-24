@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.24.2',
+    date: 'September 24, 2026',
+    title: '🧭 Audit round 1 — one look, fewer gaps',
+    notes: [
+      'The top bar, the phone status bar, the launch screen, and the app icon now use the same midnight navy and gold as the rest of the app (the WHG logo finally sits on a matching background)',
+      'Mission Control: new alert when a new hire has no onboarding items confirmed by a manager — with who, where, and how long ago they started',
+      'People → Onboarding keeps new hires listed past day 90 until their checklist is actually finished (same rule as the staff side)',
+      'Home: your personal bar card alert moves to the top when it needs action; holiday and event cards match the dark theme; “Explore the Portal” covers all four tabs, including Menu',
+      'Behind the scenes: holiday colors now render correctly everywhere, and an unused old screen was removed',
+    ],
+  },
+  {
     version: '2026.09.24',
     date: 'September 24, 2026',
     title: '📍 Start Here opens where new hires need it',

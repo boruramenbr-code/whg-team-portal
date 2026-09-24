@@ -17,6 +17,8 @@ interface HolidayTypeStyle {
   textClass: string;     // Title text color
   subTextClass: string;  // Subtitle / banner text color
   iconClass: string;     // For colored dots in list rows
+  /** Same roles on the dark (Midnight Navy & Gold) staff side. */
+  dark: { bgClass: string; borderClass: string; textClass: string; subTextClass: string };
 }
 
 export const HOLIDAY_TYPES: Record<HolidayType, HolidayTypeStyle> = {
@@ -31,6 +33,7 @@ export const HOLIDAY_TYPES: Record<HolidayType, HolidayTypeStyle> = {
     textClass: 'text-emerald-900',
     subTextClass: 'text-emerald-700',
     iconClass: 'text-emerald-600',
+    dark: { bgClass: 'bg-emerald-400/10', borderClass: 'border-emerald-400', textClass: 'text-emerald-100', subTextClass: 'text-emerald-300/90' },
   },
   slow: {
     emoji: '🌤️',
@@ -43,6 +46,7 @@ export const HOLIDAY_TYPES: Record<HolidayType, HolidayTypeStyle> = {
     textClass: 'text-sky-900',
     subTextClass: 'text-sky-700',
     iconClass: 'text-sky-600',
+    dark: { bgClass: 'bg-sky-400/10', borderClass: 'border-sky-400', textClass: 'text-sky-100', subTextClass: 'text-sky-300/90' },
   },
   normal: {
     emoji: '📅',
@@ -55,6 +59,7 @@ export const HOLIDAY_TYPES: Record<HolidayType, HolidayTypeStyle> = {
     textClass: 'text-gray-800',
     subTextClass: 'text-gray-600',
     iconClass: 'text-gray-500',
+    dark: { bgClass: 'bg-whg-card2', borderClass: 'border-whg-dim', textClass: 'text-whg-snow', subTextClass: 'text-whg-dim' },
   },
   busy: {
     emoji: '⚡',
@@ -67,6 +72,7 @@ export const HOLIDAY_TYPES: Record<HolidayType, HolidayTypeStyle> = {
     textClass: 'text-amber-900',
     subTextClass: 'text-amber-700',
     iconClass: 'text-amber-600',
+    dark: { bgClass: 'bg-whg-gold/10', borderClass: 'border-whg-gold', textClass: 'text-whg-gold2', subTextClass: 'text-whg-gold/85' },
   },
   all_hands: {
     emoji: '🔥',
@@ -79,6 +85,7 @@ export const HOLIDAY_TYPES: Record<HolidayType, HolidayTypeStyle> = {
     textClass: 'text-rose-900',
     subTextClass: 'text-rose-700',
     iconClass: 'text-rose-600',
+    dark: { bgClass: 'bg-rose-400/10', borderClass: 'border-rose-400', textClass: 'text-rose-100', subTextClass: 'text-rose-300/90' },
   },
 };
 

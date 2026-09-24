@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase-server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { getOnboardingForUser } from '@/lib/onboarding';
+import { onboardingHireCutoff } from '@/lib/onboarding-window';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,9 +67,9 @@ export async function GET(req: NextRequest) {
 
   // Active hires = profiles with welcome_until in the future OR hire_date in the last 90 days.
   // We err on the inclusive side so managers can also drill in to anyone they want.
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 90);
-  const cutoffIso = cutoff.toISOString().slice(0, 10);
+  // Same onboarding rule as the staff side: hired in the last 90 days or
+  // since ONBOARDING_SINCE (so hires stay listed until they're done).
+  const cutoffIso = onboardingHireCutoff();
 
   let q = admin
     .from('profiles')
