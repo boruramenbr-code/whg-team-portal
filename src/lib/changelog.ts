@@ -24,6 +24,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.24',
+    date: 'September 24, 2026',
+    title: '📍 Start Here opens where new hires need it',
+    notes: [
+      'New hires: Start Here opens on the Welcome page the first time, then on the Onboarding Checklist every time after — until every item is complete, then it opens on the Handbook',
+      'Staff hired before this summer still open on the Handbook',
+      'The Onboarding Checklist tab shows your progress (like 6/40) and a ✓ when you’re done',
+      'A divider now separates getting started (Welcome, Onboarding Checklist) from reference (Quick Guide, Handbook, Policies, Ask)',
+    ],
+  },
+  {
     version: '2026.09.23.4',
     date: 'September 23, 2026',
     title: '👋 Start Here gets a Welcome page',

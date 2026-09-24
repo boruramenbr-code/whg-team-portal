@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Fragment } from 'react';
 import dynamic from 'next/dynamic';
 import { Profile } from '@/lib/types';
 import WelcomeSplash from './WelcomeSplash';
@@ -44,6 +44,8 @@ interface Props {
 // Team tab as a sub-view; Menu promoted to the freed slot.
 type TopTabKey = 'home' | 'training' | 'menu' | 'handbook' | 'ourteam';
 type HandbookSubTab = 'welcome' | 'checklist' | 'guide' | 'read' | 'policies' | 'ask';
+/** Start Here's getting-started group; everything after the divider is reference. */
+const START_GROUP: HandbookSubTab[] = ['welcome', 'checklist'];
 type TeamSubTab = 'org' | 'positions' | 'memories';
 
 /* ── SVG icons for bottom nav (inline, no dependency) ──
@@ -90,14 +92,20 @@ const NavIcons: Record<string, (active: boolean) => React.ReactNode> = {
 };
 
 export default function DashboardClient({ profile, isManager }: Props) {
-  // Smart default for the Start Here sub-tab:
-  //   • New hires (welcome_until still in the future, or hired in the last 90 days) → land on Welcome
-  //   • Everyone else → land on Handbook
+  // Where Start Here opens (Randy, Sept 2026):
+  //   • New hires → Welcome the first time, then the Onboarding Checklist
+  //     on every open until every item is complete (employee + manager).
+  //   • Once it's complete — and for veterans — → Handbook.
+  // "New hire" = welcome period active, hired in the last 90 days, or hired
+  // since ONBOARDING_SINCE (so nobody drops off the checklist at day 90
+  // just because the clock ran out).
   const todayMs = Date.now();
   const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
-  const isWelcomeActive = profile.welcome_until && new Date(profile.welcome_until).getTime() >= todayMs;
-  const isRecentHire = profile.hire_date && (todayMs - new Date(profile.hire_date).getTime()) <= ninetyDaysMs;
-  const defaultHandbookSub: HandbookSubTab = (isWelcomeActive || isRecentHire) ? 'welcome' : 'read';
+  const ONBOARDING_SINCE = '2026-06-26'; // 90 days before the Welcome page launched
+  const isWelcomeActive = !!profile.welcome_until && new Date(profile.welcome_until).getTime() >= todayMs;
+  const isRecentHire = !!profile.hire_date && (todayMs - new Date(profile.hire_date).getTime()) <= ninetyDaysMs;
+  const isNewHire = isWelcomeActive || isRecentHire || (!!profile.hire_date && profile.hire_date >= ONBOARDING_SINCE);
+  const defaultHandbookSub: HandbookSubTab = isNewHire ? 'welcome' : 'read';
 
   const [activeTop, setActiveTop] = useState<TopTabKey>('home');
   // Perf: visited tabs stay MOUNTED (hidden, not unmounted) so switching
@@ -110,6 +118,40 @@ export default function DashboardClient({ profile, isManager }: Props) {
   const tabShown = (k: TopTabKey) => activeTop === k;
   const tabMounted = (k: TopTabKey) => activeTop === k || visitedTops.has(k);
   const [activeHandbookSub, setActiveHandbookSub] = useState<HandbookSubTab>(defaultHandbookSub);
+
+  // New hires: checklist progress (tab badge + landing) and whether they've
+  // already seen the Welcome page on this device.
+  const [checklistProgress, setChecklistProgress] = useState<{ done: number; total: number } | null>(null);
+  const [welcomeSeen, setWelcomeSeen] = useState(false);
+  useEffect(() => {
+    if (!isNewHire) return;
+    try { setWelcomeSeen(localStorage.getItem('whg_welcome_seen') === '1'); } catch { /* private mode */ }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/onboarding/me', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        const items: { is_complete: boolean }[] = j.items || [];
+        if (!cancelled) setChecklistProgress({ done: items.filter((i) => i.is_complete).length, total: items.length });
+      } catch { /* badge just doesn't show */ }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const checklistComplete = !!checklistProgress && checklistProgress.total > 0 && checklistProgress.done === checklistProgress.total;
+  // Settle the landing sub-tab before Start Here is first opened. Once it
+  // has been opened (or something deep-linked into it), leave it alone.
+  useEffect(() => {
+    if (!isNewHire || activeTop === 'handbook' || visitedTops.has('handbook')) return;
+    setActiveHandbookSub(checklistComplete ? 'read' : welcomeSeen ? 'checklist' : 'welcome');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [welcomeSeen, checklistComplete]);
+  // Viewing Welcome counts as seen — next open lands on the checklist.
+  useEffect(() => {
+    if (activeTop !== 'handbook' || activeHandbookSub !== 'welcome') return;
+    try { localStorage.setItem('whg_welcome_seen', '1'); } catch { /* private mode */ }
+  }, [activeTop, activeHandbookSub]);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
 
   // Handbook Quick Guide — fetched the first time the Start Here tab opens.
@@ -405,24 +447,40 @@ export default function DashboardClient({ profile, isManager }: Props) {
             className="flex gap-0 min-w-0 flex-1 overflow-x-auto [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {handbookSubTabs.filter((t) => t.key !== 'guide' || (guideSections?.length ?? 0) > 0).map((t) => {
+            {handbookSubTabs.filter((t) => t.key !== 'guide' || (guideSections?.length ?? 0) > 0).map((t, i, list) => {
               const isActive = activeHandbookSub === t.key;
+              // Two groups: getting started (Welcome, Onboarding Checklist) |
+              // reference (Quick Guide, Handbook, Policies, Ask).
+              const startsReference = !START_GROUP.includes(t.key) && i > 0 && START_GROUP.includes(list[i - 1].key);
               return (
-                <button
-                  key={t.key}
-                  onClick={() => setActiveHandbookSub(t.key)}
-                  className={`tap-highlight relative flex items-center gap-1.5 px-2.5 md:px-4 py-3 md:py-2 text-[13px] md:text-xs font-semibold whitespace-nowrap transition-colors ${
-                    isActive
-                      ? 'text-whg-gold'
-                      : 'text-whg-dim hover:text-whg-snow'
-                  }`}
-                >
-                  <span className="hidden md:inline text-sm">{t.emoji}</span>
-                  <span>{isES ? t.labelEs : t.label}</span>
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-whg-gold rounded-t-full" />
+                <Fragment key={t.key}>
+                  {startsReference && (
+                    <span aria-hidden className="self-center flex-shrink-0 w-px h-5 bg-white/20 mx-1.5 md:mx-2" />
                   )}
-                </button>
+                  <button
+                    onClick={() => setActiveHandbookSub(t.key)}
+                    className={`tap-highlight relative flex items-center gap-1.5 px-2.5 md:px-4 py-3 md:py-2 text-[13px] md:text-xs font-semibold whitespace-nowrap transition-colors ${
+                      isActive
+                        ? 'text-whg-gold'
+                        : 'text-whg-dim hover:text-whg-snow'
+                    }`}
+                  >
+                    <span className="hidden md:inline text-sm">{t.emoji}</span>
+                    <span>{isES ? t.labelEs : t.label}</span>
+                    {t.key === 'checklist' && checklistProgress && checklistProgress.total > 0 && (
+                      checklistComplete ? (
+                        <span className="text-[11px] font-bold text-[#5FB49C]">✓</span>
+                      ) : (
+                        <span className="text-[10px] font-bold tabular-nums px-1.5 py-px rounded-full bg-whg-gold/15 text-whg-gold">
+                          {checklistProgress.done}/{checklistProgress.total}
+                        </span>
+                      )
+                    )}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-whg-gold rounded-t-full" />
+                    )}
+                  </button>
+                </Fragment>
               );
             })}
           </div>
