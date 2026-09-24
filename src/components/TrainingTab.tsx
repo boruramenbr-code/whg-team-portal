@@ -47,9 +47,9 @@ interface Props {
   onChecklistAction?: (action: string) => void;
 }
 
-/** Manager-only training lives in Mission Control → Training → Academy. */
-function goToMissionControl(params: Record<string, string>) {
-  window.location.href = `/admin?${new URLSearchParams(params).toString()}`;
+/** Manager-only training lives in Manager Resources → Academy. */
+function goToManagerResources(params: Record<string, string>) {
+  window.location.href = `/resources?${new URLSearchParams(params).toString()}`;
 }
 
 /* ───────── Employee Training Tab ─────────
@@ -101,7 +101,7 @@ export default function TrainingTab({
   }, [load]);
 
   // Shared links: jump to the right sub-tab, or queue the video until the
-  // library has loaded. Manager Academy links open in Mission Control.
+  // library has loaded. Manager Academy links open in Manager Resources.
   useEffect(() => {
     if (!link) return;
     if (link.kind === 'start') {
@@ -111,7 +111,7 @@ export default function TrainingTab({
       setPendingVideoId(link.id);
     } else if (link.zone === 'academy') {
       if (isMgmt) {
-        goToMissionControl({ lesson: link.id, zone: 'academy', ...(link.card ? { card: link.card } : {}) });
+        goToManagerResources({ lesson: link.id, zone: 'academy', ...(link.card ? { card: link.card } : {}) });
       }
     } else {
       setLessonTarget({ id: link.id, zone: link.zone, card: link.card });
@@ -127,7 +127,7 @@ export default function TrainingTab({
       const v = s.videos.find((x) => x.id === pendingVideoId);
       if (!v) continue;
       if (s.audience === 'mgmt') {
-        goToMissionControl({ video: v.id });
+        goToManagerResources({ video: v.id });
       } else {
         setOpenSeries((prev) => new Set(prev).add(s.id));
         setActiveVideo({ video: v, seriesTitle: s.title });
@@ -158,7 +158,7 @@ export default function TrainingTab({
       language={language}
       onGoTo={(s, refId) => {
         if (s === 'academy') {
-          if (isMgmt && refId) goToMissionControl({ lesson: refId, zone: 'academy' });
+          if (isMgmt && refId) goToManagerResources({ lesson: refId, zone: 'academy' });
           return;
         }
         if (s === 'menu' || s === 'systems') {
@@ -172,7 +172,7 @@ export default function TrainingTab({
     />
   );
 
-  // Staff-side library shows team videos only; manager videos are in Mission Control.
+  // Staff-side library shows team videos only; manager videos are in Manager Resources.
   const teamSeries = series.filter((s) => s.audience !== 'mgmt');
 
   return (

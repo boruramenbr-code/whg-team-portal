@@ -7,9 +7,9 @@ import { CALCULATORS, CalculatorSheet, type CalculatorKey } from './ManagerCalcu
 import { VideoPlayer, type Series, type Video } from './TrainingTab';
 import { buildVideoUrl, type TrainingLink } from '@/lib/training-links';
 
-/* ───────── Mission Control → Training → 🎓 Academy ─────────
+/* ───────── Manager Resources → 🎓 Academy ─────────
  * Loads the video library itself and hosts the player, so the Academy
- * lives with the rest of management in Mission Control. Opens a shared
+ * lives in Manager Resources (moved from Mission Control, Sept 2026). Opens a shared
  * Academy lesson or manager video link when one arrives. */
 export function AcademyInMissionControl({
   viewRestaurantId = null,
@@ -49,7 +49,7 @@ export function AcademyInMissionControl({
 
   return (
     <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8">
-      <div className="rounded-3xl bg-gradient-to-b from-whg-night via-[#101B2E] to-whg-night2 p-4 md:p-6">
+      <div className="rounded-3xl bg-gradient-to-b from-whg-card to-whg-night2 border border-whg-line p-4 md:p-6">
         <ManagerAcademyTab
           language="en"
           viewRestaurantId={viewRestaurantId}
@@ -66,7 +66,7 @@ export function AcademyInMissionControl({
           video={active.video}
           seriesTitle={active.seriesTitle}
           isES={false}
-          shareUrl={buildVideoUrl(active.video.id, 'admin')}
+          shareUrl={buildVideoUrl(active.video.id, 'resources')}
           onClose={() => setActive(null)}
         />
       )}
@@ -89,7 +89,7 @@ interface Props {
 
 type PillarFilter = Pillar | 'all';
 
-/* ───────── 🎓 Manager Academy (Training → Academy, management only) ─────────
+/* ───────── 🎓 Manager Academy (Manager Resources → Academy, management only) ─────────
  *
  * "Teach it once. Build it into the system. Use it everywhere." Not a new
  * training system — a manager-facing view over what already exists:

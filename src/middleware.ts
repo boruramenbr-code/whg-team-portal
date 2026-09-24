@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isLoginPage = path === '/';
-  const isProtected = path.startsWith('/dashboard') || path.startsWith('/admin');
+  const isProtected = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/resources');
   const isGet = request.method === 'GET';
 
   // Only apply redirects on GET requests — POST requests are Server Actions
@@ -57,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard', '/dashboard/:path*', '/admin', '/admin/:path*'],
+  matcher: ['/', '/dashboard', '/dashboard/:path*', '/admin', '/admin/:path*', '/resources', '/resources/:path*'],
 };

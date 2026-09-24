@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026.09.24.3',
+    date: 'September 24, 2026',
+    title: '🗝️ The manager zone — Mission Control gets its own look',
+    notes: [
+      'The Mission Control button is now “Managers.” Tap it for two choices: Mission Control (run the restaurant) and Manager Resources (learn it and look it up)',
+      'Mission Control has its own Charcoal & Gold look with a gold Mission Control band on every screen, so you always know you’re in the manager side',
+      'New: Manager Resources — the Manager Bible (read or ask), Manager Academy lessons and videos, and the manager calculators, all in one place',
+      'Compliance moved under People; the Standards tab is gone (the Manager Bible lives in Manager Resources). Old Academy links still work and open in Manager Resources',
+      'The manager zone is for Managers, AMs, KMs, and Assistant KMs',
+    ],
+  },
+  {
     version: '2026.09.24.2',
     date: 'September 24, 2026',
     title: '🧭 Audit round 1 — one look, fewer gaps',

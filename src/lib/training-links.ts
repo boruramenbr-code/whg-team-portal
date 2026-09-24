@@ -8,7 +8,8 @@
  * ?next=, the login page honors it).
  *
  * Staff lessons and videos open in the team app (/dashboard). Manager
- * Academy lessons and manager-only videos open in Mission Control (/admin).
+ * Academy lessons and manager-only videos open in Manager Resources
+ * (/resources). Older links pointing at /admin are forwarded there.
  */
 
 export type TrainingZone = 'menu' | 'systems' | 'academy';
@@ -23,10 +24,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function buildLessonUrl(sectionId: string, zone: TrainingZone, cardId?: string | null): string {
   const q = new URLSearchParams({ lesson: sectionId, zone });
   if (cardId) q.set('card', cardId);
-  return `${window.location.origin}${zone === 'academy' ? '/admin' : '/dashboard'}?${q.toString()}`;
+  return `${window.location.origin}${zone === 'academy' ? '/resources' : '/dashboard'}?${q.toString()}`;
 }
 
-export function buildVideoUrl(videoId: string, where: 'dashboard' | 'admin' = 'dashboard'): string {
+export function buildVideoUrl(videoId: string, where: 'dashboard' | 'resources' = 'dashboard'): string {
   return `${window.location.origin}/${where}?video=${encodeURIComponent(videoId)}`;
 }
 
@@ -52,7 +53,7 @@ export function parseTrainingLink(search: string): TrainingLink | null {
 
 /** Where to go after signing in — only ever our own app pages. */
 export function safeNextPath(raw: string | null): string {
-  return raw && /^\/(dashboard|admin)(\/|\?|$)/.test(raw) ? raw : '/dashboard';
+  return raw && /^\/(dashboard|admin|resources)(\/|\?|$)/.test(raw) ? raw : '/dashboard';
 }
 
 export async function copyText(text: string): Promise<boolean> {

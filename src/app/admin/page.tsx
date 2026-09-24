@@ -33,7 +33,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#C5D3E2]">
+    <div className="mc-theme flex flex-col min-h-screen bg-whg-night">
       <Header
         profile={profile}
         currentPage="admin"

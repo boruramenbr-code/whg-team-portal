@@ -7,10 +7,8 @@ import TrackBuilderTab from './TrackBuilderTab';
 import QuizzesAdminTab from './QuizzesAdminTab';
 import { PILLARS, type Pillar } from '@/lib/menu-constants';
 import NewHiresTab from './NewHiresTab';
-import { AcademyInMissionControl } from './ManagerAcademyTab';
-import type { TrainingLink } from '@/lib/training-links';
 
-type AdminSub = 'newhires' | 'academy' | 'videos' | 'menu' | 'quizzes' | 'progress' | 'builder';
+type AdminSub = 'newhires' | 'videos' | 'menu' | 'quizzes' | 'progress' | 'builder';
 
 /* ───────── Types ───────── */
 interface Video {
@@ -50,19 +48,16 @@ interface Series {
 export default function TrainingAdminTab({
   viewRestaurantId = null,
   isAdmin = false,
-  link = null,
   onNavigate,
 }: {
   viewRestaurantId?: string | null;
   isAdmin?: boolean;
-  /** A shared Academy lesson / manager video link — opens the Academy. */
-  link?: TrainingLink | null;
   /** Jump to another Mission Control tab (e.g. People → Staff). */
   onNavigate?: (target: string) => void;
 } = {}) {
-  // Sub-tabs: New Hires (landing) | Academy | Videos | Menu | Quizzes | Progress | Builder.
-  const [sub, setSub] = useState<AdminSub>(link ? 'academy' : 'newhires');
-  useEffect(() => { if (link) setSub('academy'); }, [link]);
+  // Sub-tabs: New Hires (landing) | Videos | Menu | Quizzes | Progress | Builder.
+  // (The Academy moved to Manager Resources, Sept 2026.)
+  const [sub, setSub] = useState<AdminSub>('newhires');
   const [series, setSeries] = useState<Series[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,19 +115,7 @@ export default function TrainingAdminTab({
         <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
           <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
         </div>
-        <NewHiresTab viewRestaurantId={viewRestaurantId} onAddPerson={() => onNavigate?.('staff')} />
-      </div>
-    );
-  }
-
-  // Manager Academy — videos, lessons, and practice tools for management.
-  if (sub === 'academy') {
-    return (
-      <div>
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6 md:pt-8">
-          <SubTabPills sub={sub} onChange={setSub} showBuilder={isAdmin} />
-        </div>
-        <AcademyInMissionControl viewRestaurantId={viewRestaurantId} link={link} />
+        <div className="mc-native"><NewHiresTab viewRestaurantId={viewRestaurantId} onAddPerson={() => onNavigate?.('staff')} /></div>
       </div>
     );
   }
@@ -362,7 +345,6 @@ function SubTabPills({ sub, onChange, showBuilder = false }: { sub: AdminSub; on
     <div className="flex gap-1.5 mb-5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
       {([
         { key: 'newhires' as const, label: '🧭 New Hires' },
-        { key: 'academy' as const, label: '🎓 Academy' },
         { key: 'videos' as const, label: '🎬 Videos' },
         { key: 'menu' as const, label: '🍣 Menu' },
         { key: 'quizzes' as const, label: '📝 Quizzes' },

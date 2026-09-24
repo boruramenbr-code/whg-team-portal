@@ -7,9 +7,11 @@ import ChatInterface from './ChatInterface';
 
 interface Props {
   profile: Profile;
+  /** Open straight to Read or Ask (Manager Resources tiles). */
+  initialView?: SubView;
 }
 
-type SubView = 'about' | 'read' | 'ask';
+export type SubView = 'about' | 'read' | 'ask';
 
 /**
  * Manager's Handbook Standards — admin-only Read + Ask interface.
@@ -23,8 +25,8 @@ type SubView = 'about' | 'read' | 'ask';
  *   • Read  — browse sections (reuses HandbookReaderTab with audience='manager')
  *   • Ask   — chatbot scoped to manager content (forceSource='manager')
  */
-export default function ManagerStandardsTab({ profile }: Props) {
-  const [view, setView] = useState<SubView>('about');
+export default function ManagerStandardsTab({ profile, initialView = 'about' }: Props) {
+  const [view, setView] = useState<SubView>(initialView);
   const [language, setLanguage] = useState<'en' | 'es'>(profile.preferred_language || 'en');
 
   return (
@@ -35,7 +37,7 @@ export default function ManagerStandardsTab({ profile }: Props) {
           <div className="flex items-center justify-between gap-3 mb-1">
             <div>
               <h2 className="text-lg font-bold text-[#1B3A6B] flex items-center gap-2">
-                <span>📖</span> Manager&apos;s Handbook Standards
+                <span>📖</span> Manager Bible
               </h2>
               <p className="text-xs text-gray-500 italic mt-0.5">
                 The Standards Guide for Managers
@@ -71,16 +73,21 @@ export default function ManagerStandardsTab({ profile }: Props) {
           ChatInterface) get a proper flex parent and can size + scroll correctly. */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {view === 'about' && <AboutStandardsView />}
+        {/* Read + Ask are built for the dark staff side — keep their own colors. */}
         {view === 'read' && (
-          <HandbookReaderTab language={language} audience="manager" />
+          <div className="mc-native flex-1 flex flex-col overflow-hidden">
+            <HandbookReaderTab language={language} audience="manager" />
+          </div>
         )}
         {view === 'ask' && (
-          <ChatInterface
-            profile={profile}
-            language={language}
-            onLanguageChange={setLanguage}
-            forceSource="manager"
-          />
+          <div className="mc-native flex-1 flex flex-col overflow-hidden bg-whg-night">
+            <ChatInterface
+              profile={profile}
+              language={language}
+              onLanguageChange={setLanguage}
+              forceSource="manager"
+            />
+          </div>
         )}
       </div>
     </div>
@@ -171,15 +178,15 @@ function AboutStandardsView() {
         </div>
 
         {/* Getting started */}
-        <div className="bg-[#1B3A6B] text-white rounded-2xl p-6">
-          <h2 className="text-sm font-bold uppercase tracking-wide mb-2 text-amber-300">
+        <div className="bg-whg-card2 border border-whg-gold/40 text-whg-snow rounded-2xl p-6">
+          <h2 className="text-sm font-bold uppercase tracking-wide mb-2 text-whg-gold">
             Get started
           </h2>
           <p className="text-sm leading-relaxed mb-4">
             Tap <strong>📑 Read</strong> to browse the current Standards content, or jump straight to
             <strong> 💬 Ask</strong> if you have a specific situation you&apos;re working through.
           </p>
-          <p className="text-xs text-white/70 italic">
+          <p className="text-xs text-whg-dim italic">
             This is your playbook. Use it whenever you need it.
           </p>
         </div>

@@ -92,7 +92,7 @@ export default function OnboardingAdminTab() {
         </button>
         {/* The checklist is styled for the dark staff portal; frame it so it
             reads as an embedded card on this light page. */}
-        <div className="bg-whg-night rounded-2xl p-3 md:p-4">
+        <div className="mc-native bg-whg-night rounded-2xl p-3 md:p-4">
           <OnboardingChecklist
             endpoint={`/api/onboarding/users/${drillUser.user_id}`}
             managerMode

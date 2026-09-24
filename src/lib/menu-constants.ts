@@ -45,7 +45,7 @@ export interface MenuCategory {
   is_knowledge?: boolean;
   /** 'menu' (default) renders on the Menu tab; 'systems' renders under
    *  Training → 🧰 Systems (OpenTable, Toast POS, 7shifts…); 'academy'
-   *  renders under Training → 🎓 Academy (managers only). */
+   *  renders under Manager Resources → 🎓 Academy (managers only). */
   zone?: 'menu' | 'systems' | 'academy';
   /** 'mgmt' = managers only (enforced by RLS, migration 080). */
   audience?: 'all' | 'mgmt';
